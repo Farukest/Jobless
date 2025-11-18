@@ -177,15 +177,22 @@
 #### `/login` - Giriş Sayfası
 **Access:** Public
 
-**Form Elements:**
-- **BUTTON:** "Login with Twitter" → OAuth redirect
-- **BUTTON:** "Login with Farcaster" → OAuth redirect
-- **NO INPUT FIELDS** (OAuth only)
+**Authentication Methods:**
+- **BUTTON:** "Continue with Twitter" → OAuth redirect to `/api/auth/twitter`
+- **BUTTON:** "Connect Wallet" → Opens RainbowKit modal for wallet connection
 
-**Actions:**
-- **OAUTH:** Twitter authentication
-- **OAUTH:** Farcaster authentication
-- **REDIRECT:** After successful login → `/center`
+**Wallet Authentication Flow:**
+- When wallet connected → Signature request modal appears
+- **MODAL:** Sign message modal
+  - **TEXT (read-only):** Message to sign (includes wallet address + timestamp)
+  - **BUTTON:** "Send request" → Triggers wallet signature
+  - **BUTTON:** "Cancel" → Close modal
+- **SIGNATURE:** User signs message via wallet
+- **API:** POST `/auth/wallet/connect` with signature
+- **TOKENS:** Store accessToken + refreshToken in localStorage
+- **REDIRECT:** After successful auth → `/` (home page)
+
+**NO MANUAL INPUT FIELDS** (OAuth + Wallet signature only)
 
 #### `/about` - Hakkımızda
 **Access:** Public
@@ -228,26 +235,75 @@
 - **BUTTON:** "View Stats" → `/center/stats`
 - **BUTTON:** "Settings" → `/center/settings`
 
-#### `/center/profile` - Profil Düzenleme
+#### `/center/profile` - Profil Sayfası
 **Access:** All authenticated users
 
-**Form Elements:**
-- **INPUT (file):** Avatar/Profile photo (jpg, png - max 2MB)
-- **INPUT (text):** Display name (required, max 50 chars)
-- **INPUT (text):** Username (required, unique, alphanumeric + underscore, max 30 chars)
-- **TEXTAREA:** Bio (max 500 chars)
-- **INPUT (url):** Twitter URL (optional)
-- **INPUT (url):** Farcaster URL (optional)
-- **INPUT (url):** Website URL (optional)
-- **INPUT (text):** Location (optional, max 100 chars)
-- **SELECT:** Language preference (TR, EN)
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+**Profile Header Section:**
+- **BUTTON (top-right):** Logout button → Clears tokens, disconnects wallet, redirects to `/login`
+- **PROFILE IMAGE (clickable):**
+  - **INPUT (file, hidden):** Image upload (jpg, png, max 5MB)
+  - **ACTION:** Click image → Triggers file input
+  - **API:** POST `/upload/profile-picture` → PUT `/users/profile-picture`
+  - **LOADING STATE:** Spinner overlay during upload
 
-**Actions:**
-- **UPDATE:** Profile data
-- **UPLOAD:** Avatar image
-- **VALIDATION:** Real-time validation (username availability)
+**Edit Mode Toggle:**
+- **BUTTON (icon):** Edit profile icon → Toggles edit mode
+- **BUTTON:** "Save Changes" (visible in edit mode) → Saves profile data
+- **BUTTON:** "Cancel" (visible in edit mode) → Discards changes
+
+**Editable Fields (when in edit mode):**
+- **INPUT (text):** Display Name (max 50 chars)
+- **TEXTAREA:** Bio (max 500 chars, character counter shown)
+
+**Read-Only Display:**
+- **TEXT:** Twitter username (from OAuth, shown as @username)
+- **TEXT:** Wallet address (truncated format: 0x1234...5678)
+- **BADGES:** User roles (displayed as colored pills)
+
+**Social Links Section:**
+- **BUTTON (Twitter):** Link/Unlink Twitter profile
+  - IF not linked → Prompt for username input → POST `/social-links/link`
+  - IF linked → Confirm unlink → DELETE `/social-links/unlink/twitter`
+  - Shows username on hover
+- **BUTTON (LinkedIn):** Link/Unlink LinkedIn
+  - IF not linked → OAuth redirect to `/api/auth/linkedin?token=JWT`
+  - IF linked → Confirm unlink → DELETE `/social-links/unlink/linkedin`
+- **BUTTON (GitHub):** Link/Unlink GitHub
+  - IF not linked → OAuth redirect to `/api/auth/github?token=JWT`
+  - IF linked → Confirm unlink → DELETE `/social-links/unlink/github`
+
+**Stats Overview:**
+- **CARD:** J-Rank Points (display only)
+- **CARD:** Contribution Score (display only)
+
+**Module Activity Stats:**
+- **CARDS (5):** J Hub, J Studio, J Academy, J Alpha, J Info
+  - Display: Module name, count, description
+  - No edit functionality
+
+**Personal Progress Map:**
+- **PROGRESS BARS (5):** One for each module
+  - Visual progress indicator
+  - Percentage based on activity
+  - Display only
+
+**Recent Activity:**
+- **LIST:** Activity timeline
+  - Module, status, description, timestamp
+  - **PAGINATION:** Previous/Next buttons
+  - **SELECT:** Page navigation
+
+**API Calls:**
+- PUT `/users/profile` → Update displayName, bio
+- POST `/upload/profile-picture` → Upload image
+- PUT `/users/profile-picture` → Set new profile image URL
+- POST `/social-links/link` → Link social account
+- DELETE `/social-links/unlink/{platform}` → Unlink social account
+
+**Validation:**
+- Display name: max 50 chars
+- Bio: max 500 chars, real-time character count
+- Profile image: max 5MB, image formats only
 
 #### `/center/settings` - Ayarlar
 **Access:** All authenticated users
