@@ -1,5 +1,158 @@
 # JOBLESS PLATFORM STRUCTURE
 
+---
+
+## Platform Layout & Navigation
+
+### 1. PUBLIC LAYOUT (Ana Sayfa)
+**Usage:** `/` (Home page only)
+
+**Structure:**
+```
+<div className="flex min-h-screen flex-col">
+  <Header />
+  <main className="flex-1">
+    <Hero />
+  </main>
+  <Footer />
+</div>
+```
+
+**Components:**
+- **Header** (Sticky top)
+- **Main Content** (Flex-1, full height)
+- **Footer** (Bottom)
+
+---
+
+### 2. AUTHENTICATED LAYOUT (User Pages)
+**Usage:** All authenticated user pages (Hub, Studio, Academy, Info, Alpha, Center)
+
+**Structure:**
+```
+<div className="flex min-h-screen flex-col">
+  <Header />
+  <main className="flex-1">
+    {children}
+  </main>
+  <Footer />
+</div>
+```
+
+**Components:**
+- **Header** (Sticky top with navigation)
+- **Main Content** (Flex-1, page content)
+- **Footer** (Bottom)
+
+---
+
+### 3. ADMIN LAYOUT (Admin Panel)
+**Usage:** All admin pages (`/admin/*`)
+
+**Structure:**
+```
+<div className="min-h-screen bg-background">
+  <AdminSidebar /> (Fixed left, 256px width)
+  <main className="ml-64 min-h-screen">
+    <div className="p-8">
+      {children}
+    </div>
+  </main>
+</div>
+```
+
+**Components:**
+- **AdminSidebar** (Fixed left sidebar, collapsible to 80px)
+- **Main Content** (Left margin 256px, padding 32px)
+- **NO Header, NO Footer**
+
+---
+
+## HEADER Component
+
+**Visibility:** Public pages + All authenticated pages (NOT in admin panel)
+
+**Structure:**
+- **Logo:** Jobless logo (left, links to `/`)
+- **Navigation Menu:** (visible only when authenticated)
+  - Hub (`/hub`)
+  - Studio (`/studio`)
+  - Academy (`/academy`)
+  - Info (`/info`)
+  - Alpha (`/alpha`)
+- **Right Section:**
+  - **Theme Toggle** (dark/light mode)
+  - **IF Authenticated:**
+    - **Wallet Connection** (RainbowKit)
+      - Connect Wallet button (if not connected)
+      - Chain selector + Account button (if connected)
+    - **Profile Link** → `/center/profile`
+  - **IF NOT Authenticated:**
+    - **Sign In Button** → `/login`
+
+**Navigation Access Control:**
+- All nav items require `member` role (any authenticated user)
+- Items filtered based on user roles
+
+---
+
+## FOOTER Component
+
+**Visibility:** Public pages + All authenticated pages (NOT in admin panel)
+
+**Structure:**
+- **Column 1:** Logo + Platform description
+- **Column 2:** Product links (Hub, Studio, Academy, Info, Alpha)
+- **Column 3:** Resources (Documentation, Help, Terms, Privacy)
+- **Column 4:** Social links (Twitter, GitHub)
+- **Bottom:** Copyright text
+
+---
+
+## ADMIN SIDEBAR Component
+
+**Visibility:** Admin panel only (`/admin/*`)
+
+**Features:**
+- **Collapsible:** Toggle between 256px (expanded) and 80px (collapsed)
+- **Fixed position:** Left side, full height
+- **Scroll:** Vertical scroll for overflow content
+
+**Header Section:**
+- **Logo:** "Admin" text + animated J logo
+- **Collapse Toggle:** Button to collapse/expand sidebar
+
+**Navigation Sections:**
+
+**1. Overview:**
+- Dashboard → `/admin/dashboard`
+- Analytics → `/admin/analytics`
+
+**2. User Management:**
+- All Users → `/admin/users`
+- Roles → `/admin/roles`
+- Permissions → `/admin/permissions`
+
+**3. Content Management:**
+- J Hub Content → `/admin/content`
+- J Studio Requests → `/admin/studio-requests`
+- J Academy Courses → `/admin/courses`
+- J Info Engagements → `/admin/engagements`
+- J Alpha Posts → `/admin/alpha-posts`
+
+**4. System:**
+- Site Settings → `/admin/settings`
+- Activity Logs → `/admin/logs`
+
+**Footer Section:**
+- **Back to Site** link → `/` (returns to main site)
+
+**Active State:**
+- Current page highlighted with `bg-primary` background
+- Inactive pages: `hover:bg-muted`
+
+---
+
 ## User Roles
 
 ### 1. Base Roles
