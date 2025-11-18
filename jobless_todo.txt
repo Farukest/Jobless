@@ -1,0 +1,36 @@
+- windowsdayım mongo kurulu. npm falan kurulu. webstormda calısıyoruz proje burada C:\Users\Farukest-Working\Desktop\PROJECT\Jobless
+- Proje yapısı dökümanı burada C:\Users\Farukest-Working\Desktop\PROJECT\Jobless\jobless_project.pdf
+- Heryer çizgisel minimalist ve sade bir tasarım. efektli renklere geçişlere gerek yok sadece bir tasarım çizgisel.
+- Skelton loading ekranları kullanacaksın sayfa yapılarına uygun tiplerde.
+- Dark theme ve Light Theme smooth geçiş özelliği ile
+- hiçbiryerde emoji kullanma
+- jobless için J yapısı kullanarak animatif bir ( bir topluluğu ifade eden gerçek animatif logo )
+- Responsiveliğe dikkat et kesinlikle. Mobil yapısına da uygun şekilde tasarla.
+- hiçbiryerde ai yapısı ile oluşturulmul frontend ve backend blokları kullanma ( why our platform ? .. vs tarzı şeyler istemiyorum )
+- Example veya placeholder veya dummy birşey kullanmadan ( profil resmi placeholder gibi şeyler hariç )
+- Full güvenlik aktif ( hiçbir exploite veya js sızmasına veya db sızmasına izin vermeyecek dünyadaki en profesyonel yapı nasılsa o şekilde ) - mongo db kullanabilirsin
+- dökümana göre structure de gerekli eklemeleri yaparak ( db yapısı alanları ve profil sayfası ve arayüz ve kullanıcı işlemleri ve sayfalar vs vs.. )
+- Twitter bağlantısı ile giriş yapıp ( o bağlantıyı düzgün bir şekilde sürekli kullanabilen aynı twitterdaki gibi tüm caseleri ele alaarak , cache silinince bağlantının kopması twitterdaki izni gidince bağlanamaması vs vs )
+- Cüzdan bağlama özelliği ( bağlantıyı koruyacak şekilde tekrar tekrar bağlanma ihtiyacı olmadan ) modern profesyonel cüzdan seçim ekranı ile ve evm ile bağlantı.
+- Base ağında dökümandaki yapıyı algılayıp gerekli güvenli contractları oluşturup. kullanıcı ve yöneticilerin ve içerik sahiplerinin de gerekli işlemleri yapabildiği ( mesala token kazanıyorsa birisi token dağıtımı vs gibi şeyler bu yapıyı çok dikkatli kurulu
+- Hybrid şeyleri senkron etmek zor oluyor ondan sadece contractı gerekli bölümlede kullanacağız ve contracttan çekecek direk o bilgileri
+- Profesyonel değiştirilebiir kolay ve dinamik modelleme ile
+- Çizgisel tasarımın dışına cıkmadan ( emoji kullanmadan gerekli loading ekranlarının animatif yapısını tasarlayarak ve logosunu animatif tasarlayarak )
+- Roller ( Super Admin, Admin, Content Creator ve dökümanda okuduğun yapıya uygun olacak şekilde db yi de ayarlayarak )
+- Model ve db yapısı frontend üzerinde de gerekli ihtiyaçları sağlayacak şekilde ( kullanıcılar arasında roller ile mesala team elemanalrının admin sayfasında neler yapabileceğini ayarlayacak süper modelleme. hangi işlemlere ulaşabilecekleri düzenleyebilecekleri ( frontend sayfasının yapısına inputlara da uygun olarak )
+- Model yapısı frontend ve backende uydurulacak şekilde dedim cünkü headera mesala logo değiştirebilme gibi özellikler . footer içeriklerinin konumlarını ve yazılarını logolarını gerekirse ayarlabilmek gibi .. twitter. github vs gibi bizim dökümandaki konsepte uygunları ekle )
+- sen benim ne istediğimi anladın hem site yönetimi hem işlemler db yapısı modellemesi profesyonel eksiksiz olacak.
+- dummy ve hardcoded mevzusundan uygulama boyunca kaçın. baştaki kayıtlar için placeholder ( text ve logolar kullanabilirsin )
+- birbirleri ile paylaşım olan bölümleri falan iyi analiz et ( oraları cok iyi oku anlamadım uydurmuşum demeni istemiyorum şimdiden pişman olacağın şeyleri iyi analiz et )
+- Medya paylaşımı içerik desteği gibi sistemi çok iyi ( rolsel şeylere dikkat ederek kur )
+- test edebileceğin her fonksiyonu frontend ve backend-js backend-api gibi şeyleri ayrı klasörlerde test et ve o şekilde ilerle. hep buradaki dosyalara ekleme veya cıkarma düzeltme yaparak ilerle sürekli script oluşturma lütfen.
+- dökümanı tamamen oku orada roller kimlerin ne yapacağı kimlere ne vereceği ne paylaşacağı kendilerinin ne yapacağı gibi şeyler var hepsine dikkat ederek rolleri ve sayfaları oluştur.
+- frontend backend sayfa erişimlerinin sistemini rollere göre düzenlemeyi unutma ( erişimsel olarak sayfa ve inputlar falan hepsi dinamik olsun ayarlanabilir olsun super admin tarafından ) 
+- mesala dökümanda profil sayfası gibi birşey yoksa ( ama sen bu app için bunun olması gerektiğini düşünüyorsan kendin fikir yürüt ve gerekli geliştirmeleri ayarla )
+- misal : Üye, üretim talebini oluşturur diye bir ifade var dökümanda. 
+(örneğin “Twitter/Farcaster gönderisi için kapak tasarımı” veya “Twitter içerik videosu 
+düzenleme” gibi) bunu kendin yorumlayıp tüm sisteme göre ayarlaman gerek.
+- parça parça ayrı ayrı yapabilirsin tabiki ama gereken bağları kendin kurman gerek uml şeması ile
+- süper bir uml şeması kurarak ilerleyebilisin uml versiyonlama da yaparsan uml i sürekli düzeltmek yerine yeni içerikte mevcutları koruyup yenileri ekleyebilirsin akışa.
+- süper profesyonel ui + ux designersın ve security uzmanısın ağ konusunda ayrıca süper bir developersın hadi göreyim seni aslan
+- ne kadar uzun sürerse sürsün devam et bana sorma devam edeyimmi diye.
