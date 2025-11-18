@@ -412,13 +412,22 @@
 - `/admin/settings` - Site ayarları (super_admin only)
 - `/admin/logs` - Admin log kayıtları (super_admin only)
 
+#### ADMIN - DYNAMIC CONTENT MANAGEMENT (Admin tarafından oluşturulan dinamik içerik tipleri)
+
+- `/admin/hub-content-types` - J Hub içerik tiplerini yönetme (admin, super_admin only)
+- `/admin/studio-request-types` - J Studio talep tiplerini yönetme (admin, super_admin only)
+- `/admin/academy-categories` - J Academy eğitim kategorilerini yönetme (admin, super_admin only)
+- `/admin/info-platforms` - J Info platform listesini yönetme (admin, super_admin only)
+- `/admin/info-engagement-types` - J Info etkileşim tiplerini yönetme (admin, super_admin only)
+- `/admin/alpha-categories` - J Alpha kategorilerini yönetme (admin, super_admin only)
+
 ### 9. NOTIFICATIONS & MISC
 
 - `/notifications` - Bildirimler sayfası (All authenticated users)
 
 ---
 
-## Total Pages: ~40
+## Total Pages: ~46
 
 **Public Pages:** 5
 **J Center Pages:** 5
@@ -428,6 +437,7 @@
 **J Info Pages:** 3
 **J Alpha Pages:** 5
 **Admin Pages:** 13
+**Admin Dynamic Management Pages:** 6
 **Misc Pages:** 1
 
 ---
@@ -712,7 +722,8 @@
 **Form Elements:**
 - **INPUT (text):** Title (required, max 200 chars)
 - **TEXTAREA:** Description (required, max 2000 chars)
-- **SELECT:** Content type (Video, Thread, Podcast, Guide, Tutorial)
+- **SELECT:** Content type [DYNAMIC - populated from admin-created types via `/admin/hub-content-types`]
+  - Default: Video, Thread, Podcast, Guide, Tutorial
 - **SELECT:** Category (required, dynamic based on platform categories)
 - **SELECT:** Difficulty level (Beginner, Intermediate, Advanced)
 - **INPUT (file):** Thumbnail image (optional, jpg/png, max 2MB)
@@ -802,13 +813,8 @@
 **Form Elements:**
 - **INPUT (text):** Request title (required, max 150 chars)
 - **TEXTAREA:** Description (required, max 2000 chars)
-- **SELECT:** Request type (required)
-  - Cover Design
-  - Logo Design
-  - Banner Design
-  - Social Media Graphics
-  - Video Editing
-  - Other
+- **SELECT:** Request type [DYNAMIC - populated from admin-created types via `/admin/studio-request-types`] (required)
+  - Default: Cover Design, Logo Design, Banner Design, Social Media Graphics, Video Editing, Infographic Design, Animation, Other
 - **SELECT:** Priority (Low, Medium, High, Urgent)
 - **DATE PICKER:** Deadline (required, must be future date)
 - **INPUT (file):** Reference files/images (optional, multiple files, max 10MB total)
@@ -1030,13 +1036,8 @@
 - **INPUT (file):** Course intro video (optional, mp4, max 100MB)
 
 **SECTION:** Course Details
-- **SELECT:** Category (required)
-  - Photoshop & Tasarım
-  - Video Edit
-  - Kripto Twitter & Kişisel Marka
-  - Web3 Araştırma & DeFi
-  - Node Kurulum & Validatör
-  - AI Araçları
+- **SELECT:** Category [DYNAMIC - populated from admin-created categories via `/admin/academy-categories`] (required)
+  - Default: Photoshop & Tasarım, Video Edit, Kripto Twitter & Kişisel Marka, Web3 Araştırma & DeFi, Node Kurulum & Validatör, AI Araçları
 - **SELECT:** Difficulty level (Beginner, Intermediate, Advanced)
 - **SELECT:** Format (Online, Offline, Hybrid)
 - **INPUT (number):** Total duration (hours) (required)
@@ -1156,24 +1157,11 @@
 **Access:** All authenticated users
 
 **Form Elements:**
-- **SELECT:** Platform (required)
-  - Kaito
-  - WallChain
-  - Cookie
-  - Zama
-  - Twitter/X General
-  - Farcaster
-  - Discord
-  - Other
+- **SELECT:** Platform [DYNAMIC - populated from admin-created platforms via `/admin/info-platforms`] (required)
+  - Default: Kaito, WallChain, Cookie, Zama, Twitter/X General, Farcaster, Discord, Other
 
-- **SELECT:** Engagement type (required)
-  - Tweet/Post
-  - Retweet/Recast
-  - Like/React
-  - Comment/Reply
-  - Follow
-  - Join Community
-  - Other
+- **SELECT:** Engagement type [DYNAMIC - populated from admin-created types via `/admin/info-engagement-types`] (required)
+  - Default: Tweet/Post, Retweet/Recast, Like/React, Comment/Reply, Follow, Join Community, Discord Role, Other
 
 - **INPUT (url):** Proof URL (required)
   - Tweet URL, post link, screenshot link, etc.
@@ -1342,11 +1330,8 @@
 **SECTION:** Project Information
 - **INPUT (text):** Alpha title (required, max 150 chars)
 - **INPUT (text):** Project name (required, max 100 chars)
-- **SELECT:** Category (required)
-  - Airdrop Radar
-  - Testnet Tracker
-  - Memecoin Call
-  - DeFi Signal
+- **SELECT:** Category [DYNAMIC - populated from admin-created categories via `/admin/alpha-categories`] (required)
+  - Default: Airdrop Radar, Testnet Tracker, Memecoin Call, DeFi Signal
 - **SELECT:** Blockchain/Chain (required)
   - Ethereum, Solana, Arbitrum, Base, etc.
 - **INPUT (url):** Project website (optional)
@@ -1949,6 +1934,266 @@
 
 ---
 
+### 8.1. ADMIN - DYNAMIC CONTENT MANAGEMENT
+
+Bu sayfalar admin tarafından oluşturulan ve platformdaki dropdown/select alanlarında kullanılan dinamik içerik tiplerini yönetmek için kullanılır.
+
+---
+
+#### `/admin/hub-content-types` - J Hub İçerik Tipleri Yönetimi
+**Access:** admin & super_admin only
+
+**Display Elements:**
+- **TABLE:** Content type list
+  - Columns: Icon, Name, Description, Usage Count, Status, Actions
+
+**Default Content Types (Pre-populated):**
+- Video
+- Thread
+- Podcast
+- Guide
+- Tutorial
+
+**Actions (per type):**
+- **BUTTON:** "Edit" → Edit modal
+- **BUTTON:** "Deactivate/Activate" → Toggle status
+- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+
+**Create New Content Type:**
+- **BUTTON:** "Add New Content Type" → Creation modal
+- **MODAL FORM:**
+  - **INPUT (text):** Type name (required, max 50 chars, unique)
+  - **INPUT (text):** Type key (required, lowercase_underscore, unique)
+  - **TEXTAREA:** Description (optional, max 200 chars)
+  - **INPUT (text):** Icon name (Lucide icon name, optional)
+  - **CHECKBOX:** "Active" (default: true)
+  - **BUTTON:** "Create"
+
+**Edit Modal:**
+- Same fields as create
+- **BUTTON:** "Save Changes"
+- **BUTTON:** "Cancel"
+
+**IMPORTANT:** Bu tipler `/hub/create` sayfasındaki "Content type" dropdown'ında gösterilir.
+
+---
+
+#### `/admin/studio-request-types` - J Studio Talep Tipleri Yönetimi
+**Access:** admin & super_admin only
+
+**Display Elements:**
+- **TABLE:** Request type list
+  - Columns: Icon, Name, Description, Total Requests, Status, Actions
+
+**Default Request Types (Pre-populated):**
+- Cover Design (Twitter/Farcaster gönderisi kapak tasarımı)
+- Logo Design
+- Banner Design
+- Social Media Graphics
+- Video Editing
+- Infographic Design
+- Animation
+- Other
+
+**Actions (per type):**
+- **BUTTON:** "Edit" → Edit modal
+- **BUTTON:** "Deactivate/Activate" → Toggle status
+- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+
+**Create New Request Type:**
+- **BUTTON:** "Add New Request Type" → Creation modal
+- **MODAL FORM:**
+  - **INPUT (text):** Type name (required, max 100 chars, unique)
+  - **INPUT (text):** Type key (required, lowercase_underscore, unique)
+  - **TEXTAREA:** Description (optional, max 300 chars)
+  - **SELECT:** Assigned role (Designer, Video Editor, Both)
+  - **INPUT (text):** Icon name (Lucide icon, optional)
+  - **CHECKBOX:** "Active" (default: true)
+  - **BUTTON:** "Create"
+
+**Edit Modal:**
+- Same fields as create
+- **BUTTON:** "Save Changes"
+- **BUTTON:** "Cancel"
+
+**IMPORTANT:** Bu tipler `/studio/create` sayfasındaki "Request type" dropdown'ında gösterilir.
+
+---
+
+#### `/admin/academy-categories` - J Academy Eğitim Kategorileri Yönetimi
+**Access:** admin & super_admin only
+
+**Display Elements:**
+- **TABLE:** Course category list
+  - Columns: Icon, Name, Description, Total Courses, Total Students, Status, Actions
+
+**Default Categories (Pre-populated):**
+- Photoshop & Tasarım
+- Video Edit ve İçerik Montajı
+- Kripto Twitter & Kişisel Marka İnşası
+- Web3 Araştırma & DeFi Stratejileri
+- Node Kurulum & Validatör Teknikleri
+- AI Araçlarının Doğru Kullanımı
+
+**Actions (per category):**
+- **BUTTON:** "Edit" → Edit modal
+- **BUTTON:** "View Courses" → Filter courses by this category
+- **BUTTON:** "Deactivate/Activate" → Toggle status
+- **BUTTON (super_admin only):** "Delete" → Confirmation (if no courses)
+
+**Create New Category:**
+- **BUTTON:** "Add New Category" → Creation modal
+- **MODAL FORM:**
+  - **INPUT (text):** Category name (required, max 100 chars, unique)
+  - **INPUT (text):** Category key (required, lowercase_underscore, unique)
+  - **TEXTAREA:** Description (required, max 500 chars)
+  - **INPUT (text):** Icon name (Lucide icon, optional)
+  - **INPUT (color):** Color code (hex, for badge display, optional)
+  - **CHECKBOX:** "Active" (default: true)
+  - **BUTTON:** "Create"
+
+**Edit Modal:**
+- Same fields as create
+- **BUTTON:** "Save Changes"
+- **BUTTON:** "Cancel"
+
+**IMPORTANT:** Bu kategoriler `/academy/create` ve `/academy/courses` sayfalarındaki "Category" dropdown'larında gösterilir.
+
+---
+
+#### `/admin/info-platforms` - J Info Platform Listesi Yönetimi
+**Access:** admin & super_admin only
+
+**Display Elements:**
+- **TABLE:** Platform list
+  - Columns: Logo/Icon, Name, Description, Total Engagements, Status, Actions
+
+**Default Platforms (Pre-populated):**
+- Kaito
+- WallChain
+- Cookie
+- Zama OG NFT
+- Twitter/X General
+- Farcaster
+- Discord
+- Other
+
+**Actions (per platform):**
+- **BUTTON:** "Edit" → Edit modal
+- **BUTTON:** "View Engagements" → Filter engagements by platform
+- **BUTTON:** "Deactivate/Activate" → Toggle status
+- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+
+**Create New Platform:**
+- **BUTTON:** "Add New Platform" → Creation modal
+- **MODAL FORM:**
+  - **INPUT (text):** Platform name (required, max 50 chars, unique)
+  - **INPUT (text):** Platform key (required, lowercase_underscore, unique)
+  - **TEXTAREA:** Description (optional, max 200 chars)
+  - **INPUT (url):** Platform website (optional)
+  - **INPUT (file):** Platform logo (optional, jpg/png, max 500KB)
+  - **INPUT (text):** Icon name (Lucide icon, optional, if no logo)
+  - **CHECKBOX:** "Active" (default: true)
+  - **BUTTON:** "Create"
+
+**Edit Modal:**
+- Same fields as create
+- **BUTTON:** "Save Changes"
+- **BUTTON:** "Cancel"
+
+**IMPORTANT:** Bu platformlar `/info/submit` sayfasındaki "Platform" dropdown'ında gösterilir.
+
+---
+
+#### `/admin/info-engagement-types` - J Info Etkileşim Tipleri Yönetimi
+**Access:** admin & super_admin only
+
+**Display Elements:**
+- **TABLE:** Engagement type list
+  - Columns: Icon, Name, Description, Total Submissions, Default Points, Status, Actions
+
+**Default Engagement Types (Pre-populated):**
+- Tweet/Post
+- Retweet/Recast
+- Like/React
+- Comment/Reply
+- Follow
+- Join Community
+- Discord Role
+- Other
+
+**Actions (per type):**
+- **BUTTON:** "Edit" → Edit modal
+- **BUTTON:** "Deactivate/Activate" → Toggle status
+- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+
+**Create New Engagement Type:**
+- **BUTTON:** "Add New Engagement Type" → Creation modal
+- **MODAL FORM:**
+  - **INPUT (text):** Type name (required, max 50 chars, unique)
+  - **INPUT (text):** Type key (required, lowercase_underscore, unique)
+  - **TEXTAREA:** Description (optional, max 200 chars)
+  - **INPUT (number):** Default points (required, min: 0, default: 10)
+  - **INPUT (text):** Icon name (Lucide icon, optional)
+  - **CHECKBOX:** "Requires proof URL" (default: true)
+  - **CHECKBOX:** "Requires screenshot" (default: false)
+  - **CHECKBOX:** "Active" (default: true)
+  - **BUTTON:** "Create"
+
+**Edit Modal:**
+- Same fields as create
+- **BUTTON:** "Save Changes"
+- **BUTTON:** "Cancel"
+
+**IMPORTANT:** Bu tipler `/info/submit` sayfasındaki "Engagement type" dropdown'ında gösterilir.
+
+---
+
+#### `/admin/alpha-categories` - J Alpha Kategorileri Yönetimi
+**Access:** admin & super_admin only
+
+**Display Elements:**
+- **TABLE:** Alpha category list
+  - Columns: Icon, Name, Description, Total Posts, Active Projects, Status, Actions
+
+**Default Categories (Pre-populated):**
+- Airdrop Radar (Erken aşama airdrop fırsatları, görevler, katılım şartları)
+- Testnet Tracker (Erken aşama blockchain test süreçleri)
+- Memecoin Calls (Solana veya diğer chainlerde olabilecek memecoin fırsatları)
+- DeFi Signals (TVL, APY ve hacim artışına göre potansiyel protokoller)
+
+**Actions (per category):**
+- **BUTTON:** "Edit" → Edit modal
+- **BUTTON:** "View Posts" → Filter alpha posts by category
+- **BUTTON:** "Deactivate/Activate" → Toggle status
+- **BUTTON (super_admin only):** "Delete" → Confirmation (if no posts)
+
+**Create New Category:**
+- **BUTTON:** "Add New Alpha Category" → Creation modal
+- **MODAL FORM:**
+  - **INPUT (text):** Category name (required, max 100 chars, unique)
+  - **INPUT (text):** Category key (required, lowercase_underscore, unique)
+  - **TEXTAREA:** Description (required, max 300 chars)
+  - **INPUT (text):** Icon/Emoji (optional, single emoji or Lucide icon name)
+  - **INPUT (color):** Badge color (hex, for display, optional)
+  - **SELECT:** Default risk level (Low, Medium, High)
+  - **CHECKBOX:** "Active" (default: true)
+  - **BUTTON:** "Create"
+
+**Edit Modal:**
+- Same fields as create
+- **BUTTON:** "Save Changes"
+- **BUTTON:** "Cancel"
+
+**Stats Summary:**
+- **STAT:** Total categories
+- **STAT:** Most popular category (by post count)
+- **STAT:** Success rate by category
+
+**IMPORTANT:** Bu kategoriler `/alpha/submit` ve `/alpha/feed` sayfalarındaki "Category" dropdown/filter'larında gösterilir.
+
+---
+
 ### 9. NOTIFICATIONS & MISC
 
 #### `/notifications` - Bildirimler Sayfası
@@ -2072,6 +2317,120 @@
 | **J Info** | ✅ All users (engagements) | ✅ All users | ❌ (read-only after submit) | ❌ (admin can delete) |
 | **J Alpha** | ✅ Scout (alphas) | ✅ All users | ✅ Scout (own alphas)/Admin | ✅ Scout (own)/Admin |
 | **Admin Panel** | ✅ Admin/Super Admin (users, roles, etc.) | ✅ Admin/Super Admin | ✅ Admin/Super Admin | ✅ Super Admin only |
+
+---
+
+## DYNAMIC CONTENT MANAGEMENT SUMMARY
+
+Bu bölüm, admin tarafından yönetilen ve platform genelinde dropdown/select alanlarında kullanılan dinamik içerik tiplerini özetler.
+
+### 1. J Hub Content Types
+**Admin Management:** `/admin/hub-content-types`
+**Used In:** `/hub/create` - Content type dropdown
+
+**Default Types:**
+- Video
+- Thread
+- Podcast
+- Guide
+- Tutorial
+
+**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE
+
+---
+
+### 2. J Studio Request Types
+**Admin Management:** `/admin/studio-request-types`
+**Used In:** `/studio/create` - Request type dropdown
+
+**Default Types:**
+- Cover Design
+- Logo Design
+- Banner Design
+- Social Media Graphics
+- Video Editing
+- Infographic Design
+- Animation
+- Other
+
+**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE, ASSIGN TO ROLE
+
+---
+
+### 3. J Academy Course Categories
+**Admin Management:** `/admin/academy-categories`
+**Used In:** `/academy/create`, `/academy/courses` - Category dropdown/filter
+
+**Default Categories:**
+- Photoshop & Tasarım
+- Video Edit ve İçerik Montajı
+- Kripto Twitter & Kişisel Marka İnşası
+- Web3 Araştırma & DeFi Stratejileri
+- Node Kurulum & Validatör Teknikleri
+- AI Araçlarının Doğru Kullanımı
+
+**Admin Can:** CREATE, EDIT, DELETE (if no courses), ACTIVATE/DEACTIVATE, SET COLOR
+
+---
+
+### 4. J Info Platforms
+**Admin Management:** `/admin/info-platforms`
+**Used In:** `/info/submit` - Platform dropdown
+
+**Default Platforms:**
+- Kaito
+- WallChain
+- Cookie
+- Zama OG NFT
+- Twitter/X General
+- Farcaster
+- Discord
+- Other
+
+**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE, UPLOAD LOGO
+
+---
+
+### 5. J Info Engagement Types
+**Admin Management:** `/admin/info-engagement-types`
+**Used In:** `/info/submit` - Engagement type dropdown
+
+**Default Types:**
+- Tweet/Post
+- Retweet/Recast
+- Like/React
+- Comment/Reply
+- Follow
+- Join Community
+- Discord Role
+- Other
+
+**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE, SET DEFAULT POINTS, SET REQUIREMENTS
+
+---
+
+### 6. J Alpha Categories
+**Admin Management:** `/admin/alpha-categories`
+**Used In:** `/alpha/submit`, `/alpha/feed` - Category dropdown/filter
+
+**Default Categories:**
+- Airdrop Radar
+- Testnet Tracker
+- Memecoin Calls
+- DeFi Signals
+
+**Admin Can:** CREATE, EDIT, DELETE (if no posts), ACTIVATE/DEACTIVATE, SET COLOR, SET DEFAULT RISK LEVEL
+
+---
+
+### IMPORTANT NOTES:
+
+1. **All dynamic content is admin-controlled** - Users cannot create new types/categories/platforms
+2. **Pre-populated defaults** - System starts with default values, admin can modify
+3. **Delete protection** - Items with existing usage cannot be deleted (must be deactivated instead)
+4. **Real-time updates** - When admin changes these, dropdowns update immediately for all users
+5. **Validation** - All dynamic items have unique names and keys (lowercase_underscore format)
+6. **Deactivation** - Inactive items don't show in user dropdowns but remain in database for historical records
 
 ---
 
