@@ -19,9 +19,63 @@
 ```
 
 **Components:**
-- **Header** (Sticky top)
+- **Header** (Sticky top, see below for details)
 - **Main Content** (Flex-1, full height)
-- **Footer** (Bottom)
+  - **Hero Component** (see below)
+- **Footer** (Bottom, see below for details)
+
+---
+
+### HERO COMPONENT (Ana Sayfa Main Content)
+
+**Layout:** Full viewport height minus header (min-h-[calc(100vh-4rem)]), centered content
+
+**Structure:**
+
+**Heading Section:**
+- **Main Title:**
+  - Text: "Build, Learn, and Grow"
+  - Next line: "in Web3" (muted color)
+  - Size: 4xl mobile, 6xl tablet, 7xl desktop
+  - Animation: Fade in from bottom (0.5s)
+
+**Subtitle:**
+- Text: "A comprehensive ecosystem for content creators, designers, learners, and researchers in the Web3 space."
+- Size: lg mobile, xl desktop
+- Color: `text-muted-foreground`
+- Animation: Fade in from bottom (0.5s, 0.1s delay)
+
+**CTA Buttons:** (Horizontal flex, gap-4, centered)
+- **"Get Started" Button:**
+  - Primary background (`bg-primary`)
+  - Links to `/login`
+  - Height: 44px (h-11), padding: 32px (px-8)
+  - Animation: Fade in from bottom (0.5s, 0.2s delay)
+
+- **"Learn More" Button:**
+  - Border style (`border border-input bg-background`)
+  - Links to `/docs`
+  - Height: 44px (h-11), padding: 32px (px-8)
+  - Hover: `hover:bg-accent`
+
+**Feature Cards:** (Grid: 1 col mobile, 2 cols tablet, 3 cols desktop, mt-20, gap-6)
+- **Animation:** Fade in from bottom (0.5s, 0.3s delay)
+- **6 Cards:** J Hub, J Studio, J Academy, J Info, J Alpha, J Center
+- **Each Card:**
+  - Border with hover effect (`hover:border-primary/50`)
+  - Shadow on hover (`hover:shadow-lg`)
+  - Padding: 24px (p-6)
+  - Left-aligned text
+  - **Title:** text-lg, font-semibold
+  - **Description:** text-sm, text-muted-foreground
+
+**Feature Cards Content:**
+1. **J Hub:** "Access exclusive content, guides, and earning strategies from the community."
+2. **J Studio:** "Get professional design and video services from expert creators."
+3. **J Academy:** "Learn from industry experts and become a Web3 producer."
+4. **J Info:** "Coordinate community engagement and grow together."
+5. **J Alpha:** "Discover early-stage projects and investment opportunities."
+6. **J Center:** "Manage your profile, track progress, and showcase contributions."
 
 ---
 
@@ -72,27 +126,56 @@
 
 **Visibility:** Public pages + All authenticated pages (NOT in admin panel)
 
-**Structure:**
-- **Logo:** Jobless logo (left, links to `/`)
-- **Navigation Menu:** (visible only when authenticated)
-  - Hub (`/hub`)
-  - Studio (`/studio`)
-  - Academy (`/academy`)
-  - Info (`/info`)
-  - Alpha (`/alpha`)
-- **Right Section:**
-  - **Theme Toggle** (dark/light mode)
-  - **IF Authenticated:**
-    - **Wallet Connection** (RainbowKit)
-      - Connect Wallet button (if not connected)
-      - Chain selector + Account button (if connected)
-    - **Profile Link** → `/center/profile`
-  - **IF NOT Authenticated:**
-    - **Sign In Button** → `/login`
+**Layout:** Sticky top, height 64px (h-16), full width, backdrop blur, border-bottom
 
-**Navigation Access Control:**
-- All nav items require `member` role (any authenticated user)
-- Items filtered based on user roles
+**Left Section:**
+- **Logo Component:**
+  - **Animated SVG:** 40x40px "J" shape with animated path (2s loop)
+  - **4 Animated Dots:** Pulsing community dots with 0/0.3/0.6/0.9s delays
+  - **Text:** "Jobless" (text-xl, font-bold)
+  - **Link:** Redirects to `/`
+  - **Animation:** Fade in + scale (0.3s duration)
+
+**Center Section (only when authenticated):**
+- **Navigation Menu:** Horizontal list (hidden on mobile, visible md:flex)
+  - **Hub** → `/hub`
+  - **Studio** → `/studio`
+  - **Academy** → `/academy`
+  - **Info** → `/info`
+  - **Alpha** → `/alpha`
+- **Active State:** Current page shows `text-foreground`, others `text-muted-foreground`
+- **Hover:** `hover:text-primary` transition
+- **Access Control:** All items require `member` role
+
+**Right Section:**
+- **Theme Toggle Button:**
+  - Icon button for dark/light mode switch
+  - No text, only icon
+
+- **IF NOT Authenticated:**
+  - **"Sign In" Button:**
+    - Primary background (`bg-primary`)
+    - Text: "Sign In"
+    - Links to `/login`
+    - Height: 40px (h-10), padding: 16px (px-4)
+
+- **IF Authenticated:**
+  - **RainbowKit Wallet Button:**
+    - **IF NOT Connected:**
+      - "Connect Wallet" button
+      - Card background with border
+      - Height: 36px (h-9), padding: 12px (px-3)
+    - **IF Connected (wrong network):**
+      - "Wrong network" button (red/destructive)
+    - **IF Connected (correct network):**
+      - **Chain Selector Button:** Shows chain icon + name
+      - **Account Button:** Shows account display name (truncated address)
+      - Both buttons: Card background, border, height 36px
+
+  - **"Profile" Link:**
+    - Text link to `/center/profile`
+    - Text: "Profile"
+    - `text-muted-foreground hover:text-primary`
 
 ---
 
@@ -100,12 +183,47 @@
 
 **Visibility:** Public pages + All authenticated pages (NOT in admin panel)
 
-**Structure:**
-- **Column 1:** Logo + Platform description
-- **Column 2:** Product links (Hub, Studio, Academy, Info, Alpha)
-- **Column 3:** Resources (Documentation, Help, Terms, Privacy)
-- **Column 4:** Social links (Twitter, GitHub)
-- **Bottom:** Copyright text
+**Layout:** Border-top, 4-column grid (responsive: 1 col mobile, 4 cols desktop), padding 48px (py-12)
+
+**Column 1 - Branding:**
+- **Logo Component:**
+  - Same animated Jobless logo (40x40 SVG + text)
+- **Description Text:**
+  - "Comprehensive Web3 Ecosystem Platform"
+  - `text-sm text-muted-foreground`
+
+**Column 2 - Product:**
+- **Heading:** "Product" (text-sm, font-semibold, mb-4)
+- **Links:**
+  - Hub → `/hub`
+  - Studio → `/studio`
+  - Academy → `/academy`
+  - Info → `/info`
+  - Alpha → `/alpha`
+- **Style:** `text-sm text-muted-foreground hover:text-primary`
+
+**Column 3 - Resources:**
+- **Heading:** "Resources" (text-sm, font-semibold, mb-4)
+- **Links:**
+  - Documentation → `/docs`
+  - Help Center → `/help`
+  - Terms → `/terms`
+  - Privacy → `/privacy`
+- **Style:** `text-sm text-muted-foreground hover:text-primary`
+
+**Column 4 - Connect:**
+- **Heading:** "Connect" (text-sm, font-semibold, mb-4)
+- **Social Icons:** Horizontal flex (gap-4)
+  - **Twitter Icon** (Lucide icon, 20x20)
+  - **GitHub Icon** (Lucide icon, 20x20)
+  - Links: `#` placeholder (external links with target="_blank")
+- **Style:** `text-muted-foreground hover:text-primary`
+
+**Bottom Section:**
+- **Border-top** separator
+- **Copyright:** "© 2025 Jobless Ecosystem. All rights reserved."
+- **Center aligned** text
+- **Style:** `text-sm text-muted-foreground`
 
 ---
 
