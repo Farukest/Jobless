@@ -41,7 +41,11 @@
       "Bash(\"C:\\Users\\Farukest-Working\\Desktop\\PROJECT\\Jobless\\FINAL_SUMMARY.md\")",
       "Bash(node fix-user-status.js:*)",
       "Bash(node check-all-users.js:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh --version:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
