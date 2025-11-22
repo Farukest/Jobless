@@ -91,12 +91,24 @@ export const emitLikeUpdate = (targetId: string, targetType: string, data: any) 
   const room = `${targetType}:${targetId}`
   io.to(room).emit('likeUpdate', data)
   logger.info(`Emitted likeUpdate to room ${room}:`, data)
+
+  // Also emit to global hub room for Hub Home and Feed pages
+  if (targetType === 'content') {
+    io.emit('hub:likeUpdate', data)
+    logger.info(`Emitted hub:likeUpdate globally:`, data)
+  }
 }
 
 export const emitBookmarkUpdate = (targetId: string, targetType: string, data: any) => {
   const room = `${targetType}:${targetId}`
   io.to(room).emit('bookmarkUpdate', data)
   logger.info(`Emitted bookmarkUpdate to room ${room}:`, data)
+
+  // Also emit to global hub room for Hub Home and Feed pages
+  if (targetType === 'content') {
+    io.emit('hub:bookmarkUpdate', data)
+    logger.info(`Emitted hub:bookmarkUpdate globally:`, data)
+  }
 }
 
 export const emitViewUpdate = (targetId: string, targetType: string, data: any) => {
@@ -110,6 +122,12 @@ export const emitNewComment = (contentId: string, contentType: string, comment: 
   const room = `content:${contentId}`
   io.to(room).emit('newComment', comment)
   logger.info(`Emitted newComment to room ${room} (contentType: ${contentType})`)
+
+  // Also emit comment created event globally for Hub Home and Feed pages
+  if (contentType === 'hub_content') {
+    io.emit('hub:commentCreated', { contentId, comment })
+    logger.info(`Emitted hub:commentCreated globally for content ${contentId}`)
+  }
 }
 
 export const emitNewReply = (commentId: string, reply: any) => {
@@ -159,4 +177,10 @@ export const emitCommentDeleted = (
   const commentRoom = `comment:${commentId}`
   io.to(commentRoom).emit('commentDeleted', data)
   logger.info(`Emitted commentDeleted to own room ${commentRoom}:`, data)
+}
+
+export const emitContentCreated = (content: any) => {
+  // Emit globally for Hub Feed page (for "X new posts" banner)
+  io.emit('hub:contentCreated', content)
+  logger.info(`Emitted hub:contentCreated globally:`, { contentId: content._id, title: content.title })
 }

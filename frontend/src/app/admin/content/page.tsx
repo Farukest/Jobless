@@ -240,8 +240,15 @@ export default function AdminContentPage() {
   }
 
   const handleStatsSort = (sortBy: StatsSortBy) => {
-    setStatsSortBy(sortBy)
-    setSortColumn('stats')
+    // If already on stats with same sortBy, toggle order
+    if (sortColumn === 'stats' && statsSortBy === sortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      // New stats sort - default to descending (most to least)
+      setStatsSortBy(sortBy)
+      setSortColumn('stats')
+      setSortOrder('desc')
+    }
     setShowStatsPopup(false)
   }
 

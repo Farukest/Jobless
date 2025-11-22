@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Logo } from '../ui/logo'
 import { ThemeToggle } from '../ui/theme-toggle'
+import { Skeleton } from '../ui/skeleton'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAuth } from '@/hooks/use-auth'
 import { cn, userHasAnyRole } from '@/lib/utils'
@@ -12,9 +13,15 @@ import { useState, useRef, useEffect } from 'react'
 
 export function Header() {
   const pathname = usePathname()
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, isLoading, logout } = useAuth()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Handle client-side mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -72,7 +79,16 @@ export function Header() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
 
-          {isAuthenticated ? (
+          {/* Show skeleton before mount or during loading */}
+          {!mounted || isLoading ? (
+            <div className="flex items-center gap-2">
+              {/* Wallet info skeleton */}
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-24" />
+              {/* Profile icon skeleton */}
+              <Skeleton className="h-9 w-9 rounded-lg" />
+            </div>
+          ) : isAuthenticated ? (
             <>
               <ConnectButton.Custom>
                 {({

@@ -1,2437 +1,2098 @@
-# JOBLESS PLATFORM STRUCTURE
+# JOBLESS PLATFORM - COMPLETE STRUCTURE
+
+**Last Updated:** 2025-01-22
+**Version:** 2.0 - Complete Rebuild with Real-time Features
 
 ---
 
-## Platform Layout & Navigation
+## TABLE OF CONTENTS
 
-### 1. PUBLIC LAYOUT (Ana Sayfa)
-**Usage:** `/` (Home page only)
-
-**Structure:**
-```
-<div className="flex min-h-screen flex-col">
-  <Header />
-  <main className="flex-1">
-    <Hero />
-  </main>
-  <Footer />
-</div>
-```
-
-**Components:**
-- **Header** (Sticky top, see below for details)
-- **Main Content** (Flex-1, full height)
-  - **Hero Component** (see below)
-- **Footer** (Bottom, see below for details)
-
----
-
-### HERO COMPONENT (Ana Sayfa Main Content)
-
-**Layout:** Full viewport height minus header (min-h-[calc(100vh-4rem)]), centered content
-
-**Structure:**
-
-**Heading Section:**
-- **Main Title:**
-  - Text: "Build, Learn, and Grow"
-  - Next line: "in Web3" (muted color)
-  - Size: 4xl mobile, 6xl tablet, 7xl desktop
-  - Animation: Fade in from bottom (0.5s)
-
-**Subtitle:**
-- Text: "A comprehensive ecosystem for content creators, designers, learners, and researchers in the Web3 space."
-- Size: lg mobile, xl desktop
-- Color: `text-muted-foreground`
-- Animation: Fade in from bottom (0.5s, 0.1s delay)
-
-**CTA Buttons:** (Horizontal flex, gap-4, centered)
-- **"Get Started" Button:**
-  - Primary background (`bg-primary`)
-  - Links to `/login`
-  - Height: 44px (h-11), padding: 32px (px-8)
-  - Animation: Fade in from bottom (0.5s, 0.2s delay)
-
-- **"Learn More" Button:**
-  - Border style (`border border-input bg-background`)
-  - Links to `/docs`
-  - Height: 44px (h-11), padding: 32px (px-8)
-  - Hover: `hover:bg-accent`
-
-**Feature Cards:** (Grid: 1 col mobile, 2 cols tablet, 3 cols desktop, mt-20, gap-6)
-- **Animation:** Fade in from bottom (0.5s, 0.3s delay)
-- **6 Cards:** J Hub, J Studio, J Academy, J Info, J Alpha, J Center
-- **Each Card:**
-  - Border with hover effect (`hover:border-primary/50`)
-  - Shadow on hover (`hover:shadow-lg`)
-  - Padding: 24px (p-6)
-  - Left-aligned text
-  - **Title:** text-lg, font-semibold
-  - **Description:** text-sm, text-muted-foreground
-
-**Feature Cards Content:**
-1. **J Hub:** "Access exclusive content, guides, and earning strategies from the community."
-2. **J Studio:** "Get professional design and video services from expert creators."
-3. **J Academy:** "Learn from industry experts and become a Web3 producer."
-4. **J Info:** "Coordinate community engagement and grow together."
-5. **J Alpha:** "Discover early-stage projects and investment opportunities."
-6. **J Center:** "Manage your profile, track progress, and showcase contributions."
+1. [Platform Overview](#platform-overview)
+2. [Role & Permission System](#role--permission-system)
+3. [Authentication System](#authentication-system)
+4. [Module Structure](#module-structure)
+   - [J Hub - Content Center](#j-hub---content-center)
+   - [J Studio - Design & Production](#j-studio---design--production)
+   - [J Academy - Learning Platform](#j-academy---learning-platform)
+   - [J Info - Engagement Tracking](#j-info---engagement-tracking)
+   - [J Alpha - Early Project Research](#j-alpha---early-project-research)
+   - [J Center - User Profile](#j-center---user-profile)
+   - [Admin Panel](#admin-panel)
+5. [Comment System](#comment-system)
+6. [Badge System](#badge-system)
+7. [WebSocket & Real-time Features](#websocket--real-time-features)
+8. [Dynamic Content Management](#dynamic-content-management)
+9. [Navigation & Layout](#navigation--layout)
+10. [Component Library](#component-library)
+11. [API Endpoints Summary](#api-endpoints-summary)
 
 ---
 
-### 2. AUTHENTICATED LAYOUT (User Pages)
-**Usage:** All authenticated user pages (Hub, Studio, Academy, Info, Alpha, Center)
+## PLATFORM OVERVIEW
 
-**Structure:**
-```
-<div className="flex min-h-screen flex-col">
-  <Header />
-  <main className="flex-1">
-    {children}
-  </main>
-  <Footer />
-</div>
+**Jobless** is a comprehensive Web3 ecosystem platform for content creators, designers, learners, and researchers.
+
+**Tech Stack:**
+- **Frontend:** Next.js 14 (App Router), TypeScript, TailwindCSS, React Query, Socket.IO Client
+- **Backend:** Node.js, Express, TypeScript, MongoDB, Mongoose, Socket.IO Server
+- **Authentication:** Twitter OAuth 2.0, Wallet Signature (ethers.js)
+- **Real-time:** Socket.IO for live updates
+- **File Storage:** Local uploads (backend/uploads)
+
+**Core Modules:**
+1. **J Hub** - Content sharing and discovery
+2. **J Studio** - Design and video production requests
+3. **J Academy** - Online learning and courses
+4. **J Info** - Social media engagement tracking
+5. **J Alpha** - Early-stage project research
+6. **J Center** - User profile and achievements
+7. **Admin Panel** - Platform management
+
+---
+
+## ROLE & PERMISSION SYSTEM
+
+### 10 Platform Roles
+
+| Role | Key | Description | Special Permissions |
+|------|-----|-------------|---------------------|
+| **Member** | `member` | Base role for all users | Access all modules |
+| **Admin** | `admin` | Platform moderator | Moderate content, manage users |
+| **Super Admin** | `super_admin` | Full platform control | All admin + system settings |
+| **Content Creator** | `content_creator` | Hub content publisher | Publish content immediately (others draft) |
+| **Designer** | `designer` | Studio design specialist | Claim design requests |
+| **Video Editor** | `video_editor` | Studio video specialist | Claim video requests |
+| **Requester** | `requester` | Academy course requester | Create course requests |
+| **Learner** | `learner` | Academy student | Enroll in courses |
+| **Mentor** | `mentor` | Academy instructor | Create and manage courses |
+| **Scout** | `scout` | Alpha researcher | Submit alpha research posts |
+
+### Permission Patterns
+
+**Backend Middleware:**
+```typescript
+// All authenticated users
+router.use(protect)
+
+// Specific roles
+router.use(authorize('admin', 'super_admin'))
+
+// Owner or Admin check
+if (userId !== ownerId && !userRoles.includes('admin')) {
+  throw new AppError('Unauthorized', 403)
+}
 ```
 
-**Components:**
-- **Header** (Sticky top with navigation)
-- **Main Content** (Flex-1, page content)
-- **Footer** (Bottom)
+**Frontend Role Check:**
+```typescript
+const { user } = useAuth()
 
----
+// Show button for specific roles
+{user?.roles?.includes('mentor') && (
+  <button>Create Course</button>
+)}
 
-### 3. ADMIN LAYOUT (Admin Panel)
-**Usage:** All admin pages (`/admin/*`)
-
-**Structure:**
-```
-<div className="min-h-screen bg-background">
-  <AdminSidebar /> (Fixed left, 256px width)
-  <main className="ml-64 min-h-screen">
-    <div className="p-8">
-      {children}
-    </div>
-  </main>
-</div>
+// Conditional behavior
+const canPublish = user?.roles?.includes('content_creator')
+const status = canPublish ? 'published' : 'draft'
 ```
 
-**Components:**
-- **AdminSidebar** (Fixed left sidebar, collapsible to 80px)
-- **Main Content** (Left margin 256px, padding 32px)
-- **NO Header, NO Footer**
+---
+
+## AUTHENTICATION SYSTEM
+
+### Twitter OAuth 2.0
+
+**Flow:**
+1. User clicks "Login with Twitter" → `/api/auth/twitter`
+2. Twitter OAuth redirect → `http://localhost:5000/api/auth/twitter/callback`
+3. Backend generates JWT tokens (access + refresh)
+4. Redirect to frontend → `http://localhost:3000/auth/callback?accessToken=xxx&refreshToken=xxx`
+5. Frontend saves tokens to localStorage
+6. Redirect to `/center/profile`
+
+**Backend Routes:**
+```typescript
+// backend/src/routes/auth.routes.ts
+router.get('/twitter', passport.authenticate('twitter', { scope: ['tweet.read', 'users.read'] }))
+router.get('/twitter/callback', passport.authenticate('twitter', { session: false }), twitterCallback)
+```
+
+**Frontend Pages:**
+- `/login` - Login page with Twitter OAuth button
+- `/auth/callback` - OAuth callback handler
+
+### Wallet Authentication
+
+**Flow:**
+1. User connects wallet via RainbowKit
+2. Frontend requests nonce → `POST /api/auth/wallet/connect`
+3. User signs message with wallet
+4. Frontend sends signature → `POST /api/auth/wallet/verify`
+5. Backend validates signature, generates tokens
+6. User logged in
+
+**Backend Routes:**
+```typescript
+router.post('/wallet/connect', connectWallet)
+router.post('/wallet/verify', protect, verifyWallet)
+```
+
+### Token Management
+
+```typescript
+// backend/src/routes/auth.routes.ts
+router.post('/refresh', refreshAccessToken)  // Refresh access token
+router.get('/me', protect, getCurrentUser)   // Get current user
+router.post('/logout', protect, logout)      // Logout user
+```
 
 ---
 
-## HEADER Component
+## MODULE STRUCTURE
 
-**Visibility:** Public pages + All authenticated pages (NOT in admin panel)
+### J HUB - CONTENT CENTER
 
-**Layout:** Sticky top, height 64px (h-16), full width, backdrop blur, border-bottom
+**Purpose:** Content sharing platform for videos, threads, podcasts, guides, and tutorials.
 
-**Left Section:**
-- **Logo Component:**
-  - **Animated SVG:** 40x40px "J" shape with animated path (2s loop)
-  - **4 Animated Dots:** Pulsing community dots with 0/0.3/0.6/0.9s delays
-  - **Text:** "Jobless" (text-xl, font-bold)
-  - **Link:** Redirects to `/`
-  - **Animation:** Fade in + scale (0.3s duration)
+**Access:** All members
+**Special Role:** `content_creator` can publish immediately, others create drafts
 
-**Center Section (only when authenticated):**
-- **Navigation Menu:** Horizontal list (hidden on mobile, visible md:flex)
-  - **Hub** → `/hub`
-  - **Studio** → `/studio`
-  - **Academy** → `/academy`
-  - **Info** → `/info`
-  - **Alpha** → `/alpha`
-- **Active State:** Current page shows `text-foreground`, others `text-muted-foreground`
-- **Hover:** `hover:text-primary` transition
-- **Access Control:** All items require `member` role
+#### Pages
 
-**Right Section:**
-- **Theme Toggle Button:**
-  - Icon button for dark/light mode switch
-  - No text, only icon
+**1. Hub Home** - `/hub`
 
-- **IF NOT Authenticated:**
-  - **"Sign In" Button:**
-    - Primary background (`bg-primary`)
-    - Text: "Sign In"
-    - Links to `/login`
-    - Height: 40px (h-10), padding: 16px (px-4)
-
-- **IF Authenticated:**
-  - **RainbowKit Wallet Button:**
-    - **IF NOT Connected:**
-      - "Connect Wallet" button
-      - Card background with border
-      - Height: 36px (h-9), padding: 12px (px-3)
-    - **IF Connected (wrong network):**
-      - "Wrong network" button (red/destructive)
-    - **IF Connected (correct network):**
-      - **Chain Selector Button:** Shows chain icon + name
-      - **Account Button:** Shows account display name (truncated address)
-      - Both buttons: Card background, border, height 36px
-
-  - **"Profile" Link:**
-    - Text link to `/center/profile`
-    - Text: "Profile"
-    - `text-muted-foreground hover:text-primary`
-
----
-
-## FOOTER Component
-
-**Visibility:** Public pages + All authenticated pages (NOT in admin panel)
-
-**Layout:** Border-top, 4-column grid (responsive: 1 col mobile, 4 cols desktop), padding 48px (py-12)
-
-**Column 1 - Branding:**
-- **Logo Component:**
-  - Same animated Jobless logo (40x40 SVG + text)
-- **Description Text:**
-  - "Comprehensive Web3 Ecosystem Platform"
-  - `text-sm text-muted-foreground`
-
-**Column 2 - Product:**
-- **Heading:** "Product" (text-sm, font-semibold, mb-4)
-- **Links:**
-  - Hub → `/hub`
-  - Studio → `/studio`
-  - Academy → `/academy`
-  - Info → `/info`
-  - Alpha → `/alpha`
-- **Style:** `text-sm text-muted-foreground hover:text-primary`
-
-**Column 3 - Resources:**
-- **Heading:** "Resources" (text-sm, font-semibold, mb-4)
-- **Links:**
-  - Documentation → `/docs`
-  - Help Center → `/help`
-  - Terms → `/terms`
-  - Privacy → `/privacy`
-- **Style:** `text-sm text-muted-foreground hover:text-primary`
-
-**Column 4 - Connect:**
-- **Heading:** "Connect" (text-sm, font-semibold, mb-4)
-- **Social Icons:** Horizontal flex (gap-4)
-  - **Twitter Icon** (Lucide icon, 20x20)
-  - **GitHub Icon** (Lucide icon, 20x20)
-  - Links: `#` placeholder (external links with target="_blank")
-- **Style:** `text-muted-foreground hover:text-primary`
-
-**Bottom Section:**
-- **Border-top** separator
-- **Copyright:** "© 2025 Jobless Ecosystem. All rights reserved."
-- **Center aligned** text
-- **Style:** `text-sm text-muted-foreground`
-
----
-
-## ADMIN SIDEBAR Component
-
-**Visibility:** Admin panel only (`/admin/*`)
+**Layout:**
+- Sticky header with filters and search
+- Content grid (3 columns desktop, 2 tablet, 1 mobile)
+- Infinite scroll pagination
 
 **Features:**
-- **Collapsible:** Toggle between 256px (expanded) and 80px (collapsed)
-- **Fixed position:** Left side, full height
-- **Scroll:** Vertical scroll for overflow content
-
-**Header Section:**
-- **Logo:** "Admin" text + animated J logo
-- **Collapse Toggle:** Button to collapse/expand sidebar
-
-**Navigation Sections:**
-
-**1. Overview:**
-- Dashboard → `/admin/dashboard`
-- Analytics → `/admin/analytics`
-
-**2. User Management:**
-- All Users → `/admin/users`
-- Roles → `/admin/roles`
-- Permissions → `/admin/permissions`
-
-**3. Content Management:**
-- J Hub Content → `/admin/content`
-- J Studio Requests → `/admin/studio-requests`
-- J Academy Courses → `/admin/courses`
-- J Info Engagements → `/admin/engagements`
-- J Alpha Posts → `/admin/alpha-posts`
-
-**4. System:**
-- Site Settings → `/admin/settings`
-- Activity Logs → `/admin/logs`
-
-**Footer Section:**
-- **Back to Site** link → `/` (returns to main site)
-
-**Active State:**
-- Current page highlighted with `bg-primary` background
-- Inactive pages: `hover:bg-muted`
-
----
-
-## User Roles
-
-### 1. Base Roles
-- **user** - Temel kullanıcı rolü (tüm Jobless üyeleri)
-- **admin** - Platform yöneticileri
-- **super_admin** - Tam yetkili platform yöneticisi
-
-### 2. J Hub Roles (İçerik Merkezi)
-- **content_creator** - İçerik üreten Jobless üyeleri
-  - Video içerik üreticileri
-  - Thread yazarları
-  - Podcast yapımcıları
-  - Guide ve tutorial yazarları
-
-### 3. J Studio Roles (Görsel İçerik Merkezi)
-- **designer** - Görsel tasarım yapan Jobless tasarımcıları
-  - Cover tasarımı
-  - Logo tasarımı
-  - Banner tasarımı
-  - Social media görselleri
-- **video_editor** - Video düzenleme yapan editörler
-  - Twitter/Farcaster içerik videoları
-  - Promotional videolar
-  - Content montajı
-
-### 4. J Academy Roles (Eğitim Platformu)
-- **requester** - Eğitim programı talep eden topluluk üyeleri
-  - Eğitim talebi oluşturur
-  - Üyeleri teşvik eder
-- **learner** - Eğitim alan Jobless üyeleri
-  - Online/offline eğitimlere katılır
-  - Sertifika kazanır
-- **mentor** - Eğitim veren uzmanlar
-  - Jobless tarafından doğrulanır
-  - Photoshop & Tasarım
-  - Video Edit
-  - Kripto Twitter & Kişisel Marka
-  - Web3 Araştırma & DeFi
-  - Node Kurulum & Validatör
-  - AI Araçları
-
-### 5. J Info Roles (Etkileşim Merkezi)
-- Özel rol yok - Tüm kullanıcılar katılabilir
-- Sosyal medya etkileşim desteği
-- Kaito, WallChain, Cookie, Zama vb. platform destekleri
-
-### 6. J Alpha Roles (Erken Proje Araştırma)
-- **scout** - Alpha caller'lar, erken proje araştırmacıları
-  - Airdrop Radar
-  - Testnet Tracker
-  - Memecoin Calls
-  - DeFi Signals
-
----
-
-## Total Roles: 10
-
-1. user
-2. admin
-3. super_admin
-4. content_creator
-5. designer
-6. video_editor
-7. requester
-8. learner
-9. mentor
-10. scout
-
----
-
-## Platform Pages & URLs
-
-### 1. PUBLIC PAGES (Giriş Yapmadan Erişilebilir)
-- `/` - Ana sayfa (Landing page)
-- `/login` - Giriş sayfası (Twitter/Farcaster OAuth)
-- `/about` - Hakkımızda
-- `/terms` - Kullanım şartları
-- `/privacy` - Gizlilik politikası
-
-### 2. J CENTER (Kullanıcı Profil Merkezi)
-
-- `/center` - Dashboard/Genel bakış (All authenticated users)
-- `/center/profile` - Profil düzenleme (All authenticated users)
-- `/center/settings` - Ayarlar (All authenticated users)
-- `/center/stats` - İstatistikler (All authenticated users)
-- `/center/activity` - Aktivite geçmişi (All authenticated users)
-
-### 3. J HUB (İçerik Merkezi)
-
-- `/hub` - Hub ana sayfa (All authenticated users)
-- `/hub/content/:id` - İçerik detay sayfası (All authenticated users)
-- `/hub/create` - Yeni içerik oluştur (All authenticated users - content_creator can publish immediately, others draft only)
-- `/hub/my-content` - Benim içeriklerim (All authenticated users)
-
-### 4. J STUDIO (Görsel İçerik Merkezi)
-
-- `/studio` - Studio ana sayfa (All authenticated users)
-- `/studio/create` - Yeni üretim talebi oluştur (All authenticated users)
-- `/studio/request/:id` - Talep detay sayfası (All authenticated users - only designer/video_editor can claim)
-- `/studio/my-requests` - Benim taleplerim (All authenticated users)
-- `/studio/team` - Studio ekibi (All authenticated users)
-
-### 5. J ACADEMY (Eğitim Platformu)
-
-- `/academy` - Academy ana sayfa (All authenticated users)
-- `/academy/courses` - Tüm kurslar (All authenticated users)
-- `/academy/course/:id` - Kurs detay sayfası (All authenticated users)
-- `/academy/my-courses` - Kayıtlı olduğum kurslar (All authenticated users - learner)
-- `/academy/create` - Yeni kurs oluştur (mentor, admin, super_admin only)
-- `/academy/requests` - Eğitim talepleri (All authenticated users - only requester can create request)
-
-### 6. J INFO (Etkileşim Merkezi)
-
-- `/info` - Info ana sayfa (All authenticated users)
-- `/info/submit` - Yeni etkileşim gönderisi ekle (All authenticated users)
-- `/info/my-engagements` - Benim etkileşimlerim (All authenticated users)
-
-### 7. J ALPHA (Erken Proje Araştırma)
-
-- `/alpha` - Alpha ana sayfa (All authenticated users)
-- `/alpha/feed` - Alpha akışı (All authenticated users)
-- `/alpha/post/:id` - Alpha post detay (All authenticated users)
-- `/alpha/submit` - Yeni alpha gönder (scout, admin, super_admin only)
-- `/alpha/my-alphas` - Benim alpha'larım (scout, admin, super_admin only)
-
-### 8. ADMIN PANEL
-
-- `/admin` - Admin dashboard redirect (admin, super_admin only)
-- `/admin/dashboard` - Admin ana dashboard (admin, super_admin only)
-- `/admin/users` - Kullanıcı yönetimi (admin, super_admin only)
-- `/admin/roles` - Rol yönetimi (super_admin only)
-- `/admin/permissions` - İzin yönetimi (super_admin only)
-- `/admin/content` - J Hub içerik moderasyonu (admin, super_admin only)
-- `/admin/courses` - J Academy kurs yönetimi (admin, super_admin only)
-- `/admin/production` - J Studio üretim talepleri yönetimi (admin, super_admin only)
-- `/admin/engagement` - J Info etkileşim yönetimi (admin, super_admin only)
-- `/admin/alpha` - J Alpha post moderasyonu (admin, super_admin only)
-- `/admin/analytics` - Platform analitiği (admin, super_admin only)
-- `/admin/settings` - Site ayarları (super_admin only)
-- `/admin/logs` - Admin log kayıtları (super_admin only)
-
-#### ADMIN - DYNAMIC CONTENT MANAGEMENT (Admin tarafından oluşturulan dinamik içerik tipleri)
-
-- `/admin/hub-content-types` - J Hub içerik tiplerini yönetme (admin, super_admin only)
-- `/admin/studio-request-types` - J Studio talep tiplerini yönetme (admin, super_admin only)
-- `/admin/academy-categories` - J Academy eğitim kategorilerini yönetme (admin, super_admin only)
-- `/admin/info-platforms` - J Info platform listesini yönetme (admin, super_admin only)
-- `/admin/info-engagement-types` - J Info etkileşim tiplerini yönetme (admin, super_admin only)
-- `/admin/alpha-categories` - J Alpha kategorilerini yönetme (admin, super_admin only)
-
-### 9. NOTIFICATIONS & MISC
-
-- `/notifications` - Bildirimler sayfası (All authenticated users)
-
----
-
-## Total Pages: ~46
-
-**Public Pages:** 5
-**J Center Pages:** 5
-**J Hub Pages:** 4
-**J Studio Pages:** 5
-**J Academy Pages:** 6
-**J Info Pages:** 3
-**J Alpha Pages:** 5
-**Admin Pages:** 13
-**Admin Dynamic Management Pages:** 6
-**Misc Pages:** 1
-
----
-
-## Page Form & Input Structures
-
-### 1. PUBLIC PAGES
-
-#### `/` - Ana Sayfa (Landing Page)
-**Access:** Public (Giriş gerekmez)
-
-**Elements:**
-- **BUTTON:** "Giriş Yap" → Redirects to `/login`
-- **BUTTON:** "Hakkımızda" → Redirects to `/about`
-- **STATIC CONTENT:** Platform tanıtımı, özellikler
-- **NO FORMS**
-
-#### `/login` - Giriş Sayfası
-**Access:** Public
-
-**Authentication Methods:**
-- **BUTTON:** "Continue with Twitter" → OAuth redirect to `/api/auth/twitter`
-- **BUTTON:** "Connect Wallet" → Opens RainbowKit modal for wallet connection
-
-**Wallet Authentication Flow:**
-- When wallet connected → Signature request modal appears
-- **MODAL:** Sign message modal
-  - **TEXT (read-only):** Message to sign (includes wallet address + timestamp)
-  - **BUTTON:** "Send request" → Triggers wallet signature
-  - **BUTTON:** "Cancel" → Close modal
-- **SIGNATURE:** User signs message via wallet
-- **API:** POST `/auth/wallet/connect` with signature
-- **TOKENS:** Store accessToken + refreshToken in localStorage
-- **REDIRECT:** After successful auth → `/` (home page)
-
-**NO MANUAL INPUT FIELDS** (OAuth + Wallet signature only)
-
-#### `/about` - Hakkımızda
-**Access:** Public
-
-**Elements:**
-- **STATIC CONTENT:** Platform hakkında bilgi
-- **NO FORMS**
-
-#### `/terms` - Kullanım Şartları
-**Access:** Public
-
-**Elements:**
-- **STATIC CONTENT:** Kullanım koşulları
-- **NO FORMS**
-
-#### `/privacy` - Gizlilik Politikası
-**Access:** Public
-
-**Elements:**
-- **STATIC CONTENT:** Gizlilik bildirimi
-- **NO FORMS**
-
----
-
-### 2. J CENTER (Kullanıcı Profil Merkezi)
-
-#### `/center` - Dashboard/Genel Bakış
-**Access:** All authenticated users
-
-**Display Elements:**
-- **CARD:** Profil özeti (avatar, username, bio)
-- **CARD:** İstatistikler widget (puanlar, rozetler)
-- **CARD:** Son aktiviteler (timeline)
-- **CARD:** Roller ve yetkiler
-- **CARD:** Hızlı aksiyonlar (shortcuts to modules)
-- **NO FORMS** (Display only)
-
-**Quick Actions:**
-- **BUTTON:** "Edit Profile" → `/center/profile`
-- **BUTTON:** "View Stats" → `/center/stats`
-- **BUTTON:** "Settings" → `/center/settings`
-
-#### `/center/profile` - Profil Sayfası
-**Access:** All authenticated users
-
-**Profile Header Section:**
-- **BUTTON (top-right):** Logout button → Clears tokens, disconnects wallet, redirects to `/login`
-- **PROFILE IMAGE (clickable):**
-  - **INPUT (file, hidden):** Image upload (jpg, png, max 5MB)
-  - **ACTION:** Click image → Triggers file input
-  - **API:** POST `/upload/profile-picture` → PUT `/users/profile-picture`
-  - **LOADING STATE:** Spinner overlay during upload
-
-**Edit Mode Toggle:**
-- **BUTTON (icon):** Edit profile icon → Toggles edit mode
-- **BUTTON:** "Save Changes" (visible in edit mode) → Saves profile data
-- **BUTTON:** "Cancel" (visible in edit mode) → Discards changes
-
-**Editable Fields (when in edit mode):**
-- **INPUT (text):** Display Name (max 50 chars)
-- **TEXTAREA:** Bio (max 500 chars, character counter shown)
-
-**Read-Only Display:**
-- **TEXT:** Twitter username (from OAuth, shown as @username)
-- **TEXT:** Wallet address (truncated format: 0x1234...5678)
-- **BADGES:** User roles (displayed as colored pills)
-
-**Social Links Section:**
-- **BUTTON (Twitter):** Link/Unlink Twitter profile
-  - IF not linked → Prompt for username input → POST `/social-links/link`
-  - IF linked → Confirm unlink → DELETE `/social-links/unlink/twitter`
-  - Shows username on hover
-- **BUTTON (LinkedIn):** Link/Unlink LinkedIn
-  - IF not linked → OAuth redirect to `/api/auth/linkedin?token=JWT`
-  - IF linked → Confirm unlink → DELETE `/social-links/unlink/linkedin`
-- **BUTTON (GitHub):** Link/Unlink GitHub
-  - IF not linked → OAuth redirect to `/api/auth/github?token=JWT`
-  - IF linked → Confirm unlink → DELETE `/social-links/unlink/github`
-
-**Stats Overview:**
-- **CARD:** J-Rank Points (display only)
-- **CARD:** Contribution Score (display only)
-
-**Module Activity Stats:**
-- **CARDS (5):** J Hub, J Studio, J Academy, J Alpha, J Info
-  - Display: Module name, count, description
-  - No edit functionality
-
-**Personal Progress Map:**
-- **PROGRESS BARS (5):** One for each module
-  - Visual progress indicator
-  - Percentage based on activity
-  - Display only
-
-**Recent Activity:**
-- **LIST:** Activity timeline
-  - Module, status, description, timestamp
-  - **PAGINATION:** Previous/Next buttons
-  - **SELECT:** Page navigation
-
-**API Calls:**
-- PUT `/users/profile` → Update displayName, bio
-- POST `/upload/profile-picture` → Upload image
-- PUT `/users/profile-picture` → Set new profile image URL
-- POST `/social-links/link` → Link social account
-- DELETE `/social-links/unlink/{platform}` → Unlink social account
-
-**Validation:**
-- Display name: max 50 chars
-- Bio: max 500 chars, real-time character count
-- Profile image: max 5MB, image formats only
-
-#### `/center/settings` - Ayarlar
-**Access:** All authenticated users
-
-**Form Elements:**
-- **SECTION:** Wallet Addresses
-  - **INPUT (text):** Ethereum wallet address (optional, validation: 0x...)
-  - **INPUT (text):** Solana wallet address (optional, validation: base58)
-  - **INPUT (text):** Other chain addresses (optional)
-  - **BUTTON:** "Add Wallet"
-  - **BUTTON:** "Remove Wallet"
-
-- **SECTION:** Whitelist Settings
-  - **INPUT (text):** Discord username (optional)
-  - **INPUT (text):** Telegram username (optional)
-  - **CHECKBOX:** "Include me in whitelist campaigns"
-
-- **SECTION:** Notification Preferences
-  - **CHECKBOX:** Email notifications
-  - **CHECKBOX:** Platform notifications
-  - **CHECKBOX:** Hub content updates
-  - **CHECKBOX:** Academy course updates
-  - **CHECKBOX:** Alpha signals
-
-- **SECTION:** Privacy
-  - **RADIO:** Profile visibility (Public / Private / Friends only)
-  - **CHECKBOX:** "Show my activity on feed"
-
-- **BUTTON:** "Save All Settings"
-- **BUTTON:** "Reset to Defaults"
-
-**Actions:**
-- **UPDATE:** User settings
-- **CREATE:** New wallet address
-- **DELETE:** Wallet address
-
-#### `/center/stats` - İstatistikler
-**Access:** All authenticated users
-
-**Display Elements:**
-- **CHART:** Aktivite grafiği (son 30 gün)
-- **STAT CARD:** Total points earned
-- **STAT CARD:** Content contributions (J Hub)
-- **STAT CARD:** Courses completed (J Academy)
-- **STAT CARD:** Engagement count (J Info)
-- **STAT CARD:** Alpha submissions (J Alpha)
-- **STAT CARD:** Studio requests completed
-- **BADGE DISPLAY:** Earned badges/achievements
-- **LEADERBOARD:** Ranking (optional)
-
-**Filter Elements:**
-- **SELECT:** Time range (7 days, 30 days, 90 days, All time)
-- **SELECT:** Stats type (All, Hub, Academy, Info, Alpha, Studio)
-- **NO EDIT FORMS** (Display only)
-
-#### `/center/activity` - Aktivite Geçmişi
-**Access:** All authenticated users
-
-**Display Elements:**
-- **TIMELINE:** Activity feed (chronological)
-- **ACTIVITY ITEM:** Each activity with timestamp, type, description
-
-**Filter Elements:**
-- **INPUT (search):** Search activities (text)
-- **SELECT:** Activity type (All, Hub, Academy, Info, Alpha, Studio, Profile)
-- **DATE PICKER:** Date range filter (from - to)
-- **BUTTON:** "Clear Filters"
-
-**Pagination:**
-- **BUTTON:** "Load More"
-- **SELECT:** Items per page (10, 25, 50)
-
----
-
-### 3. J HUB (İçerik Merkezi)
-
-#### `/hub` - Hub Ana Sayfa
-**Access:** All authenticated users
-
-**Display Elements:**
-- **GRID/LIST:** Content cards (title, thumbnail, author, views, likes)
-
-**Filter & Search:**
-- **INPUT (search):** Search content (title, tags, author)
-- **SELECT:** Content type (All, Video, Thread, Podcast, Guide, Tutorial)
-- **SELECT:** Category filter (multiple categories)
-- **SELECT:** Difficulty (All, Beginner, Intermediate, Advanced)
-- **SELECT:** Sort by (Newest, Most Viewed, Most Liked, Trending)
-- **DATE PICKER:** Date range filter
-- **BUTTON:** "Clear Filters"
-
-**Actions:**
-- **BUTTON:** "Create Content" → `/hub/create` (visible to all users)
-- **CLICK:** Content card → `/hub/content/:id`
-
-**Pagination:**
-- **PAGINATION:** Page numbers
-- **SELECT:** Items per page (12, 24, 48)
-
-#### `/hub/content/:id` - İçerik Detay Sayfası
-**Access:** All authenticated users
-
-**Display Elements:**
-- **MEDIA PLAYER:** Video/Podcast player (if applicable)
-- **RICH TEXT:** Content body (for threads, guides, tutorials)
-- **INFO:** Title, author, publish date, views, category, difficulty
-- **TAGS:** Content tags (clickable)
-- **AUTHOR CARD:** Author info with follow button
-
-**Interaction Elements:**
-- **BUTTON:** Like/Unlike (heart icon + count)
-- **BUTTON:** Bookmark/Save
-- **BUTTON:** Share (social media share options)
-- **BUTTON:** Report (flag inappropriate content)
-
-**Comments Section:**
-- **TEXTAREA:** Add comment (max 1000 chars)
-- **BUTTON:** "Post Comment"
-- **COMMENT LIST:** Existing comments (nested replies support)
-- **BUTTON (per comment):** Like, Reply, Report
-- **SELECT:** Sort comments (Newest, Oldest, Most Liked)
-
-**Role-Based Actions:**
-- **IF author OR admin/super_admin:**
-  - **BUTTON:** "Edit Content" → Edit mode
-  - **BUTTON:** "Delete Content" → Confirmation modal
-
-#### `/hub/create` - Yeni İçerik Oluştur
-**Access:** All authenticated users
-
-**Role-Based Behavior:**
-- **content_creator** → Can publish immediately
-- **Other roles** → Draft only (pending admin approval)
-
-**Form Elements:**
-- **INPUT (text):** Title (required, max 200 chars)
-- **TEXTAREA:** Description (required, max 2000 chars)
-- **SELECT:** Content type [DYNAMIC - populated from admin-created types via `/admin/hub-content-types`]
-  - Default: Video, Thread, Podcast, Guide, Tutorial
-- **SELECT:** Category (required, dynamic based on platform categories)
-- **SELECT:** Difficulty level (Beginner, Intermediate, Advanced)
-- **INPUT (file):** Thumbnail image (optional, jpg/png, max 2MB)
-- **INPUT (tags):** Tags (comma separated, max 10 tags)
-
-**Conditional Fields (based on content type):**
-- **IF Video:**
-  - **INPUT (url):** Video URL (YouTube, Vimeo, etc.) (required)
-  - **INPUT (number):** Duration (minutes) (optional)
-
-- **IF Podcast:**
-  - **INPUT (url):** Podcast URL (Spotify, Apple, etc.) (required)
-  - **INPUT (number):** Duration (minutes) (optional)
-
-- **IF Thread/Guide/Tutorial:**
-  - **RICH TEXT EDITOR:** Content body (required, min 100 chars)
-    - Formatting: Bold, Italic, Headers, Lists, Links, Code blocks
-    - Image upload support (inline images)
+- Filter by content type (Video, Thread, Podcast, Guide, Tutorial)
+- Filter by category (dropdown, dynamic from admin)
+- Search by title/description
+- Sort by: Latest, Most Viewed, Most Liked
+- Featured content carousel at top
+
+**Content Card:**
+```typescript
+<div className="border rounded-lg overflow-hidden hover:shadow-lg transition-all">
+  {/* Thumbnail */}
+  <div className="aspect-video bg-muted relative">
+    {media && <Image />}
+    <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+      {contentType}
+    </div>
+  </div>
+
+  {/* Content Info */}
+  <div className="p-4">
+    <h3 className="font-semibold line-clamp-2">{title}</h3>
+    <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+
+    {/* Author */}
+    <div className="flex items-center gap-2 mt-3">
+      <Avatar />
+      <span className="text-sm">{author.displayName}</span>
+    </div>
+
+    {/* Stats */}
+    <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+      <span>{viewsCount} views</span>
+      <span>{likesCount} likes</span>
+      <span>{commentsCount} comments</span>
+    </div>
+  </div>
+</div>
+```
+
+**2. Content Detail** - `/hub/content/[id]`
+
+**Layout:**
+- Back button (supports middle-click)
+- Content header (title, author, stats, actions)
+- Content body (type-specific renderer)
+- Comment section
+
+**Content Renderers:**
+- `VideoContent` - Video player with description
+- `ThreadContent` - Twitter-style thread display
+- `PodcastContent` - Audio player with chapters
+- `GuideContent` - Rich text with sections
+- `DefaultContent` - Fallback renderer
 
 **Action Buttons:**
-- **BUTTON:** "Save as Draft" (available to all)
-- **BUTTON:** "Publish" (for content_creator role)
-- **BUTTON:** "Submit for Review" (for other roles)
-- **BUTTON:** "Cancel" → Confirmation if unsaved changes
+```typescript
+<div className="flex items-center gap-4">
+  <button onClick={handleLike}>
+    <Heart fill={isLiked ? "currentColor" : "none"} />
+    <span>{likesCount}</span>
+  </button>
 
-**Validation:**
-- Real-time character count
-- Required field validation
-- URL validation
-- Image size/format validation
+  <button onClick={handleBookmark}>
+    <Bookmark fill={isBookmarked ? "currentColor" : "none"} />
+    <span>{bookmarksCount}</span>
+  </button>
 
-#### `/hub/my-content` - Benim İçeriklerim
-**Access:** All authenticated users
+  <button>
+    <MessageCircle />
+    <span>{commentsCount}</span>
+  </button>
 
-**Display Elements:**
-- **TABS:** Published / Drafts / Pending Review / Rejected
-- **GRID/LIST:** User's content items
+  <button onClick={() => navigator.share({})}>
+    <Share2 />
+  </button>
+</div>
+```
 
-**Filter & Search:**
-- **INPUT (search):** Search my content
-- **SELECT:** Content type filter
-- **SELECT:** Sort by (Newest, Oldest, Most Viewed)
-- **DATE PICKER:** Date range
+**Comment Section:**
+- Twitter-style comment input
+- Comment list with real-time updates
+- Comment item with like, reply, delete (three-dot menu)
+- Click comment to see replies
 
-**Actions (per content):**
-- **BUTTON:** "Edit" → Edit mode
-- **BUTTON:** "Delete" → Confirmation modal
-- **BUTTON:** "View Stats" → Content analytics
-- **BUTTON:** "Duplicate" → Create copy
+**3. Comment Detail** - `/hub/content/[id]/comment/[commentId]`
+
+**Layout:**
+- Back button to content page
+- Parent comment display
+- Reply input
+- Replies list
+
+**Features:**
+- View single comment with all replies
+- Reply to replies (nested conversations)
+- Real-time reply updates via WebSocket
+- Modal warning if comment deleted
+
+**4. Create Content** - `/hub/create`
+
+**Form Fields:**
+```typescript
+interface ContentForm {
+  title: string           // Required, max 200 chars
+  description: string     // Optional, max 500 chars
+  contentType: string     // Dropdown (dynamic from admin)
+  category: string        // Dropdown (dynamic from admin)
+  body: string           // Optional, rich text editor
+  mediaUrls: Array<{     // Multiple file upload
+    type: 'image' | 'video' | 'audio' | 'document'
+    url: string
+    thumbnail?: string
+    duration?: number
+    size?: number
+  }>
+  tags: string[]         // Comma-separated input
+  difficulty: string     // Radio: beginner, intermediate, advanced
+}
+```
+
+**Submit Behavior:**
+- `content_creator` → Status: `published`
+- Others → Status: `draft` (requires admin approval)
+
+**Backend API:**
+```typescript
+POST /api/hub/content
+{
+  title, description, contentType, category, body,
+  mediaUrls, tags, difficulty
+}
+
+// Response
+{
+  success: true,
+  data: content,
+  message: canPublish ? "Content published!" : "Content submitted for review"
+}
+```
+
+#### Real-time Features
+
+**WebSocket Events:**
+```typescript
+// Like update
+socket.on('likeUpdate', (data: { contentId, likesCount, isLiked, userId }) => {
+  // Update like count in UI
+})
+
+// Bookmark update
+socket.on('bookmarkUpdate', (data: { contentId, bookmarksCount, isBookmarked, userId }) => {
+  // Update bookmark count in UI
+})
+
+// New comment
+socket.on('newComment', (comment: Comment) => {
+  // Add comment to list
+})
+
+// Comment deleted
+socket.on('commentDeleted', (data: { commentId, deletedReplies[] }) => {
+  // Remove comment from list
+})
+```
+
+#### Components
+
+**1. CommentItem** - `components/hub/comment-item.tsx`
+
+**Props:**
+```typescript
+interface CommentItemProps {
+  comment: Comment
+  onLike?: (commentId: string) => void
+  isLiked?: boolean
+  contentAuthorId?: string
+  commentDetailUrl?: string  // For middle-click navigation
+  onReplyClick?: (comment: Comment) => void
+}
+```
+
+**Features:**
+- Profile avatar (Link to user profile)
+- Profile name (Link to user profile)
+- Timestamp (Link to comment detail if URL provided)
+- Comment content (Link to comment detail if URL provided)
+- Three-dot menu for delete (author or moderator only)
+- Like and reply buttons
+- "View more" for long comments
+- Outside click detection for dropdown
+
+**2. TwitterReplyInput** - `components/hub/twitter-reply-input.tsx`
+
+**Props:**
+```typescript
+interface TwitterReplyInputProps {
+  value: string
+  onChange: (value: string) => void
+  onSubmit: () => void
+  isSubmitting?: boolean
+  placeholder?: string
+  maxLength?: number
+  autoFocus?: boolean
+  replyingTo?: string | string[]
+  disabled?: boolean  // For deleted comments
+}
+```
+
+**Features:**
+- Auto-resize textarea
+- Emoji picker
+- Bold and italic formatting
+- Character counter
+- Cmd/Ctrl+Enter to submit
+- Disabled state with warning message
 
 ---
 
-### 4. J STUDIO (Görsel İçerik Merkezi)
+### J STUDIO - DESIGN & PRODUCTION
 
-#### `/studio` - Studio Ana Sayfa
-**Access:** All authenticated users
+**Purpose:** Design and video production request system.
 
-**Display Elements:**
-- **TABS:**
-  - "All Requests" (default)
-  - "My Requests" (user's own requests)
-  - "Available Jobs" (for designers/video_editors)
+**Access:** All members can request, `designer` and `video_editor` can claim
 
-**Filter & Search:**
-- **INPUT (search):** Search requests (title, description)
-- **SELECT:** Request type (All, Cover, Logo, Banner, Social Media, Video Edit)
-- **SELECT:** Status (All, Open, In Progress, Completed, Cancelled)
-- **SELECT:** Priority (All, Low, Medium, High, Urgent)
-- **DATE PICKER:** Date range filter
-- **BUTTON:** "Clear Filters"
+#### Pages
 
-**Display Cards (per request):**
-- Title, type, status, priority, requester, deadline
-- **BUTTON:** "View Details" → `/studio/request/:id`
+**1. Studio Home** - `/studio`
+
+**Layout:**
+- Tab navigation: "Browse Requests" | "My Requests" | "My Claims"
+- Request grid
+- Filter by request type
+- Search by title
+
+**Request Card:**
+```typescript
+<div className="border rounded-lg p-6">
+  <div className="flex justify-between items-start">
+    <div>
+      <h3 className="font-semibold">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+    <Badge>{requestType}</Badge>
+  </div>
+
+  <div className="mt-4 flex items-center gap-2">
+    <Avatar />
+    <span className="text-sm">{requester.displayName}</span>
+  </div>
+
+  <div className="mt-4 flex justify-between items-center">
+    <div className="text-sm text-muted-foreground">
+      {deadline && `Deadline: ${formatDate(deadline)}`}
+    </div>
+    {canClaim && (
+      <button className="btn-primary">Claim Request</button>
+    )}
+  </div>
+</div>
+```
+
+**2. Create Request** - `/studio/create`
+
+**Form:**
+```typescript
+interface StudioRequestForm {
+  title: string              // Required
+  description: string        // Required
+  requestType: string        // Dropdown (dynamic from admin)
+  referenceUrls: string[]   // Optional, multiple URL inputs
+  deadline: Date            // Optional, date picker
+  additionalNotes: string   // Optional, textarea
+}
+```
+
+**3. Request Detail** - `/studio/requests/[id]`
+
+**Features:**
+- Request details display
+- Claim button (for designers/video editors)
+- File upload for deliverables
+- Status tracking (pending, claimed, in progress, completed)
+- Chat/comment system for Q&A
+
+---
+
+### J ACADEMY - LEARNING PLATFORM
+
+**Purpose:** Online learning platform with courses and course requests.
+
+**Access:** All members
+**Special Roles:** `mentor` can create courses, `learner` can enroll, `requester` can request courses
+
+#### Pages
+
+**1. Academy Home** - `/academy`
+
+**Layout:**
+- Hero section with search
+- Featured courses carousel
+- Course grid with filters
+- Categories sidebar
+
+**Course Card:**
+```typescript
+<div className="border rounded-lg overflow-hidden hover:shadow-lg transition-all">
+  <div className="aspect-video bg-muted">
+    {thumbnail && <Image />}
+  </div>
+
+  <div className="p-4">
+    <Badge>{category}</Badge>
+    <h3 className="font-semibold mt-2 line-clamp-2">{title}</h3>
+    <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+
+    <div className="flex items-center gap-2 mt-3">
+      <Avatar />
+      <span className="text-sm">{instructor.displayName}</span>
+    </div>
+
+    <div className="flex items-center justify-between mt-4">
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <span>{enrolledCount} students</span>
+        <span>{lessonsCount} lessons</span>
+      </div>
+      <Badge variant={difficulty}>{difficulty}</Badge>
+    </div>
+  </div>
+</div>
+```
+
+**2. Course Detail** - `/academy/courses/[id]`
+
+**Layout:**
+- Course header (title, instructor, enroll button)
+- Course overview tab
+- Curriculum tab (lesson list)
+- Reviews tab
+
+**Enroll Button:**
+- Not enrolled → "Enroll Now"
+- Enrolled → "Continue Learning"
+- Completed → "Review Course"
+
+**3. Course Requests** - `/academy/requests`
+
+**Features:**
+- List of user-requested courses
+- Voting system (upvote/downvote)
+- Sort by votes, date
+- Create new request button
+
+**Request Card:**
+```typescript
+<div className="border rounded-lg p-6">
+  <div className="flex justify-between items-start">
+    <div>
+      <h3 className="font-semibold">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+    <div className="flex flex-col items-center gap-1">
+      <button onClick={handleUpvote}>
+        <ChevronUp className={isUpvoted ? "text-primary" : ""} />
+      </button>
+      <span className="font-semibold">{votes}</span>
+      <button onClick={handleDownvote}>
+        <ChevronDown className={isDownvoted ? "text-primary" : ""} />
+      </button>
+    </div>
+  </div>
+
+  <div className="mt-4 flex items-center gap-2">
+    <Avatar />
+    <span className="text-sm">{requester.displayName}</span>
+  </div>
+</div>
+```
+
+**4. Create Course** - `/academy/create` (mentor only)
+
+**Form:**
+```typescript
+interface CourseForm {
+  title: string
+  description: string
+  category: string        // Dropdown (dynamic from admin)
+  difficulty: string      // Radio: beginner, intermediate, advanced
+  thumbnail: File         // Image upload
+  lessons: Array<{
+    title: string
+    description: string
+    videoUrl: string
+    duration: number
+    order: number
+  }>
+}
+```
+
+---
+
+### J INFO - ENGAGEMENT TRACKING
+
+**Purpose:** Track and manage social media engagements for points and rewards.
+
+**Access:** All members
+
+#### Pages
+
+**1. Info Home** - `/info`
+
+**Layout:**
+- Leaderboard (top engagers)
+- Submit engagement button
+- My engagements list
+- Filter by platform and type
+
+**2. Submit Engagement** - `/info/submit`
+
+**Form:**
+```typescript
+interface EngagementForm {
+  platform: string          // Dropdown (dynamic from admin)
+  engagementType: string   // Dropdown (dynamic from admin)
+  url: string              // Required, proof URL
+  description: string      // Optional
+  screenshot: File         // Optional, proof image
+}
+```
+
+**Platforms (Dynamic):**
+- Twitter/X, Discord, Farcaster, Kaito, WallChain, Cookie, Zama
+
+**Engagement Types (Dynamic):**
+- Tweet, Retweet, Like, Comment, Follow, Join Community, Discord Role
+
+**3. My Engagements** - `/info/my-engagements`
+
+**Features:**
+- List of submitted engagements
+- Status badges (pending, approved, rejected)
+- Points earned
+- Filter by status
+
+---
+
+### J ALPHA - EARLY PROJECT RESEARCH
+
+**Purpose:** Share and discover early-stage project research.
+
+**Access:** All members view, `scout` and `admin` can submit
+
+#### Pages
+
+**1. Alpha Feed** - `/alpha`
+
+**Layout:**
+- Filter by category (dropdown)
+- Sort by: Latest, Most Reactions, Most Comments
+- Alpha post grid
+
+**Alpha Post Card:**
+```typescript
+<div className="border rounded-lg p-6">
+  <div className="flex justify-between items-start">
+    <div>
+      <Badge>{category}</Badge>
+      <h3 className="font-semibold mt-2">{title}</h3>
+      <p className="text-sm text-muted-foreground mt-1">{description}</p>
+    </div>
+  </div>
+
+  {/* Project Info */}
+  <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+    <div>Website: <a href={projectUrl} className="text-primary">{projectUrl}</a></div>
+    <div>Twitter: <a href={twitterUrl} className="text-primary">@{twitterHandle}</a></div>
+  </div>
+
+  {/* Reactions */}
+  <div className="flex items-center gap-4 mt-4">
+    <button onClick={() => handleReaction('fire')}>
+      🔥 {reactions.fire}
+    </button>
+    <button onClick={() => handleReaction('eyes')}>
+      👀 {reactions.eyes}
+    </button>
+    <button onClick={() => handleReaction('warning')}>
+      ⚠️ {reactions.warning}
+    </button>
+    <button onClick={() => handleReaction('checkmark')}>
+      ✅ {reactions.checkmark}
+    </button>
+  </div>
+
+  {/* Voting */}
+  <div className="flex items-center gap-4 mt-4 pt-4 border-t">
+    <button onClick={() => handleVote('bullish')} className={isBullish ? "text-green-500" : ""}>
+      📈 Bullish ({bullishVotes})
+    </button>
+    <button onClick={() => handleVote('bearish')} className={isBearish ? "text-red-500" : ""}>
+      📉 Bearish ({bearishVotes})
+    </button>
+  </div>
+
+  {/* Author & Stats */}
+  <div className="flex items-center justify-between mt-4">
+    <div className="flex items-center gap-2">
+      <Avatar />
+      <span className="text-sm">{scout.displayName}</span>
+    </div>
+    <span className="text-sm text-muted-foreground">{commentsCount} comments</span>
+  </div>
+</div>
+```
+
+**2. Alpha Detail** - `/alpha/post/[id]`
+
+**Layout:**
+- Post header
+- Full research content
+- Reaction buttons
+- Voting buttons
+- Comment section
+
+**3. Submit Alpha** - `/alpha/submit` (scout/admin only)
+
+**Form:**
+```typescript
+interface AlphaPostForm {
+  title: string
+  description: string
+  category: string       // Dropdown (dynamic from admin)
+  projectName: string
+  projectUrl: string
+  twitterHandle: string
+  content: string       // Rich text editor
+  tags: string[]
+}
+```
+
+**4. My Alphas** - `/alpha/my-alphas` (scout only)
+
+**Features:**
+- List of submitted alpha posts
+- Edit/delete options
+- View stats (reactions, votes, comments)
+
+---
+
+### J CENTER - USER PROFILE
+
+**Purpose:** User profile management and achievement tracking.
+
+**Access:** All members (own profile)
+
+#### Pages
+
+**1. My Profile** - `/center/profile`
+
+**Layout:**
+- Profile header (avatar, cover, display name, bio)
+- Edit profile button
+- Badge showcase (pinned badges + badge grid)
+- Activity tabs (Content, Alpha, Engagements)
+
+**Profile Header:**
+```typescript
+<div className="relative">
+  {/* Cover Image */}
+  <div className="h-48 bg-gradient-to-r from-primary/20 to-primary/5">
+    {coverImage && <Image />}
+  </div>
+
+  {/* Profile Info */}
+  <div className="container mx-auto px-4 -mt-16 relative">
+    {/* Avatar */}
+    <div className="w-32 h-32 rounded-lg border-4 border-background overflow-hidden">
+      {profileImage ? <Image /> : <Initials />}
+    </div>
+
+    {/* Name & Bio */}
+    <div className="mt-4">
+      <h1 className="text-2xl font-bold">{displayName}</h1>
+      {twitterUsername && <p className="text-muted-foreground">@{twitterUsername}</p>}
+      {bio && <p className="mt-2">{bio}</p>}
+    </div>
+
+    {/* Social Links */}
+    <div className="flex items-center gap-4 mt-4">
+      {twitterUrl && <a href={twitterUrl}><Twitter /></a>}
+      {linkedInUrl && <a href={linkedInUrl}><Linkedin /></a>}
+      {githubUrl && <a href={githubUrl}><Github /></a>}
+    </div>
+
+    {/* Stats */}
+    <div className="flex items-center gap-6 mt-4 text-sm">
+      <span>{jRankPoints} J-Rank Points</span>
+      <span>{badgesCount} Badges</span>
+      <span>{followersCount} Followers</span>
+    </div>
+  </div>
+</div>
+```
+
+**Badge Showcase:**
+```typescript
+{/* Pinned Badges (max 3) */}
+<div className="mb-6">
+  <h3 className="font-semibold mb-3">Pinned Badges</h3>
+  <PinnedBadges badges={pinnedBadges} />
+</div>
+
+{/* All Badges Grid */}
+<div>
+  <h3 className="font-semibold mb-3">All Badges ({badgesCount})</h3>
+  <BadgeGrid
+    badges={userBadges}
+    onBadgeClick={handleBadgeClick}
+    size="md"
+  />
+</div>
+```
+
+**2. Other User Profile** - `/center/profile/[userId]`
+
+**Features:**
+- View-only profile
+- See pinned badges and public badges
+- View public activity
+- Follow/Unfollow button (future)
+
+**3. Profile Settings** - `/center/settings`
+
+**Tabs:**
+- Profile (edit display name, bio, avatar, cover)
+- Social Links (Twitter, LinkedIn, GitHub, Website)
+- Badges (pin/unpin badges, set badge visibility)
+- Notifications (future)
+- Privacy (future)
+
+**Profile Edit Form:**
+```typescript
+interface ProfileForm {
+  displayName: string
+  bio: string
+  profileImage: File
+  coverImage: File
+  twitterUsername: string
+  twitterUrl: string
+  linkedInUrl: string
+  githubUrl: string
+  websiteUrl: string
+}
+```
+
+---
+
+### ADMIN PANEL
+
+**Purpose:** Platform management and moderation.
+
+**Access:** `admin` and `super_admin` only
+
+#### Navigation Sidebar
+
+**Location:** `/admin/*` routes
+**Component:** `AdminSidebar`
+
+**Menu Items:**
+```typescript
+const menuItems = [
+  { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+
+  // Content Management
+  { name: 'Hub Content', href: '/admin/content', icon: FileText },
+  { name: 'Alpha Posts', href: '/admin/alpha-posts', icon: TrendingUp },
+  { name: 'Studio Requests', href: '/admin/studio-requests', icon: Paintbrush },
+  { name: 'Academy Courses', href: '/admin/courses', icon: GraduationCap },
+  { name: 'Engagements', href: '/admin/engagements', icon: Users },
+
+  // User Management
+  { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Roles', href: '/admin/roles', icon: Shield },
+  { name: 'Permissions', href: '/admin/permissions', icon: Key },
+  { name: 'Badges', href: '/admin/badges', icon: Award },
+
+  // System
+  { name: 'Analytics', href: '/admin/analytics', icon: BarChart },
+  { name: 'Logs', href: '/admin/logs', icon: FileText },
+  { name: 'Settings', href: '/admin/settings', icon: Settings },
+]
+```
+
+#### Pages
+
+**1. Admin Dashboard** - `/admin/dashboard`
+
+**Widgets:**
+- Total users count
+- Active users (last 30 days)
+- Total content count (Hub, Alpha, Studio, Academy)
+- Pending approvals count
+- Recent activity feed
+
+**2. Hub Content Management** - `/admin/content`
+
+**Features:**
+- List all Hub content (published, draft, rejected)
+- Filter by status, type, category
+- Search by title/author
+- Approve/Reject drafts
+- Edit/Delete content
+- Create content (as admin)
 
 **Actions:**
-- **BUTTON:** "Create New Request" → `/studio/create`
+- Approve → Status: `published`
+- Reject → Status: `rejected`
+- Delete → Permanently remove
+- Edit → Open edit modal
 
-**Role-Based Display:**
-- **IF designer OR video_editor:**
-  - Show "Available Jobs" tab
-  - Show "Claim Request" button on open requests
+**3. Alpha Posts Management** - `/admin/alpha-posts`
 
-#### `/studio/create` - Yeni Üretim Talebi Oluştur
-**Access:** All authenticated users
+**Features:**
+- List all alpha posts
+- Filter by category, author
+- Edit/Delete posts
+- View reactions and votes
 
-**Form Elements:**
-- **INPUT (text):** Request title (required, max 150 chars)
-- **TEXTAREA:** Description (required, max 2000 chars)
-- **SELECT:** Request type [DYNAMIC - populated from admin-created types via `/admin/studio-request-types`] (required)
-  - Default: Cover Design, Logo Design, Banner Design, Social Media Graphics, Video Editing, Infographic Design, Animation, Other
-- **SELECT:** Priority (Low, Medium, High, Urgent)
-- **DATE PICKER:** Deadline (required, must be future date)
-- **INPUT (file):** Reference files/images (optional, multiple files, max 10MB total)
-  - Accepted: jpg, png, pdf, ai, psd, mp4, mov
-- **TEXTAREA:** Technical requirements (optional, max 1000 chars)
-  - Dimensions, format, color scheme, etc.
-- **INPUT (url):** Reference URLs (optional, comma separated)
-- **CHECKBOX:** "I need this for a specific project"
-  - **IF checked:** **INPUT (text):** Project name
+**4. Studio Requests Management** - `/admin/studio-requests`
 
-**Action Buttons:**
-- **BUTTON:** "Submit Request"
-- **BUTTON:** "Save as Draft"
-- **BUTTON:** "Cancel"
+**Features:**
+- View all requests
+- Filter by type, status
+- Assign to designers/editors
+- Track progress
 
-**Validation:**
-- Required fields
-- File size/type validation
-- Date validation (deadline > today)
+**5. Academy Courses Management** - `/admin/courses`
 
-#### `/studio/request/:id` - Talep Detay Sayfası
-**Access:** All authenticated users (view), role-based actions
+**Features:**
+- List all courses
+- Approve/Reject course submissions
+- Edit/Delete courses
+- View enrollment stats
 
-**Display Elements:**
-- **INFO SECTION:** Title, type, status, priority, deadline
-- **REQUESTER INFO:** Avatar, name, contact
-- **DESCRIPTION:** Full request description
-- **TECHNICAL REQUIREMENTS:** Specifications
-- **REFERENCE FILES:** Download links
-- **REFERENCE URLS:** Clickable links
-- **STATUS TIMELINE:** Request history (created, claimed, submitted, completed)
+**6. Engagement Management** - `/admin/engagements`
 
-**Comment/Discussion Section:**
-- **TEXTAREA:** Add comment/question
-- **BUTTON:** "Post Comment"
-- **COMMENT LIST:** Discussion thread
-
-**Role-Based Actions:**
-
-**IF Requester (owner):**
-- **BUTTON:** "Edit Request" (only if status = Open)
-- **BUTTON:** "Cancel Request" → Confirmation modal
-- **BUTTON:** "Mark as Completed" (if status = Submitted)
-- **BUTTON:** "Request Revision" (if status = Submitted)
-
-**IF designer OR video_editor (not claimed):**
-- **BUTTON:** "Claim This Request" (if status = Open)
-
-**IF designer OR video_editor (claimed by user):**
-- **INPUT (file):** Upload deliverable files (multiple, max 50MB)
-- **TEXTAREA:** Delivery notes
-- **BUTTON:** "Submit Work"
-- **BUTTON:** "Unclaim Request" (if status = In Progress)
-
-**IF admin OR super_admin:**
-- **BUTTON:** "Reassign Request" → Modal with user selector
-- **BUTTON:** "Change Priority"
-- **BUTTON:** "Delete Request"
-
-#### `/studio/my-requests` - Benim Taleplerim
-**Access:** All authenticated users
-
-**Display Elements:**
-- **TABS:**
-  - "Requests I Made" (as requester)
-  - "Requests I Claimed" (as designer/editor)
-
-**Filter & Search:**
-- **INPUT (search):** Search
-- **SELECT:** Status filter
-- **SELECT:** Type filter
-- **DATE PICKER:** Date range
-
-**Actions (per request):**
-- **BUTTON:** "View Details"
-- **BUTTON:** "Edit" (if owner and status = Open)
-- **BUTTON:** "Cancel" (if owner)
-
-#### `/studio/team` - Studio Ekibi
-**Access:** All authenticated users
-
-**Display Elements:**
-- **TABS:**
-  - "Designers"
-  - "Video Editors"
-
-**Team Member Cards:**
-- Avatar, name, specialization, completed projects count
-- **BUTTON:** "View Profile"
-- **BADGE:** Top contributor (if applicable)
-
-**Filter:**
-- **INPUT (search):** Search team members
-- **SELECT:** Specialization filter
-- **SELECT:** Sort by (Name, Projects Completed, Rating)
-
-**Stats:**
-- **STAT CARD:** Total designers
-- **STAT CARD:** Total video editors
-- **STAT CARD:** Total projects completed
-
----
-
-### 5. J ACADEMY (Eğitim Platformu)
-
-#### `/academy` - Academy Ana Sayfa
-**Access:** All authenticated users
-
-**Display Elements:**
-- **HERO SECTION:** Featured courses (slider/carousel)
-- **COURSE GRID:** All available courses
-- **STATS:** Total courses, total students, total mentors
-
-**Filter & Search:**
-- **INPUT (search):** Search courses (title, description, mentor)
-- **SELECT:** Category (All, Photoshop & Design, Video Edit, Crypto Twitter, Web3, Node Setup, AI Tools)
-- **SELECT:** Difficulty (All, Beginner, Intermediate, Advanced)
-- **SELECT:** Format (All, Online, Offline, Hybrid)
-- **SELECT:** Status (All, Upcoming, Ongoing, Completed)
-- **CHECKBOX:** "Free courses only"
-- **BUTTON:** "Clear Filters"
+**Features:**
+- List all submitted engagements
+- Filter by platform, type, status
+- Approve/Reject engagements
+- Award points
+- View proof screenshots
 
 **Actions:**
-- **BUTTON:** "Browse All Courses" → `/academy/courses`
-- **BUTTON:** "My Courses" → `/academy/my-courses`
-- **BUTTON:** "Request a Course" → `/academy/requests` (for requesters)
-- **BUTTON:** "Create Course" → `/academy/create` (for mentors)
-
-#### `/academy/courses` - Tüm Kurslar
-**Access:** All authenticated users
-
-**Display Elements:**
-- **GRID:** Course cards (thumbnail, title, mentor, duration, price, rating, student count)
-
-**Filter & Search:**
-(Same as `/academy` main page)
-
-**Sort Options:**
-- **SELECT:** Sort by (Newest, Most Popular, Highest Rated, Price Low-High, Price High-Low)
-
-**Pagination:**
-- **PAGINATION:** Page numbers
-- **SELECT:** Courses per page (12, 24, 48)
-
-**Actions (per course):**
-- **CLICK:** Course card → `/academy/course/:id`
-
-#### `/academy/course/:id` - Kurs Detay Sayfası
-**Access:** All authenticated users
-
-**Display Elements:**
-- **HEADER:** Course title, thumbnail/cover image
-- **INFO:** Category, difficulty, format, duration, price
-- **MENTOR CARD:** Avatar, name, bio, courses taught
-- **TABS:**
-  - **Overview:** Course description, what you'll learn, requirements
-  - **Curriculum:** Lesson/module list with durations
-  - **Reviews:** Student reviews and ratings
-  - **Announcements:** Course updates from mentor
-
-**Enrollment Section:**
-- **IF not enrolled:**
-  - **BUTTON:** "Enroll Now" (if free) → Immediate enrollment
-  - **BUTTON:** "Purchase Course" (if paid) → Payment modal
-  - **DISPLAY:** Price, discount (if any)
-
-- **IF enrolled:**
-  - **BUTTON:** "Continue Learning" → Course player/materials
-  - **PROGRESS BAR:** Course completion percentage
-  - **BUTTON:** "Download Certificate" (if completed)
-
-**Review Section (if enrolled):**
-- **RATING:** Star rating (1-5 stars)
-- **TEXTAREA:** Review text (max 1000 chars)
-- **BUTTON:** "Submit Review"
-
-**Role-Based Actions:**
-
-**IF mentor (owner):**
-- **BUTTON:** "Edit Course" → Edit mode
-- **BUTTON:** "Manage Students" → Student list
-- **BUTTON:** "Post Announcement"
-- **BUTTON:** "Delete Course" → Confirmation
-
-**IF admin OR super_admin:**
-- **BUTTON:** "Approve/Reject Course"
-- **BUTTON:** "Feature Course" → Add to homepage
-- **BUTTON:** "Archive Course"
-
-#### `/academy/my-courses` - Kayıtlı Olduğum Kurslar
-**Access:** All authenticated users (learner role)
-
-**Display Elements:**
-- **TABS:**
-  - "In Progress" (enrolled, not completed)
-  - "Completed" (finished courses)
-  - "Wishlist" (saved for later)
-
-**Course Cards:**
-- Thumbnail, title, mentor, progress bar, last accessed date
-- **BUTTON:** "Continue" → Course player
-- **BUTTON:** "View Certificate" (if completed)
-- **BUTTON:** "Remove from List"
-
-**Filter & Sort:**
-- **INPUT (search):** Search my courses
-- **SELECT:** Sort by (Recently Accessed, Progress, Enrollment Date)
-
-#### `/academy/create` - Yeni Kurs Oluştur
-**Access:** mentor role only
-
-**Form Elements:**
-
-**SECTION:** Basic Information
-- **INPUT (text):** Course title (required, max 150 chars)
-- **TEXTAREA:** Short description (required, max 500 chars)
-- **RICH TEXT EDITOR:** Full description (required, min 200 chars)
-- **INPUT (file):** Course thumbnail/cover (required, jpg/png, max 2MB)
-- **INPUT (file):** Course intro video (optional, mp4, max 100MB)
-
-**SECTION:** Course Details
-- **SELECT:** Category [DYNAMIC - populated from admin-created categories via `/admin/academy-categories`] (required)
-  - Default: Photoshop & Tasarım, Video Edit, Kripto Twitter & Kişisel Marka, Web3 Araştırma & DeFi, Node Kurulum & Validatör, AI Araçları
-- **SELECT:** Difficulty level (Beginner, Intermediate, Advanced)
-- **SELECT:** Format (Online, Offline, Hybrid)
-- **INPUT (number):** Total duration (hours) (required)
-- **INPUT (text):** Language (default: TR)
-- **INPUT (number):** Max students (optional, 0 = unlimited)
-
-**SECTION:** Pricing
-- **RADIO:** Pricing type (Free / Paid)
-- **IF Paid:**
-  - **INPUT (number):** Price (required, min: 0)
-  - **INPUT (number):** Discount percentage (optional, 0-100)
-
-**SECTION:** Curriculum Builder
-- **BUTTON:** "Add Module/Section"
-- **PER MODULE:**
-  - **INPUT (text):** Module title
-  - **BUTTON:** "Add Lesson"
-  - **PER LESSON:**
-    - **INPUT (text):** Lesson title
-    - **INPUT (number):** Duration (minutes)
-    - **SELECT:** Type (Video, Reading, Quiz, Assignment)
-    - **INPUT (file/url):** Content upload/link
-    - **CHECKBOX:** "Preview lesson" (free preview)
-  - **DRAG & DROP:** Reorder lessons
-- **DRAG & DROP:** Reorder modules
-
-**SECTION:** Requirements & Learning Outcomes
-- **TEXTAREA:** Prerequisites (max 1000 chars)
-- **TEXTAREA:** What students will learn (bulleted list, max 2000 chars)
-- **TEXTAREA:** Who this course is for (max 1000 chars)
-
-**SECTION:** Schedule (for live/offline courses)
-- **DATE PICKER:** Start date
-- **DATE PICKER:** End date
-- **TIME PICKER:** Class times (if applicable)
-- **INPUT (text):** Location (for offline courses)
-
-**Action Buttons:**
-- **BUTTON:** "Save as Draft"
-- **BUTTON:** "Submit for Review" (admin approval required)
-- **BUTTON:** "Publish" (if mentor has permission)
-- **BUTTON:** "Cancel"
-
-**Validation:**
-- Required field checks
-- Curriculum must have at least 1 module and 3 lessons
-- File size/type validation
-- Date validation (start < end)
-
-#### `/academy/requests` - Eğitim Talepleri
-**Access:** All authenticated users
-
-**Role-Based Views:**
-
-**FOR requesters:**
-- **BUTTON:** "Create New Request" → Request form modal
-
-**Request Form (requester role):**
-- **INPUT (text):** Requested course topic (required, max 150 chars)
-- **TEXTAREA:** Why this course is needed (required, max 1000 chars)
-- **SELECT:** Category (same as course categories)
-- **SELECT:** Preferred format (Online, Offline, Hybrid, No Preference)
-- **INPUT (number):** Estimated interested members (optional)
-- **BUTTON:** "Submit Request"
-
-**Display Elements:**
-- **LIST:** Course requests (sorted by votes)
-- **PER REQUEST:**
-  - Title, description, category, requester, vote count, status
-  - **BUTTON:** "Upvote" (all users can vote)
-  - **BUTTON:** "Comment" → Discussion thread
-  - **IF requester (owner):**
-    - **BUTTON:** "Edit Request"
-    - **BUTTON:** "Delete Request"
-  - **IF mentor:**
-    - **BUTTON:** "I can teach this" → Express interest
-  - **IF admin:**
-    - **SELECT:** Change status (Pending, Approved, In Development, Fulfilled, Rejected)
-
-**Filter & Sort:**
-- **INPUT (search):** Search requests
-- **SELECT:** Status filter
-- **SELECT:** Category filter
-- **SELECT:** Sort by (Most Voted, Newest, Most Discussed)
-
----
-
-### 6. J INFO (Etkileşim Merkezi)
-
-#### `/info` - Info Ana Sayfa
-**Access:** All authenticated users
-
-**Display Elements:**
-- **HERO SECTION:** Active campaigns banner
-- **CAMPAIGN CARDS:** Current engagement opportunities
-  - Platform name (Kaito, WallChain, Cookie, Zama, etc.)
-  - Task description
-  - Points/rewards
-  - Deadline
-  - **BUTTON:** "Participate" → Task details
-
-**Stats Dashboard:**
-- **STAT CARD:** Total engagements by user
-- **STAT CARD:** Points earned
-- **STAT CARD:** Active campaigns
-- **STAT CARD:** Leaderboard rank
-
-**Recent Engagements:**
-- **LIST:** User's recent submissions (last 10)
-- Status badges (Pending, Approved, Rejected)
-
-**Actions:**
-- **BUTTON:** "Submit Engagement" → `/info/submit`
-- **BUTTON:** "My Engagements" → `/info/my-engagements`
-
-#### `/info/submit` - Yeni Etkileşim Gönderisi Ekle
-**Access:** All authenticated users
-
-**Form Elements:**
-- **SELECT:** Platform [DYNAMIC - populated from admin-created platforms via `/admin/info-platforms`] (required)
-  - Default: Kaito, WallChain, Cookie, Zama, Twitter/X General, Farcaster, Discord, Other
-
-- **SELECT:** Engagement type [DYNAMIC - populated from admin-created types via `/admin/info-engagement-types`] (required)
-  - Default: Tweet/Post, Retweet/Recast, Like/React, Comment/Reply, Follow, Join Community, Discord Role, Other
-
-- **INPUT (url):** Proof URL (required)
-  - Tweet URL, post link, screenshot link, etc.
-  - Validation: Must be valid URL
-
-- **INPUT (text):** Campaign/Task reference (optional)
-  - If submitting for specific campaign
-
-- **TEXTAREA:** Additional notes (optional, max 500 chars)
-
-- **INPUT (file):** Screenshot proof (optional but recommended, jpg/png, max 5MB)
-
-**Action Buttons:**
-- **BUTTON:** "Submit for Review"
-- **BUTTON:** "Cancel"
-
-**Validation:**
-- Required fields
-- URL format validation
-- File size/type check
-- Duplicate submission check (same URL)
-
-#### `/info/my-engagements` - Benim Etkileşimlerim
-**Access:** All authenticated users
-
-**Display Elements:**
-- **TABS:**
-  - "All" (all submissions)
-  - "Pending" (awaiting review)
-  - "Approved" (accepted)
-  - "Rejected" (declined)
-
-**Engagement List:**
-- **TABLE/CARDS:** Submission history
-  - Columns: Platform, Type, Submitted Date, Status, Points Earned, Proof Link
-  - **BUTTON (per row):** "View Details" → Modal with full info
-  - **IF Rejected:** Show rejection reason
-
-**Filter & Search:**
-- **INPUT (search):** Search submissions
-- **SELECT:** Platform filter
-- **SELECT:** Type filter
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Sort Options:**
-- **SELECT:** Sort by (Newest, Oldest, Points High-Low, Status)
-
-**Stats Summary:**
-- **STAT:** Total submissions
-- **STAT:** Approval rate (%)
-- **STAT:** Total points earned
-- **STAT:** Current rank
-
-**Export:**
-- **BUTTON:** "Export to CSV" (download submission history)
-
----
-
-### 7. J ALPHA (Erken Proje Araştırma)
-
-#### `/alpha` - Alpha Ana Sayfa
-**Access:** All authenticated users
-
-**Display Elements:**
-- **HERO:** Latest alpha highlights (featured posts)
-- **TABS:**
-  - "All Alphas"
-  - "Airdrop Radar"
-  - "Testnet Tracker"
-  - "Memecoin Calls"
-  - "DeFi Signals"
-
-**Quick Stats:**
-- **STAT:** Total alpha posts (last 7 days)
-- **STAT:** Active projects tracked
-- **STAT:** Success rate (%)
-
-**Actions:**
-- **BUTTON:** "View Feed" → `/alpha/feed`
-- **BUTTON:** "Submit Alpha" → `/alpha/submit` (scout role)
-- **BUTTON:** "My Alphas" → `/alpha/my-alphas`
-
-#### `/alpha/feed` - Alpha Akışı
-**Access:** All authenticated users
-
-**Display Elements:**
-- **FEED:** Alpha post cards (reverse chronological)
-- **PER POST:**
-  - Title, category badge, project name, scout avatar/name
-  - Description preview (truncated)
-  - Tags, timestamp, view count, reaction count
-  - **BUTTON:** "Read More" → `/alpha/post/:id`
-  - **BUTTON:** Reactions (🔥 Fire, 👀 Eyes, ⚠️ Warning, ✅ Verified)
-  - **BUTTON:** Bookmark
-
-**Filter & Search:**
-- **INPUT (search):** Search alphas (title, project, tags)
-- **SELECT:** Category (All, Airdrop, Testnet, Memecoin, DeFi)
-- **SELECT:** Risk level (All, Low, Medium, High)
-- **SELECT:** Status (All, Active, Completed, Dead)
-- **CHECKBOX:** "Verified only" (admin/scout verified)
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Sort Options:**
-- **SELECT:** Sort by (Newest, Most Viewed, Most Reactions, Trending)
-
-**Pagination:**
-- **INFINITE SCROLL** or **PAGINATION**
-
-#### `/alpha/post/:id` - Alpha Post Detay
-**Access:** All authenticated users
-
-**Display Elements:**
-- **HEADER:** Title, category badge, status badge
-- **PROJECT INFO:**
-  - Project name, website, socials (Twitter, Discord, etc.)
-  - Chain/blockchain
-  - Launch date (if applicable)
-- **RICH TEXT CONTENT:** Full alpha description
-  - Research details
-  - Steps to participate
-  - Requirements
-  - Potential rewards
-  - Risk assessment
-- **TAGS:** Clickable tags
-- **SCOUT INFO:** Author card (avatar, name, reputation, verified badge)
-- **METADATA:** Posted date, last updated, views, reactions
-
-**Interaction Elements:**
-- **REACTIONS:** 🔥👀⚠️✅ (click to react, see count)
-- **BUTTON:** Bookmark/Save
-- **BUTTON:** Share (Twitter, copy link)
-- **BUTTON:** Report (flag inappropriate/scam)
-
-**Updates Section:**
-- **LIST:** Chronological updates from scout
-- **IF post owner (scout):**
-  - **TEXTAREA:** Add update
-  - **BUTTON:** "Post Update"
-
-**Discussion/Comments:**
-- **TEXTAREA:** Add comment (max 1000 chars)
-- **BUTTON:** "Post Comment"
-- **COMMENT LIST:** Nested comments/replies
-- **BUTTON (per comment):** Like, Reply, Report
-
-**Role-Based Actions:**
-
-**IF scout (owner):**
-- **BUTTON:** "Edit Post" → Edit mode
-- **SELECT:** Update status (Active, Completed, Dead)
-- **BUTTON:** "Delete Post" → Confirmation
-
-**IF admin OR super_admin:**
-- **BUTTON:** "Verify Post" → Add verified badge
-- **BUTTON:** "Feature Post" → Pin to top
-- **BUTTON:** "Remove Post"
-
-#### `/alpha/submit` - Yeni Alpha Gönder
-**Access:** scout role only
-
-**Form Elements:**
-
-**SECTION:** Project Information
-- **INPUT (text):** Alpha title (required, max 150 chars)
-- **INPUT (text):** Project name (required, max 100 chars)
-- **SELECT:** Category [DYNAMIC - populated from admin-created categories via `/admin/alpha-categories`] (required)
-  - Default: Airdrop Radar, Testnet Tracker, Memecoin Call, DeFi Signal
-- **SELECT:** Blockchain/Chain (required)
-  - Ethereum, Solana, Arbitrum, Base, etc.
-- **INPUT (url):** Project website (optional)
-- **INPUT (url):** Twitter/X URL (optional)
-- **INPUT (url):** Discord invite (optional)
-- **INPUT (url):** Documentation URL (optional)
-
-**SECTION:** Alpha Details
-- **RICH TEXT EDITOR:** Full description (required, min 200 chars)
-  - What is the project?
-  - How to participate?
-  - Requirements (wallet, Discord, Twitter, etc.)
-  - Potential rewards
-  - Deadlines/timeline
-- **SELECT:** Risk level (Low, Medium, High) (required)
-- **DATE PICKER:** Deadline (optional)
-- **INPUT (tags):** Tags (comma separated, max 10)
-
-**SECTION:** Verification
-- **CHECKBOX:** "I have verified this information"
-- **CHECKBOX:** "I am not affiliated with this project" (anti-shill)
-- **TEXTAREA:** Verification notes (optional, for transparency)
-
-**Action Buttons:**
-- **BUTTON:** "Submit Alpha" (pending admin review)
-- **BUTTON:** "Save as Draft"
-- **BUTTON:** "Cancel"
-
-**Validation:**
-- Required field checks
-- URL format validation
-- Minimum content length
-- Tag limit enforcement
-
-#### `/alpha/my-alphas` - Benim Alpha'larım
-**Access:** scout role only
-
-**Display Elements:**
-- **TABS:**
-  - "Published" (approved alphas)
-  - "Drafts" (unpublished)
-  - "Pending Review" (awaiting approval)
-  - "Rejected" (declined by admin)
-
-**Alpha List:**
-- **TABLE/CARDS:** User's alpha submissions
-  - Title, category, status, views, reactions, posted date
-  - **BUTTON:** "View" → `/alpha/post/:id`
-  - **BUTTON:** "Edit" (if draft or owner)
-  - **BUTTON:** "Delete" → Confirmation
-  - **IF Rejected:** Show rejection reason
-
-**Filter & Sort:**
-- **INPUT (search):** Search my alphas
-- **SELECT:** Category filter
-- **SELECT:** Status filter
-- **DATE PICKER:** Date range
-- **SELECT:** Sort by (Newest, Most Viewed, Most Reactions)
-
-**Stats Summary:**
-- **STAT:** Total alphas posted
-- **STAT:** Total views
-- **STAT:** Total reactions
-- **STAT:** Success rate (active/completed vs dead)
-
----
-
-### 8. ADMIN PANEL
-
-#### `/admin/dashboard` - Admin Ana Dashboard
-**Access:** admin & super_admin only
-
-**Display Elements:**
-
-**Stats Overview:**
-- **STAT CARD:** Total users
-- **STAT CARD:** New users (last 7 days)
-- **STAT CARD:** Total content (Hub)
-- **STAT CARD:** Pending approvals (all modules)
-- **STAT CARD:** Active courses
-- **STAT CARD:** Studio requests (open)
-- **STAT CARD:** Alpha posts (last 7 days)
-- **STAT CARD:** Engagement submissions (pending)
+- Approve → Status: `approved`, award points
+- Reject → Status: `rejected`, reason modal
+
+**7. User Management** - `/admin/users`
+
+**Features:**
+- List all users
+- Search by name, email, wallet address
+- Filter by role
+- View user details
+- Assign/Remove roles
+- Ban/Unban users
+
+**User Actions:**
+- Edit Roles → Multi-select modal
+- View Profile → Link to user profile
+- Ban User → Disable account
+- Reset Password → Send reset email (future)
+
+**8. Role Management** - `/admin/roles`
+
+**Features:**
+- List all 10 roles
+- View role permissions
+- Edit role permissions (super_admin only)
+- Assign roles to users
+
+**Role Card:**
+```typescript
+<div className="border rounded-lg p-6">
+  <div className="flex justify-between items-start">
+    <div>
+      <h3 className="font-semibold">{role.name}</h3>
+      <p className="text-sm text-muted-foreground">{role.description}</p>
+    </div>
+    <Badge>{userCount} users</Badge>
+  </div>
+
+  <div className="mt-4">
+    <h4 className="text-sm font-semibold mb-2">Permissions:</h4>
+    <div className="flex flex-wrap gap-2">
+      {permissions.map(perm => (
+        <Badge key={perm} variant="secondary">{perm}</Badge>
+      ))}
+    </div>
+  </div>
+
+  {isSuperAdmin && (
+    <button className="mt-4 text-sm text-primary">Edit Role</button>
+  )}
+</div>
+```
+
+**9. Permissions Management** - `/admin/permissions`
+
+**Features:**
+- View all permissions
+- Create custom permissions (super_admin only)
+- Assign permissions to roles
+
+**Permission List:**
+```typescript
+const defaultPermissions = [
+  'canModerateContent',
+  'canManageUsers',
+  'canManageRoles',
+  'canViewAnalytics',
+  'canManageSettings',
+  'canDeleteComments',
+  'canBanUsers',
+]
+```
+
+**10. Badge Management** - `/admin/badges`
+
+**Features:**
+- View all 88 badges
+- Filter by category, rarity, tier
+- Award badges manually
+- View badge stats (how many users earned)
+
+**11. Analytics** - `/admin/analytics`
 
 **Charts:**
-- **LINE CHART:** User growth (last 30 days)
-- **BAR CHART:** Content by module
-- **PIE CHART:** User role distribution
-
-**Recent Activity Feed:**
-- **LIST:** Latest platform activities (last 20)
-  - User registrations
-  - Content publications
-  - Course enrollments
-  - etc.
-
-**Quick Actions:**
-- **BUTTON:** "Manage Users" → `/admin/users`
-- **BUTTON:** "Moderate Content" → `/admin/content`
-- **BUTTON:** "View Reports" → `/admin/analytics`
-
-**NO FORMS** (Dashboard display only)
-
-#### `/admin/users` - Kullanıcı Yönetimi
-**Access:** admin & super_admin only
-
-**Display Elements:**
-- **TABLE:** User list
-  - Columns: Avatar, Username, Email/Social, Roles, Status, Joined Date, Last Active, Actions
-
-**Filter & Search:**
-- **INPUT (search):** Search users (username, email, Twitter, Farcaster)
-- **SELECT:** Role filter (All, User, Content Creator, Designer, etc.)
-- **SELECT:** Status filter (All, Active, Suspended, Banned)
-- **DATE PICKER:** Joined date range
-- **BUTTON:** "Clear Filters"
-
-**Sort Options:**
-- **SELECT:** Sort by (Newest, Username A-Z, Last Active, Role)
-
-**Actions (per user):**
-- **BUTTON:** "View Profile" → User detail modal
-- **BUTTON:** "Edit Roles" → Role assignment modal
-- **BUTTON:** "Suspend/Activate" → Toggle user status
-- **BUTTON (super_admin only):** "Delete User" → Confirmation
-
-**Bulk Actions:**
-- **CHECKBOX:** Select multiple users
-- **SELECT:** Bulk action (Assign Role, Suspend, Export)
-- **BUTTON:** "Apply"
-
-**Create User (super_admin only):**
-- **BUTTON:** "Add User Manually" → User creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Username
-  - **INPUT (email):** Email
-  - **SELECT:** Initial role
-  - **BUTTON:** "Create"
-
-**Export:**
-- **BUTTON:** "Export User List" → CSV download
-
-#### `/admin/roles` - Rol Yönetimi
-**Access:** super_admin only
-
-**Display Elements:**
-- **TABLE:** Role list
-  - Columns: Role Name, Description, User Count, Permissions, Actions
-
-**Actions (per role):**
-- **BUTTON:** "View Details" → Role detail modal
-- **BUTTON:** "Edit Permissions" → Permission editor
-- **BUTTON (super_admin only):** "Delete Role" → Confirmation (if no users)
-
-**Create Role:**
-- **BUTTON:** "Create New Role" → Role creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Role name (required, unique)
-  - **INPUT (text):** Role key (required, unique, lowercase_underscore)
-  - **TEXTAREA:** Description (optional)
-  - **CHECKBOX GROUP:** Permissions (select from available permissions)
-  - **BUTTON:** "Create Role"
-
-**Permission Editor Modal:**
-- **CHECKBOX GROUP:** All available permissions organized by module
-  - J Hub: create_content, edit_own_content, delete_own_content, publish_immediately, etc.
-  - J Studio: create_request, claim_request, submit_work, etc.
-  - J Academy: create_course, enroll_course, issue_certificate, etc.
-  - J Info: submit_engagement, approve_engagement, etc.
-  - J Alpha: submit_alpha, verify_alpha, feature_alpha, etc.
-  - Admin: manage_users, manage_roles, view_analytics, etc.
-- **BUTTON:** "Save Permissions"
-- **BUTTON:** "Cancel"
-
-#### `/admin/permissions` - İzin Yönetimi
-**Access:** super_admin only
-
-**Display Elements:**
-- **TABLE:** Permission list
-  - Columns: Permission Name, Key, Module, Description, Assigned Roles, Actions
-
-**Filter:**
-- **SELECT:** Module filter (All, Hub, Studio, Academy, Info, Alpha, Admin)
-- **INPUT (search):** Search permissions
-
-**Actions (per permission):**
-- **BUTTON:** "Edit" → Edit permission modal
-- **BUTTON:** "View Roles" → List of roles with this permission
-
-**Create Permission:**
-- **BUTTON:** "Create New Permission" → Permission creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Permission name (required)
-  - **INPUT (text):** Permission key (required, unique, lowercase_underscore)
-  - **SELECT:** Module (required)
-  - **TEXTAREA:** Description (required)
-  - **BUTTON:** "Create Permission"
-
-#### `/admin/content` - J Hub İçerik Moderasyonu
-**Access:** admin & super_admin
-
-**Display Elements:**
-- **TABS:**
-  - "Pending Review" (awaiting approval)
-  - "Published" (approved content)
-  - "Rejected" (declined content)
-  - "Reported" (flagged by users)
-
-**Table View:**
-- **TABLE:** Content list
-  - Columns: Thumbnail, Title, Author, Type, Category, Submitted Date, Status, Actions
-
-**Filter & Search:**
-- **INPUT (search):** Search content (title, author, tags)
-- **SELECT:** Content type filter
-- **SELECT:** Category filter
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Actions (per content):**
-- **BUTTON:** "View" → Content preview modal
-- **BUTTON:** "Approve" → Publish content (if pending)
-- **BUTTON:** "Reject" → Rejection modal (requires reason)
-- **BUTTON:** "Edit" → Edit content
-- **BUTTON:** "Delete" → Confirmation modal
-- **BUTTON:** "Feature" → Add to featured/homepage
-
-**Rejection Modal:**
-- **TEXTAREA:** Rejection reason (required, will be sent to author)
-- **CHECKBOX:** "Notify author via email"
-- **BUTTON:** "Confirm Rejection"
-
-**Bulk Actions:**
-- **CHECKBOX:** Select multiple content items
-- **SELECT:** Bulk action (Approve, Reject, Delete, Feature)
-- **BUTTON:** "Apply"
-
-#### `/admin/courses` - J Academy Kurs Yönetimi
-**Access:** admin & super_admin
-
-**Display Elements:**
-- **TABS:**
-  - "All Courses"
-  - "Pending Approval"
-  - "Published"
-  - "Drafts"
-  - "Archived"
-
-**Table View:**
-- **TABLE:** Course list
-  - Columns: Thumbnail, Title, Mentor, Category, Students, Status, Created Date, Actions
-
-**Filter & Search:**
-- **INPUT (search):** Search courses (title, mentor, description)
-- **SELECT:** Category filter
-- **SELECT:** Status filter
-- **SELECT:** Format filter (Online, Offline, Hybrid)
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Actions (per course):**
-- **BUTTON:** "View" → Course detail page
-- **BUTTON:** "Approve" → Publish course (if pending)
-- **BUTTON:** "Reject" → Rejection modal
-- **BUTTON:** "Edit" → Edit course
-- **BUTTON:** "Archive" → Archive course
-- **BUTTON:** "Feature" → Add to featured courses
-- **BUTTON:** "Delete" → Confirmation modal
-
-**Course Detail Modal/Page:**
-- Full course information
-- Curriculum view
-- Student list (enrolled users)
-- **BUTTON:** "Export Student List" → CSV
-- **BUTTON:** "Send Announcement to Students" → Email/notification
-
-**Bulk Actions:**
-- **CHECKBOX:** Select multiple courses
-- **SELECT:** Bulk action (Approve, Archive, Feature)
-- **BUTTON:** "Apply"
-
-#### `/admin/production` - J Studio Üretim Talepleri Yönetimi
-**Access:** admin & super_admin
-
-**Display Elements:**
-- **TABS:**
-  - "All Requests"
-  - "Open" (unclaimed)
-  - "In Progress" (claimed, being worked on)
-  - "Submitted" (awaiting requester approval)
-  - "Completed"
-  - "Cancelled"
-
-**Table View:**
-- **TABLE:** Production request list
-  - Columns: Title, Type, Requester, Assigned To, Priority, Status, Deadline, Actions
-
-**Filter & Search:**
-- **INPUT (search):** Search requests (title, requester, assigned)
-- **SELECT:** Type filter
-- **SELECT:** Status filter
-- **SELECT:** Priority filter
-- **DATE PICKER:** Deadline range
-- **BUTTON:** "Clear Filters"
-
-**Actions (per request):**
-- **BUTTON:** "View" → Request detail modal
-- **BUTTON:** "Reassign" → Assign to different designer/editor
-- **BUTTON:** "Change Priority" → Update priority
-- **BUTTON:** "Change Status" → Manual status update
-- **BUTTON:** "Delete" → Confirmation modal
-
-**Reassign Modal:**
-- **SELECT:** Assign to user (filter by role: designer/video_editor)
-- **TEXTAREA:** Reassignment note (optional)
-- **BUTTON:** "Reassign"
-
-**Stats Summary:**
-- **STAT:** Total requests
-- **STAT:** Average completion time
-- **STAT:** Completion rate (%)
-- **STAT:** Active designers/editors
-
-#### `/admin/engagement` - J Info Etkileşim Yönetimi
-**Access:** admin & super_admin
-
-**Display Elements:**
-- **TABS:**
-  - "Pending Review" (awaiting approval)
-  - "Approved"
-  - "Rejected"
-  - "All Submissions"
-
-**Table View:**
-- **TABLE:** Engagement submission list
-  - Columns: User, Platform, Type, Proof URL, Submitted Date, Status, Points, Actions
-
-**Filter & Search:**
-- **INPUT (search):** Search submissions (user, URL)
-- **SELECT:** Platform filter
-- **SELECT:** Type filter
-- **SELECT:** Status filter
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Actions (per submission):**
-- **BUTTON:** "View Proof" → Open URL in new tab / view screenshot
-- **BUTTON:** "Approve" → Approve submission modal
-- **BUTTON:** "Reject" → Rejection modal
-- **BUTTON:** "Delete" → Confirmation
-
-**Approve Modal:**
-- **INPUT (number):** Points to award (default: campaign points)
-- **TEXTAREA:** Admin note (optional)
-- **BUTTON:** "Confirm Approval"
-
-**Reject Modal:**
-- **TEXTAREA:** Rejection reason (required, visible to user)
-- **BUTTON:** "Confirm Rejection"
-
-**Bulk Actions:**
-- **CHECKBOX:** Select multiple submissions
-- **SELECT:** Bulk action (Approve, Reject, Delete)
-- **BUTTON:** "Apply"
-
-**Stats:**
-- **STAT:** Total submissions (all time)
-- **STAT:** Pending review count
-- **STAT:** Approval rate (%)
-- **STAT:** Total points awarded
-
-**Campaign Management:**
-- **BUTTON:** "Manage Campaigns" → Campaign list
-- **BUTTON:** "Create Campaign" → Campaign creation form
-  - **INPUT (text):** Campaign name
-  - **SELECT:** Platform
-  - **TEXTAREA:** Description
-  - **INPUT (number):** Points per engagement
-  - **DATE PICKER:** Start/End dates
-  - **BUTTON:** "Create"
-
-#### `/admin/alpha` - J Alpha Post Moderasyonu
-**Access:** admin & super_admin
-
-**Display Elements:**
-- **TABS:**
-  - "Pending Review" (awaiting approval)
-  - "Published"
-  - "Rejected"
-  - "Reported" (flagged by users)
-  - "Featured"
-
-**Table View:**
-- **TABLE:** Alpha post list
-  - Columns: Title, Scout, Category, Risk Level, Status, Views, Reactions, Submitted Date, Actions
-
-**Filter & Search:**
-- **INPUT (search):** Search alphas (title, project, scout)
-- **SELECT:** Category filter
-- **SELECT:** Risk level filter
-- **SELECT:** Status filter
-- **CHECKBOX:** "Verified only"
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Actions (per alpha):**
-- **BUTTON:** "View" → Alpha detail page
-- **BUTTON:** "Approve" → Publish alpha
-- **BUTTON:** "Reject" → Rejection modal
-- **BUTTON:** "Verify" → Add verified badge
-- **BUTTON:** "Feature" → Pin to top of feed
-- **BUTTON:** "Unfeature" → Remove from featured
-- **BUTTON:** "Delete" → Confirmation modal
-- **BUTTON:** "Ban Author" → Suspend scout (if scam/spam)
-
-**Verification Modal:**
-- **CHECKBOX:** "Mark as verified"
-- **TEXTAREA:** Verification note (internal, optional)
-- **BUTTON:** "Verify"
-
-**Rejection Modal:**
-- **TEXTAREA:** Rejection reason (required)
-- **CHECKBOX:** "This is spam/scam" (flag author)
-- **BUTTON:** "Confirm Rejection"
-
-**Bulk Actions:**
-- **CHECKBOX:** Select multiple alphas
-- **SELECT:** Bulk action (Approve, Verify, Feature, Delete)
-- **BUTTON:** "Apply"
-
-**Stats:**
-- **STAT:** Total alpha posts
-- **STAT:** Pending review
-- **STAT:** Success rate (active/completed)
-- **STAT:** Flagged/reported count
-
-#### `/admin/analytics` - Platform Analitiği
-**Access:** admin & super_admin
-
-**Display Elements:**
-
-**Time Range Selector:**
-- **SELECT:** Time range (Last 7 days, Last 30 days, Last 90 days, Last year, All time, Custom)
-- **IF Custom:**
-  - **DATE PICKER:** Start date
-  - **DATE PICKER:** End date
-  - **BUTTON:** "Apply"
-
-**Overview Stats:**
-- **STAT CARD:** Total users (with growth %)
-- **STAT CARD:** Active users (with growth %)
-- **STAT CARD:** Total content (all modules)
-- **STAT CARD:** Platform engagement rate
-
-**Charts & Graphs:**
-
-**User Analytics:**
-- **LINE CHART:** User registration trend
-- **PIE CHART:** User role distribution
-- **BAR CHART:** Users by acquisition source (Twitter, Farcaster)
-- **TABLE:** Top contributors (most active users)
-
-**Content Analytics (J Hub):**
-- **LINE CHART:** Content creation trend
-- **PIE CHART:** Content by type (video, thread, podcast, guide)
-- **BAR CHART:** Content by category
-- **TABLE:** Top content (most viewed, most liked)
-
-**Course Analytics (J Academy):**
-- **LINE CHART:** Course enrollment trend
-- **BAR CHART:** Enrollments by course category
-- **TABLE:** Top courses (most students, highest rated)
-- **STAT:** Average course completion rate
-
-**Studio Analytics:**
-- **LINE CHART:** Request volume trend
-- **PIE CHART:** Request by type
-- **BAR CHART:** Average completion time by type
-- **TABLE:** Top designers/editors (most completed)
-
-**Engagement Analytics (J Info):**
-- **LINE CHART:** Submission trend
-- **PIE CHART:** Submissions by platform
-- **BAR CHART:** Approval rate by platform
-- **STAT:** Total points awarded
-
-**Alpha Analytics:**
-- **LINE CHART:** Alpha post trend
-- **PIE CHART:** Alpha by category
-- **BAR CHART:** Success rate by category (active/completed vs dead)
-- **TABLE:** Top scouts (most posts, highest engagement)
-
-**Export:**
-- **BUTTON:** "Export Analytics Report" → PDF/CSV download
-
-**NO FORMS** (Display and analytics only)
-
-#### `/admin/settings` - Site Ayarları
-**Access:** super_admin only
-
-**Form Elements:**
-
-**SECTION:** General Settings
-- **INPUT (text):** Site name (default: "Jobless")
-- **INPUT (url):** Site URL
-- **TEXTAREA:** Site description (for SEO)
-- **INPUT (file):** Site logo (jpg/png, max 1MB)
-- **INPUT (file):** Site favicon (ico/png, max 100KB)
-- **SELECT:** Default language (TR, EN)
-- **CHECKBOX:** "Maintenance mode" (disable public access)
-
-**SECTION:** Authentication Settings
-- **CHECKBOX:** "Enable Twitter OAuth"
-- **INPUT (text):** Twitter API Key (if enabled)
-- **INPUT (text):** Twitter API Secret (if enabled)
-- **CHECKBOX:** "Enable Farcaster OAuth"
-- **INPUT (text):** Farcaster API Key (if enabled)
-
-**SECTION:** Email Settings
-- **INPUT (text):** SMTP Server
-- **INPUT (number):** SMTP Port
-- **INPUT (text):** SMTP Username
-- **INPUT (password):** SMTP Password
-- **INPUT (email):** From email address
-- **INPUT (text):** From name
-- **BUTTON:** "Test Email Configuration" → Send test email
-
-**SECTION:** Points & Rewards System
-- **INPUT (number):** Points for content creation (Hub)
-- **INPUT (number):** Points for course completion (Academy)
-- **INPUT (number):** Points per engagement (Info)
-- **INPUT (number):** Points for alpha submission (Alpha)
-- **CHECKBOX:** "Enable leaderboard"
-
-**SECTION:** Content Moderation
-- **CHECKBOX:** "Require approval for new content (Hub)"
-- **CHECKBOX:** "Require approval for new courses (Academy)"
-- **CHECKBOX:** "Require approval for alpha posts (Alpha)"
-- **TEXTAREA:** Banned words list (comma separated)
-
-**SECTION:** File Upload Limits
-- **INPUT (number):** Max avatar size (MB)
-- **INPUT (number):** Max content image size (MB)
-- **INPUT (number):** Max video size (MB)
-- **INPUT (number):** Max file size (general) (MB)
-
-**SECTION:** API Settings
-- **CHECKBOX:** "Enable public API"
-- **INPUT (text):** API rate limit (requests/hour)
-- **BUTTON:** "Generate New API Key"
-- **BUTTON:** "View API Documentation"
-
-**Action Buttons:**
-- **BUTTON:** "Save All Settings"
-- **BUTTON:** "Reset to Defaults" → Confirmation modal
-- **BUTTON:** "Cancel"
-
-**Validation:**
-- Required field checks
-- URL format validation
-- Email format validation
-- Number range validation
-
-#### `/admin/logs` - Admin Log Kayıtları
-**Access:** super_admin only
-
-**Display Elements:**
-- **TABLE:** Admin action log
-  - Columns: Timestamp, Admin User, Action Type, Target, Details, IP Address
-
-**Filter & Search:**
-- **INPUT (search):** Search logs (admin, action, target)
-- **SELECT:** Action type filter
-  - All
-  - User Management (create, edit, delete, suspend user)
-  - Role Management (create, edit, delete role)
-  - Content Moderation (approve, reject, delete content)
-  - Course Management (approve, archive course)
-  - Settings Changed
-  - Login/Logout
-- **SELECT:** Admin user filter (dropdown of all admins)
-- **DATE PICKER:** Date range
-- **BUTTON:** "Clear Filters"
-
-**Sort:**
-- **SELECT:** Sort by (Newest, Oldest, Admin, Action Type)
-
-**Pagination:**
-- **PAGINATION:** Page numbers
-- **SELECT:** Logs per page (25, 50, 100, 200)
-
-**Export:**
-- **BUTTON:** "Export Logs" → CSV download (filtered results)
-
-**NO EDIT FORMS** (Logs are read-only)
-
-**Auto-Logging:**
-- All admin actions are automatically logged
-- Includes: timestamp, admin user ID, action type, affected resource, IP address, user agent
+- User growth over time
+- Content creation trends
+- Engagement metrics
+- Most active users
+- Popular content categories
+
+**12. Activity Logs** - `/admin/logs`
+
+**Features:**
+- View all platform activity
+- Filter by action type, user, date range
+- Search logs
+
+**Log Entry:**
+```typescript
+{
+  timestamp: "2025-01-22T10:30:00Z",
+  userId: "...",
+  action: "content.create",
+  resource: "content:abc123",
+  details: {...},
+  ipAddress: "...",
+  userAgent: "..."
+}
+```
+
+**13. Platform Settings** - `/admin/settings` (super_admin only)
+
+**Tabs:**
+- **General:** Platform name, logo, description
+- **Authentication:** OAuth settings, wallet connection
+- **Modules:** Enable/disable modules
+- **Dynamic Content:** Manage dropdowns (Hub content types, Studio request types, etc.)
+- **Email:** SMTP settings (future)
+- **Storage:** File upload limits, allowed file types
+
+**Dynamic Content Management:**
+- Hub Content Types
+- Studio Request Types
+- Academy Categories
+- Info Platforms
+- Info Engagement Types
+- Alpha Categories
 
 ---
 
-### 8.1. ADMIN - DYNAMIC CONTENT MANAGEMENT
+## COMMENT SYSTEM
 
-Bu sayfalar admin tarafından oluşturulan ve platformdaki dropdown/select alanlarında kullanılan dinamik içerik tiplerini yönetmek için kullanılır.
+### Overview
 
----
+Complete comment system with nested replies, real-time updates, and moderation.
 
-#### `/admin/hub-content-types` - J Hub İçerik Tipleri Yönetimi
-**Access:** admin & super_admin only
+### Features
 
-**Display Elements:**
-- **TABLE:** Content type list
-  - Columns: Icon, Name, Description, Usage Count, Status, Actions
+- ✅ Create comments on Hub content, Alpha posts, Courses
+- ✅ Reply to comments (nested conversations)
+- ✅ Like comments
+- ✅ Delete comments (author or moderator)
+- ✅ Cascade delete (parent deletion deletes all child replies)
+- ✅ Real-time WebSocket updates
+- ✅ Comment detail page for viewing all replies
+- ✅ Modal warning for deleted comments
 
-**Default Content Types (Pre-populated):**
-- Video
-- Thread
-- Podcast
-- Guide
-- Tutorial
+### Database Model
 
-**Actions (per type):**
-- **BUTTON:** "Edit" → Edit modal
-- **BUTTON:** "Deactivate/Activate" → Toggle status
-- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+**File:** `backend/src/models/Comment.model.ts`
 
-**Create New Content Type:**
-- **BUTTON:** "Add New Content Type" → Creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Type name (required, max 50 chars, unique)
-  - **INPUT (text):** Type key (required, lowercase_underscore, unique)
-  - **TEXTAREA:** Description (optional, max 200 chars)
-  - **INPUT (text):** Icon name (Lucide icon name, optional)
-  - **CHECKBOX:** "Active" (default: true)
-  - **BUTTON:** "Create"
+```typescript
+interface Comment {
+  _id: string
+  userId: User
+  contentType: 'hub_content' | 'alpha_post' | 'course'
+  contentId: string
+  content: string               // Max 500 chars
+  parentCommentId?: string      // For replies
+  likes: number
+  likedBy: string[]             // User IDs
+  repliesCount: number
+  isEdited: boolean
+  editedAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+```
 
-**Edit Modal:**
-- Same fields as create
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+### API Endpoints
 
-**IMPORTANT:** Bu tipler `/hub/create` sayfasındaki "Content type" dropdown'ında gösterilir.
+```typescript
+// Get comments for content
+GET /api/comments/:contentType/:contentId
+// Response: { success: true, count: number, data: Comment[] }
 
----
+// Get single comment
+GET /api/comments/single/:commentId
+// Response: { success: true, data: Comment }
 
-#### `/admin/studio-request-types` - J Studio Talep Tipleri Yönetimi
-**Access:** admin & super_admin only
+// Get replies for comment
+GET /api/comments/:commentId/replies
+// Response: { success: true, count: number, data: Comment[] }
 
-**Display Elements:**
-- **TABLE:** Request type list
-  - Columns: Icon, Name, Description, Total Requests, Status, Actions
+// Create comment
+POST /api/comments/:contentType/:contentId
+Body: { content: string, parentCommentId?: string }
+// Response: { success: true, data: Comment }
 
-**Default Request Types (Pre-populated):**
-- Cover Design (Twitter/Farcaster gönderisi kapak tasarımı)
-- Logo Design
-- Banner Design
-- Social Media Graphics
-- Video Editing
-- Infographic Design
-- Animation
-- Other
+// Like comment
+POST /api/comments/:commentId/like
+// Response: { success: true, data: { likes: number } }
 
-**Actions (per type):**
-- **BUTTON:** "Edit" → Edit modal
-- **BUTTON:** "Deactivate/Activate" → Toggle status
-- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+// Delete comment
+DELETE /api/comments/:commentId
+// Authorization: Author or moderator only
+// Cascade: Deletes all child replies
+// Response: { success: true, message: "Comment deleted successfully" }
+```
 
-**Create New Request Type:**
-- **BUTTON:** "Add New Request Type" → Creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Type name (required, max 100 chars, unique)
-  - **INPUT (text):** Type key (required, lowercase_underscore, unique)
-  - **TEXTAREA:** Description (optional, max 300 chars)
-  - **SELECT:** Assigned role (Designer, Video Editor, Both)
-  - **INPUT (text):** Icon name (Lucide icon, optional)
-  - **CHECKBOX:** "Active" (default: true)
-  - **BUTTON:** "Create"
+### Delete Logic
 
-**Edit Modal:**
-- Same fields as create
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+**Backend:** `backend/src/controllers/comment.controller.ts`
 
-**IMPORTANT:** Bu tipler `/studio/create` sayfasındaki "Request type" dropdown'ında gösterilir.
+```typescript
+export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  // 1. Authorization check (author or moderator)
+  const isAuthor = comment.userId.toString() === userId.toString()
+  const isModerator = req.user.permissions.canModerateContent
+  if (!isAuthor && !isModerator) {
+    throw new AppError('Not authorized', 403)
+  }
 
----
+  // 2. Cascade delete logic
+  let deletedReplies: string[] = []
 
-#### `/admin/academy-categories` - J Academy Eğitim Kategorileri Yönetimi
-**Access:** admin & super_admin only
+  if (!comment.parentCommentId) {
+    // Parent comment - delete all replies
+    const replies = await Comment.find({ parentCommentId: id })
+    deletedReplies = replies.map(r => r._id.toString())
+    await Comment.deleteMany({ parentCommentId: id })
 
-**Display Elements:**
-- **TABLE:** Course category list
-  - Columns: Icon, Name, Description, Total Courses, Total Students, Status, Actions
+    // Decrement content's comment count
+    await Content.findByIdAndUpdate(comment.contentId, { $inc: { commentsCount: -1 } })
+  } else {
+    // Reply - decrement parent's reply count
+    await Comment.findByIdAndUpdate(comment.parentCommentId, { $inc: { repliesCount: -1 } })
+  }
 
-**Default Categories (Pre-populated):**
-- Photoshop & Tasarım
-- Video Edit ve İçerik Montajı
-- Kripto Twitter & Kişisel Marka İnşası
-- Web3 Araştırma & DeFi Stratejileri
-- Node Kurulum & Validatör Teknikleri
-- AI Araçlarının Doğru Kullanımı
+  // 3. Delete the comment
+  await comment.deleteOne()
 
-**Actions (per category):**
-- **BUTTON:** "Edit" → Edit modal
-- **BUTTON:** "View Courses" → Filter courses by this category
-- **BUTTON:** "Deactivate/Activate" → Toggle status
-- **BUTTON (super_admin only):** "Delete" → Confirmation (if no courses)
+  // 4. Emit WebSocket event
+  emitCommentDeleted(id, contentId, contentType, parentCommentId, deletedReplies)
 
-**Create New Category:**
-- **BUTTON:** "Add New Category" → Creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Category name (required, max 100 chars, unique)
-  - **INPUT (text):** Category key (required, lowercase_underscore, unique)
-  - **TEXTAREA:** Description (required, max 500 chars)
-  - **INPUT (text):** Icon name (Lucide icon, optional)
-  - **INPUT (color):** Color code (hex, for badge display, optional)
-  - **CHECKBOX:** "Active" (default: true)
-  - **BUTTON:** "Create"
+  res.status(200).json({ success: true, message: 'Comment deleted successfully' })
+})
+```
 
-**Edit Modal:**
-- Same fields as create
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+### WebSocket Events
 
-**IMPORTANT:** Bu kategoriler `/academy/create` ve `/academy/courses` sayfalarındaki "Category" dropdown'larında gösterilir.
+**Backend:** `backend/src/socket/index.ts`
 
----
+```typescript
+// Multi-room emission for targeted updates
+export const emitCommentDeleted = (
+  commentId: string,
+  contentId: string,
+  contentType: string,
+  parentCommentId: string | undefined,
+  deletedReplies: string[]
+) => {
+  const data = { commentId, parentCommentId, deletedReplies }
 
-#### `/admin/info-platforms` - J Info Platform Listesi Yönetimi
-**Access:** admin & super_admin only
+  // 1. Content room - for content page listeners
+  io.to(`content:${contentId}`).emit('commentDeleted', data)
 
-**Display Elements:**
-- **TABLE:** Platform list
-  - Columns: Logo/Icon, Name, Description, Total Engagements, Status, Actions
+  // 2. Parent comment room - for reply listeners
+  if (parentCommentId) {
+    io.to(`comment:${parentCommentId}`).emit('commentDeleted', data)
+  }
 
-**Default Platforms (Pre-populated):**
-- Kaito
-- WallChain
-- Cookie
-- Zama OG NFT
-- Twitter/X General
-- Farcaster
-- Discord
-- Other
+  // 3. Own comment room - for modals open on this comment
+  io.to(`comment:${commentId}`).emit('commentDeleted', data)
+}
 
-**Actions (per platform):**
-- **BUTTON:** "Edit" → Edit modal
-- **BUTTON:** "View Engagements" → Filter engagements by platform
-- **BUTTON:** "Deactivate/Activate" → Toggle status
-- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+// Other comment events
+emitNewComment(comment, contentId)           // When comment created
+emitCommentLikeUpdate(commentId, likes, userId, isLiked)  // When comment liked
+```
 
-**Create New Platform:**
-- **BUTTON:** "Add New Platform" → Creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Platform name (required, max 50 chars, unique)
-  - **INPUT (text):** Platform key (required, lowercase_underscore, unique)
-  - **TEXTAREA:** Description (optional, max 200 chars)
-  - **INPUT (url):** Platform website (optional)
-  - **INPUT (file):** Platform logo (optional, jpg/png, max 500KB)
-  - **INPUT (text):** Icon name (Lucide icon, optional, if no logo)
-  - **CHECKBOX:** "Active" (default: true)
-  - **BUTTON:** "Create"
+### Frontend Integration
 
-**Edit Modal:**
-- Same fields as create
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+**Content Page Listener:** `frontend/src/app/hub/content/[id]/page.tsx`
 
-**IMPORTANT:** Bu platformlar `/info/submit` sayfasındaki "Platform" dropdown'ında gösterilir.
+```typescript
+useEffect(() => {
+  const socket = getSocket()
+  socket.emit('join:content', id)
 
----
+  const handleCommentDeleted = (data: any) => {
+    const { commentId, deletedReplies } = data
+    const allDeletedIds = [commentId, ...deletedReplies]
 
-#### `/admin/info-engagement-types` - J Info Etkileşim Tipleri Yönetimi
-**Access:** admin & super_admin only
+    // Remove from cache
+    queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => ({
+      ...old,
+      count: old.count - allDeletedIds.length,
+      data: old.data.filter(c => !allDeletedIds.includes(c._id))
+    }))
 
-**Display Elements:**
-- **TABLE:** Engagement type list
-  - Columns: Icon, Name, Description, Total Submissions, Default Points, Status, Actions
+    // Update content's comment count
+    queryClient.setQueryData(['hub', 'content', id], (old: any) => ({
+      ...old,
+      data: { ...old.data, commentsCount: old.data.commentsCount - 1 }
+    }))
+  }
 
-**Default Engagement Types (Pre-populated):**
-- Tweet/Post
-- Retweet/Recast
-- Like/React
-- Comment/Reply
-- Follow
-- Join Community
-- Discord Role
-- Other
+  socket.on('commentDeleted', handleCommentDeleted)
 
-**Actions (per type):**
-- **BUTTON:** "Edit" → Edit modal
-- **BUTTON:** "Deactivate/Activate" → Toggle status
-- **BUTTON (super_admin only):** "Delete" → Confirmation (if usage count = 0)
+  return () => {
+    socket.emit('leave:content', id)
+    socket.off('commentDeleted', handleCommentDeleted)
+  }
+}, [id])
+```
 
-**Create New Engagement Type:**
-- **BUTTON:** "Add New Engagement Type" → Creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Type name (required, max 50 chars, unique)
-  - **INPUT (text):** Type key (required, lowercase_underscore, unique)
-  - **TEXTAREA:** Description (optional, max 200 chars)
-  - **INPUT (number):** Default points (required, min: 0, default: 10)
-  - **INPUT (text):** Icon name (Lucide icon, optional)
-  - **CHECKBOX:** "Requires proof URL" (default: true)
-  - **CHECKBOX:** "Requires screenshot" (default: false)
-  - **CHECKBOX:** "Active" (default: true)
-  - **BUTTON:** "Create"
+**Comment Detail Page:** `frontend/src/app/hub/content/[id]/comment/[commentId]/page.tsx`
 
-**Edit Modal:**
-- Same fields as create
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+```typescript
+const handleCommentDeleted = (data: any) => {
+  const { commentId: deletedId } = data
 
-**IMPORTANT:** Bu tipler `/info/submit` sayfasındaki "Engagement type" dropdown'ında gösterilir.
+  // If parent comment deleted, redirect to content page
+  if (deletedId === commentId) {
+    router.push(`/hub/content/${contentId}`)
+    return
+  }
 
----
+  // If modal open on deleted comment, show warning
+  if (replyModalComment && deletedId === replyModalComment._id) {
+    setIsModalCommentDeleted(true)
+  }
 
-#### `/admin/alpha-categories` - J Alpha Kategorileri Yönetimi
-**Access:** admin & super_admin only
+  // Remove deleted reply from cache
+  // ... update logic
+}
+```
 
-**Display Elements:**
-- **TABLE:** Alpha category list
-  - Columns: Icon, Name, Description, Total Posts, Active Projects, Status, Actions
+### Modal Warning UI
 
-**Default Categories (Pre-populated):**
-- Airdrop Radar (Erken aşama airdrop fırsatları, görevler, katılım şartları)
-- Testnet Tracker (Erken aşama blockchain test süreçleri)
-- Memecoin Calls (Solana veya diğer chainlerde olabilecek memecoin fırsatları)
-- DeFi Signals (TVL, APY ve hacim artışına göre potansiyel protokoller)
+**When replying to deleted comment:**
 
-**Actions (per category):**
-- **BUTTON:** "Edit" → Edit modal
-- **BUTTON:** "View Posts" → Filter alpha posts by category
-- **BUTTON:** "Deactivate/Activate" → Toggle status
-- **BUTTON (super_admin only):** "Delete" → Confirmation (if no posts)
+```tsx
+{isModalCommentDeleted && (
+  <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+    <div className="flex items-center gap-2">
+      <svg className="w-5 h-5 text-red-500">...</svg>
+      <p className="text-sm text-red-500 font-medium">
+        This comment has been deleted
+      </p>
+    </div>
+    <p className="text-xs text-red-500/70 mt-1 ml-7">
+      You cannot reply to a deleted comment
+    </p>
+  </div>
+)}
 
-**Create New Category:**
-- **BUTTON:** "Add New Alpha Category" → Creation modal
-- **MODAL FORM:**
-  - **INPUT (text):** Category name (required, max 100 chars, unique)
-  - **INPUT (text):** Category key (required, lowercase_underscore, unique)
-  - **TEXTAREA:** Description (required, max 300 chars)
-  - **INPUT (text):** Icon/Emoji (optional, single emoji or Lucide icon name)
-  - **INPUT (color):** Badge color (hex, for display, optional)
-  - **SELECT:** Default risk level (Low, Medium, High)
-  - **CHECKBOX:** "Active" (default: true)
-  - **BUTTON:** "Create"
+<TwitterReplyInput
+  disabled={isModalCommentDeleted}
+  placeholder={isModalCommentDeleted ? "Cannot reply to deleted comment" : "Post your reply..."}
+/>
+```
 
-**Edit Modal:**
-- Same fields as create
-- **BUTTON:** "Save Changes"
-- **BUTTON:** "Cancel"
+### Three-Dot Menu Pattern
 
-**Stats Summary:**
-- **STAT:** Total categories
-- **STAT:** Most popular category (by post count)
-- **STAT:** Success rate by category
+**Delete button in comment header:**
 
-**IMPORTANT:** Bu kategoriler `/alpha/submit` ve `/alpha/feed` sayfalarındaki "Category" dropdown/filter'larında gösterilir.
+```tsx
+{canDelete && (
+  <div className="ml-auto relative options-menu-container">
+    <button onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
+      <svg>...</svg> {/* Three dots */}
+    </button>
 
----
+    {showOptionsMenu && (
+      <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg">
+        <button onClick={() => setShowDeleteConfirm(true)} className="text-red-500">
+          <svg>...</svg> Delete
+        </button>
+      </div>
+    )}
+  </div>
+)}
+```
 
-### 9. NOTIFICATIONS & MISC
+**Outside click detection:**
 
-#### `/notifications` - Bildirimler Sayfası
-**Access:** All authenticated users
+```tsx
+useEffect(() => {
+  if (!showOptionsMenu) return
 
-**Display Elements:**
-- **TABS:**
-  - "All" (all notifications)
-  - "Unread" (unread only)
-  - "Hub" (J Hub notifications)
-  - "Academy" (J Academy notifications)
-  - "Studio" (J Studio notifications)
-  - "Info" (J Info notifications)
-  - "Alpha" (J Alpha notifications)
-  - "System" (platform announcements)
+  const handleClickOutside = (e: MouseEvent) => {
+    if (!e.target.closest('.options-menu-container')) {
+      setShowOptionsMenu(false)
+    }
+  }
 
-**Notification List:**
-- **LIST:** Notification items (reverse chronological)
-- **PER NOTIFICATION:**
-  - Icon (based on type)
-  - Title/message
-  - Timestamp (relative: "2 hours ago")
-  - **BADGE:** "New" (if unread)
-  - **CLICK:** Notification → Mark as read + redirect to related page
-
-**Notification Types & Examples:**
-- **Hub:** "Your content 'Title' was approved"
-- **Hub:** "New comment on your post"
-- **Hub:** "Someone liked your content"
-- **Academy:** "New course available in your category"
-- **Academy:** "Course enrollment confirmed"
-- **Academy:** "New lesson added to your course"
-- **Studio:** "Your design request was claimed by [Designer]"
-- **Studio:** "New work submitted for your request"
-- **Info:** "Your engagement was approved (+50 points)"
-- **Alpha:** "New alpha in category you follow"
-- **Alpha:** "Update on alpha: [Title]"
-- **System:** "Platform maintenance scheduled"
-
-**Actions:**
-- **BUTTON:** "Mark All as Read"
-- **BUTTON (per notification):** "Delete" (remove notification)
-- **CHECKBOX (per notification):** Select for bulk action
-
-**Bulk Actions:**
-- **CHECKBOX:** Select multiple notifications
-- **SELECT:** Bulk action (Mark as Read, Delete)
-- **BUTTON:** "Apply"
-
-**Filter:**
-- **SELECT:** Notification type filter
-- **DATE PICKER:** Date range
-
-**Settings (Inline):**
-- **LINK:** "Notification Settings" → `/center/settings` (notification preferences section)
-
-**Pagination:**
-- **INFINITE SCROLL** or **BUTTON:** "Load More"
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, [showOptionsMenu])
+```
 
 ---
 
-## FORM VALIDATION RULES (Global)
+## BADGE SYSTEM
 
-### Input Types:
-- **text:** Max length specified, trim whitespace
-- **email:** Valid email format (regex)
-- **url:** Valid URL format (http/https)
-- **number:** Min/max range, integer or decimal
-- **file:** File type (extension), file size limit
-- **date:** Valid date format, future/past restrictions
-- **time:** Valid time format (HH:MM)
+### Overview
 
-### Required Fields:
-- Show red asterisk (*) next to label
-- Display error message on blur if empty
-- Prevent form submission if required fields empty
+Gamification system with 88 unique badges across 6 categories, automatically awarded based on user activities.
 
-### Real-Time Validation:
-- Username availability (debounced check)
-- Email format (instant)
-- URL format (instant)
-- Character count (live counter)
-- File size/type (on file select)
+### Badge Categories
 
-### Error Display:
-- Inline error messages (below input)
-- Red border on invalid inputs
-- Clear, actionable error messages
-- Summary of errors at top of form (if multiple)
+1. **Member Badges (15)** - General platform achievements
+2. **Content Creator Badges (20)** - Hub content milestones
+3. **Designer Badges (18)** - Studio production achievements
+4. **Scout Badges (17)** - Alpha research contributions
+5. **Admin Badges (10)** - Moderation and management
+6. **Super Admin Badges (8)** - Platform leadership
 
-### Success Feedback:
-- Green checkmark for valid inputs
-- Success toast/notification on form submit
-- Redirect or content update on success
+### Rarity Levels
+
+| Rarity | Count | Colors | Glow Effect |
+|--------|-------|--------|-------------|
+| Common | 30 | Gray/Basic | None |
+| Rare | 18 | Blue/Green | Subtle |
+| Epic | 19 | Purple/Cyan | Medium |
+| Legendary | 11 | Gold/Orange | Strong + divine animation |
+
+### Tier Levels
+
+- `entry` - First badges in category
+- `progress` - Mid-level achievements
+- `mastery` - High-level achievements
+- `elite` - Top-tier achievements
+- `legendary` - Ultimate achievements
+- `special` - Unique/time-limited badges
+
+### Database Models
+
+**Badge Model:** `backend/src/models/Badge.model.ts`
+
+```typescript
+interface Badge {
+  _id: string
+  name: string              // e.g., "Rookie"
+  description: string
+  icon: string              // SVG badge shape name
+  category: 'general' | 'hub' | 'studio' | 'alpha' | 'admin'
+  rarity: 'common' | 'rare' | 'epic' | 'legendary'
+  tier: 'entry' | 'progress' | 'mastery' | 'elite' | 'legendary' | 'special'
+  criteria: {
+    type: string            // e.g., 'content_count', 'like_count', 'jrank_points'
+    target: number          // Required value
+    operator: 'gte' | 'gt' | 'lte' | 'lt' | 'eq'
+    contentType?: string
+    additionalCriteria?: any
+  }
+  colorScheme: {
+    primary: string
+    secondary: string
+    accent: string
+  }
+}
+```
+
+**UserBadge Model:** `backend/src/models/UserBadge.model.ts`
+
+```typescript
+interface UserBadge {
+  _id: string
+  userId: string
+  badgeId: Badge
+  earnedAt: Date
+  earnedFrom: string        // e.g., 'auto:content_count', 'manual:admin_award'
+  isPinned: boolean         // Max 3 pinned
+  isVisible: boolean        // Show on public profile
+}
+```
+
+### Badge Service
+
+**File:** `backend/src/services/badge.service.ts`
+
+**Functions:**
+```typescript
+// Check and award role-based badges (called on login and role assignment)
+checkRoleBadges(userId: string): Promise<void>
+
+// Check activity badges for specific module
+checkActivityBadges(userId: string, module: 'hub' | 'studio' | 'alpha'): Promise<void>
+
+// Check all activity badges
+checkAllActivityBadges(userId: string): Promise<void>
+
+// Award badge to user (idempotent - won't duplicate)
+awardBadge(userId: string, badgeId: string, earnedFrom: string): Promise<UserBadge | null>
+
+// Get user's earned badges
+getUserBadges(userId: string, onlyVisible?: boolean): Promise<UserBadge[]>
+
+// Get pinned badges (max 3)
+getPinnedBadges(userId: string): Promise<UserBadge[]>
+
+// Pin/unpin badge
+pinBadge(userId: string, badgeId: string): Promise<void>
+unpinBadge(userId: string, badgeId: string): Promise<void>
+
+// Toggle badge visibility
+toggleBadgeVisibility(userId: string, badgeId: string): Promise<void>
+
+// Get badge statistics
+getBadgeStats(userId: string): Promise<{ total: number, byRarity: any, byCategory: any }>
+```
+
+### Badge Criteria Examples
+
+```typescript
+// Member Badge - Rookie (join platform)
+{
+  type: 'auto_awarded',
+  target: 1,
+  operator: 'gte'
+}
+
+// Content Creator Badge - First Post
+{
+  type: 'content_count',
+  target: 1,
+  operator: 'gte'
+}
+
+// Content Creator Badge - Viral Hit
+{
+  type: 'single_content_likes',
+  target: 100,
+  operator: 'gte'
+}
+
+// Member Badge - Point Collector
+{
+  type: 'jrank_points',
+  target: 100,
+  operator: 'gte'
+}
+
+// Admin Badge - Active Moderator
+{
+  type: 'moderation_actions',
+  target: 50,
+  operator: 'gte'
+}
+```
+
+### Frontend Components
+
+**Badge Display:** `frontend/src/components/badges/badge-display.tsx`
+
+```typescript
+// Single badge with size, rarity, glow
+<BadgeDisplay badge={badge} size="md" onClick={handleClick} />
+
+// Grid of badges
+<BadgeGrid badges={badges} onBadgeClick={handleClick} size="sm" />
+
+// Pinned badges showcase (max 3)
+<PinnedBadges badges={pinnedBadges} />
+```
+
+**Badge Shapes:** `frontend/src/components/badges/badge-shapes.tsx`
+
+```typescript
+// Get SVG badge shape by icon name
+const BadgeShape = getBadgeShape(badge.icon)
+
+// Usage
+<BadgeShape
+  className="w-full h-full"
+  gradientId={`badge-${badge._id}`}
+  gradientStart={badge.colorScheme.primary}
+  gradientEnd={badge.colorScheme.secondary}
+/>
+```
+
+### API Endpoints
+
+```typescript
+// Get user's badges
+GET /api/users/:id/badges
+Query: onlyVisible (boolean)
+// Response: { success: true, data: UserBadge[] }
+
+// Get pinned badges
+GET /api/users/:id/badges/pinned
+// Response: { success: true, data: UserBadge[] }
+
+// Pin badge
+POST /api/users/badges/:badgeId/pin
+// Response: { success: true, message: "Badge pinned" }
+
+// Unpin badge
+DELETE /api/users/badges/:badgeId/pin
+// Response: { success: true, message: "Badge unpinned" }
+
+// Toggle visibility
+PATCH /api/users/badges/:badgeId/visibility
+// Response: { success: true, data: { isVisible: boolean } }
+
+// Get badge stats
+GET /api/users/:id/badges/stats
+// Response: { success: true, data: { total, byRarity, byCategory } }
+```
+
+### Integration Points
+
+**1. Login** - `backend/src/controllers/auth.controller.ts`
+```typescript
+// After successful login
+badgeService.checkRoleBadges(user._id).catch(err => console.error('Badge check error:', err))
+```
+
+**2. Role Assignment** - `backend/src/controllers/admin.controller.ts`
+```typescript
+// After assigning role
+badgeService.checkRoleBadges(userId).catch(err => console.error('Badge check error:', err))
+```
+
+**3. Content Creation** - `backend/src/controllers/hub.controller.ts`
+```typescript
+// After creating content
+badgeService.checkActivityBadges(userId, 'hub').catch(err => console.error('Badge check error:', err))
+```
+
+**Non-blocking:** All badge checks use `.catch()` to prevent errors from blocking user actions.
+
+### Seed Script
+
+**File:** `backend/src/scripts/seed-badges.ts`
+
+**Run:**
+```bash
+cd backend && npx ts-node src/scripts/seed-badges.ts
+```
+
+**Creates:** All 88 badges with proper icons, colors, criteria, and metadata.
 
 ---
 
-## ROLE-BASED FORM ACCESS SUMMARY
+## WEBSOCKET & REAL-TIME FEATURES
 
-| Page | All Users | Content Creator | Designer | Video Editor | Requester | Learner | Mentor | Scout | Admin | Super Admin |
-|------|-----------|-----------------|----------|--------------|-----------|---------|--------|-------|-------|-------------|
-| `/hub/create` | Draft only | Publish | Draft only | Draft only | Draft only | Draft only | Draft only | Draft only | Full | Full |
-| `/studio/create` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `/studio/request/:id` (claim) | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `/academy/create` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
-| `/academy/requests` (create) | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `/info/submit` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `/alpha/submit` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| `/admin/*` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+### Server Setup
+
+**File:** `backend/src/socket/index.ts`
+
+**Initialization:**
+```typescript
+import { Server } from 'socket.io'
+import http from 'http'
+
+const server = http.createServer(app)
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true
+  }
+})
+
+// Connection handler
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id)
+
+  // Join content room
+  socket.on('join:content', (contentId: string) => {
+    socket.join(`content:${contentId}`)
+  })
+
+  // Leave content room
+  socket.on('leave:content', (contentId: string) => {
+    socket.leave(`content:${contentId}`)
+  })
+
+  // Join comment room
+  socket.on('join:comment', (commentId: string) => {
+    socket.join(`comment:${commentId}`)
+  })
+
+  // Leave comment room
+  socket.on('leave:comment', (commentId: string) => {
+    socket.leave(`comment:${commentId}`)
+  })
+
+  // Disconnect
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id)
+  })
+})
+
+export { io }
+```
+
+### Client Setup
+
+**File:** `frontend/src/lib/socket.ts`
+
+```typescript
+import { io, Socket } from 'socket.io-client'
+
+let socket: Socket | null = null
+
+export const getSocket = (): Socket => {
+  if (!socket) {
+    socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    })
+
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket?.id)
+    })
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected')
+    })
+  }
+
+  return socket
+}
+```
+
+### Event Types
+
+**1. Like Updates**
+```typescript
+// Backend emission
+export const emitLikeUpdate = (contentId: string, likesCount: number, userId: string, isLiked: boolean) => {
+  io.to(`content:${contentId}`).emit('likeUpdate', {
+    contentId,
+    likesCount,
+    userId,
+    isLiked
+  })
+}
+
+// Frontend listener
+socket.on('likeUpdate', (data: { contentId, likesCount, userId, isLiked }) => {
+  // Update like count in UI
+})
+```
+
+**2. Bookmark Updates**
+```typescript
+// Backend emission
+export const emitBookmarkUpdate = (contentId: string, bookmarksCount: number, userId: string, isBookmarked: boolean) => {
+  io.to(`content:${contentId}`).emit('bookmarkUpdate', {
+    contentId,
+    bookmarksCount,
+    userId,
+    isBookmarked
+  })
+}
+
+// Frontend listener
+socket.on('bookmarkUpdate', (data) => {
+  // Update bookmark count in UI
+})
+```
+
+**3. Comment Events**
+```typescript
+// New comment
+export const emitNewComment = (comment: Comment, contentId: string) => {
+  io.to(`content:${contentId}`).emit('newComment', comment)
+}
+
+// New reply
+export const emitNewReply = (reply: Comment, parentCommentId: string) => {
+  io.to(`comment:${parentCommentId}`).emit('newReply', reply)
+}
+
+// Comment like
+export const emitCommentLikeUpdate = (commentId: string, likes: number, userId: string, isLiked: boolean) => {
+  // Emit to all rooms that might have this comment
+  io.emit('commentLikeUpdate', { commentId, likes, userId, isLiked })
+}
+
+// Comment deleted (see Comment System section)
+emitCommentDeleted(commentId, contentId, contentType, parentCommentId, deletedReplies)
+```
+
+### Room Strategy
+
+**Content Rooms:** `content:${contentId}`
+- Used for: Content-level updates (likes, bookmarks, new comments)
+- Joined by: Users viewing the content detail page
+
+**Comment Rooms:** `comment:${commentId}`
+- Used for: Comment-level updates (replies, likes, deletions)
+- Joined by: Users viewing the comment detail page
+
+**Multi-room Emission:**
+- Allows targeted updates to specific viewers
+- Reduces unnecessary network traffic
+- Ensures all relevant clients receive updates
 
 ---
 
-## CRUD OPERATIONS SUMMARY
+## DYNAMIC CONTENT MANAGEMENT
 
-| Module | Create | Read | Update | Delete |
-|--------|--------|------|--------|--------|
-| **J Center** | Profile setup (auto on first login) | ✅ All users (own profile) | ✅ All users (own profile) | ❌ (account deactivation only) |
-| **J Hub** | ✅ All users (content_creator can publish) | ✅ All users | ✅ Owner/Admin | ✅ Owner/Admin |
-| **J Studio** | ✅ All users (requests) | ✅ All users | ✅ Owner/Admin | ✅ Owner/Admin |
-| **J Academy** | ✅ Mentor (courses), Requester (requests) | ✅ All users | ✅ Mentor (own courses)/Admin | ✅ Mentor/Admin |
-| **J Info** | ✅ All users (engagements) | ✅ All users | ❌ (read-only after submit) | ❌ (admin can delete) |
-| **J Alpha** | ✅ Scout (alphas) | ✅ All users | ✅ Scout (own alphas)/Admin | ✅ Scout (own)/Admin |
-| **Admin Panel** | ✅ Admin/Super Admin (users, roles, etc.) | ✅ Admin/Super Admin | ✅ Admin/Super Admin | ✅ Super Admin only |
+### Overview
 
----
+Admin-controlled dropdown options for various platform features.
 
-## DYNAMIC CONTENT MANAGEMENT SUMMARY
+### Managed Content Types
 
-Bu bölüm, admin tarafından yönetilen ve platform genelinde dropdown/select alanlarında kullanılan dinamik içerik tiplerini özetler.
+**1. Hub Content Types** - `backend/src/models/HubContentType.model.ts`
+```typescript
+interface HubContentType {
+  _id: string
+  name: string              // e.g., "Video", "Thread"
+  description: string
+  isActive: boolean
+  order: number
+  createdAt: Date
+}
+```
 
-### 1. J Hub Content Types
-**Admin Management:** `/admin/hub-content-types`
-**Used In:** `/hub/create` - Content type dropdown
+**Default Types:** Video, Thread, Podcast, Guide, Tutorial
 
-**Default Types:**
-- Video
-- Thread
-- Podcast
-- Guide
-- Tutorial
+**Admin Page:** `/admin/settings` → Dynamic Content tab
 
-**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE
+**2. Studio Request Types** - `backend/src/models/StudioRequestType.model.ts`
 
----
+**Default Types:** Cover Design, Logo Design, Banner Design, Video Editing, Thumbnail, Motion Graphics
 
-### 2. J Studio Request Types
-**Admin Management:** `/admin/studio-request-types`
-**Used In:** `/studio/create` - Request type dropdown
+**3. Academy Categories** - `backend/src/models/AcademyCategory.model.ts`
 
-**Default Types:**
-- Cover Design
-- Logo Design
-- Banner Design
-- Social Media Graphics
-- Video Editing
-- Infographic Design
-- Animation
-- Other
+**Default Types:** Photoshop, Video Edit, Crypto Twitter, Web3, Node Setup, AI Tools, DeFi, NFTs
 
-**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE, ASSIGN TO ROLE
+**4. Info Platforms** - `backend/src/models/InfoPlatform.model.ts`
 
----
+**Default Types:** Twitter/X, Discord, Farcaster, Kaito, WallChain, Cookie, Zama
 
-### 3. J Academy Course Categories
-**Admin Management:** `/admin/academy-categories`
-**Used In:** `/academy/create`, `/academy/courses` - Category dropdown/filter
+**5. Info Engagement Types** - `backend/src/models/InfoEngagementType.model.ts`
 
-**Default Categories:**
-- Photoshop & Tasarım
-- Video Edit ve İçerik Montajı
-- Kripto Twitter & Kişisel Marka İnşası
-- Web3 Araştırma & DeFi Stratejileri
-- Node Kurulum & Validatör Teknikleri
-- AI Araçlarının Doğru Kullanımı
+**Default Types:** Tweet, Retweet, Like, Comment, Follow, Join Community, Discord Role
 
-**Admin Can:** CREATE, EDIT, DELETE (if no courses), ACTIVATE/DEACTIVATE, SET COLOR
+**6. Alpha Categories** - `backend/src/models/AlphaCategory.model.ts`
 
----
+**Default Types:** Airdrop Radar, Testnet Tracker, Memecoin Calls, DeFi Signals, NFT Launches
 
-### 4. J Info Platforms
-**Admin Management:** `/admin/info-platforms`
-**Used In:** `/info/submit` - Platform dropdown
+### API Endpoints
 
-**Default Platforms:**
-- Kaito
-- WallChain
-- Cookie
-- Zama OG NFT
-- Twitter/X General
-- Farcaster
-- Discord
-- Other
+```typescript
+// Get all types
+GET /api/dynamic-content/:type
+// type: 'hub-content-types' | 'studio-request-types' | 'academy-categories' | 'info-platforms' | 'info-engagement-types' | 'alpha-categories'
+// Response: { success: true, data: ContentType[] }
 
-**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE, UPLOAD LOGO
+// Create type (admin only)
+POST /api/dynamic-content/:type
+Body: { name, description, order }
+// Response: { success: true, data: ContentType }
 
----
+// Update type (admin only)
+PUT /api/dynamic-content/:type/:id
+Body: { name, description, isActive, order }
+// Response: { success: true, data: ContentType }
 
-### 5. J Info Engagement Types
-**Admin Management:** `/admin/info-engagement-types`
-**Used In:** `/info/submit` - Engagement type dropdown
+// Delete type (admin only)
+DELETE /api/dynamic-content/:type/:id
+// Response: { success: true, message: "Type deleted" }
+```
 
-**Default Types:**
-- Tweet/Post
-- Retweet/Recast
-- Like/React
-- Comment/Reply
-- Follow
-- Join Community
-- Discord Role
-- Other
+### Seed Script
 
-**Admin Can:** CREATE, EDIT, DELETE (if unused), ACTIVATE/DEACTIVATE, SET DEFAULT POINTS, SET REQUIREMENTS
+**File:** `backend/src/scripts/seed-dynamic-content.ts`
 
----
+**Run:**
+```bash
+cd backend && npx ts-node src/scripts/seed-dynamic-content.ts
+```
 
-### 6. J Alpha Categories
-**Admin Management:** `/admin/alpha-categories`
-**Used In:** `/alpha/submit`, `/alpha/feed` - Category dropdown/filter
+**Creates:** All default types for all 6 categories.
 
-**Default Categories:**
-- Airdrop Radar
-- Testnet Tracker
-- Memecoin Calls
-- DeFi Signals
+### Usage in Forms
 
-**Admin Can:** CREATE, EDIT, DELETE (if no posts), ACTIVATE/DEACTIVATE, SET COLOR, SET DEFAULT RISK LEVEL
+**Example - Hub Create:**
+```tsx
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+
+const { data: contentTypes } = useQuery({
+  queryKey: ['hub-content-types'],
+  queryFn: async () => {
+    const { data } = await api.get('/dynamic-content/hub-content-types')
+    return data.data
+  }
+})
+
+// In form
+<select name="contentType">
+  {contentTypes?.map(type => (
+    <option key={type._id} value={type.name}>{type.name}</option>
+  ))}
+</select>
+```
 
 ---
 
-### IMPORTANT NOTES:
+## NAVIGATION & LAYOUT
 
-1. **All dynamic content is admin-controlled** - Users cannot create new types/categories/platforms
-2. **Pre-populated defaults** - System starts with default values, admin can modify
-3. **Delete protection** - Items with existing usage cannot be deleted (must be deactivated instead)
-4. **Real-time updates** - When admin changes these, dropdowns update immediately for all users
-5. **Validation** - All dynamic items have unique names and keys (lowercase_underscore format)
-6. **Deactivation** - Inactive items don't show in user dropdowns but remain in database for historical records
+### Header
+
+**Component:** `frontend/src/components/layout/header.tsx`
+
+**Features:**
+- Sticky top positioning
+- Logo (links to `/`)
+- Navigation menu (Hub, Studio, Academy, Info, Alpha)
+- Theme toggle (light/dark mode)
+- Connect Wallet button (RainbowKit)
+- Profile dropdown (supports middle-click navigation)
+
+**Profile Dropdown:**
+```tsx
+<Link
+  href="/center/profile"
+  onClick={(e) => {
+    // Left-click: Open dropdown
+    if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+      setIsDropdownOpen(!isDropdownOpen)
+    }
+    // Ctrl/Cmd + click, middle-click: Navigate to profile
+  }}
+  onMouseDown={(e) => {
+    // Prevent dropdown on middle-click
+    if (e.button === 1) e.stopPropagation()
+  }}
+>
+  {/* Profile image */}
+</Link>
+```
+
+**Dropdown Menu:**
+- Profile → `/center/profile`
+- Admin Panel → `/admin/dashboard` (admin only)
+- Logout
+
+### Footer
+
+**Component:** `frontend/src/components/layout/footer.tsx`
+
+**Sections:**
+- Logo
+- Product links (Hub, Studio, Academy, Info, Alpha)
+- Resource links (Documentation, Help, Terms, Privacy)
+- Social links (Twitter, GitHub)
+- Copyright notice
+
+### Middle-Click Navigation Support
+
+**Pattern:** All navigation links use `<Link>` component from Next.js for proper browser support.
+
+**Supported Elements:**
+- Profile avatar and name in comments
+- Back buttons
+- Comment content and timestamps (if detail URL provided)
+- Header profile icon (with smart click handling)
+
+**Example - Comment Navigation:**
+```tsx
+// Profile avatar
+<Link href={`/center/profile/${userId}`} onClick={(e) => e.stopPropagation()}>
+  <Avatar />
+</Link>
+
+// Timestamp
+<Link href={commentDetailUrl} onClick={(e) => e.stopPropagation()}>
+  {formatTimestamp(comment.createdAt)}
+</Link>
+
+// Comment content
+<Link href={commentDetailUrl} onClick={(e) => e.stopPropagation()}>
+  {comment.content}
+</Link>
+```
+
+**Behavior:**
+- Left-click: Normal navigation
+- Ctrl/Cmd + click: Open in new tab
+- Middle-click (scroll wheel): Open in new tab
+- Right-click: Show context menu with "Open in new tab"
+
+### Back Buttons
+
+**Pattern:** Use `<Link>` instead of `<button onClick={() => router.push()}>`
+
+```tsx
+// Content page back to hub
+<Link href="/hub" className="flex items-center gap-2">
+  <svg>...</svg> Back to Hub
+</Link>
+
+// Comment detail back to content
+<Link href={`/hub/content/${contentId}`} className="flex items-center gap-2">
+  <svg>...</svg> Back to Content
+</Link>
+```
 
 ---
 
-**END OF FORM & INPUT STRUCTURE DOCUMENTATION**
+## COMPONENT LIBRARY
+
+### UI Components
+
+**Location:** `frontend/src/components/ui/`
+
+**Components:**
+- `button.tsx` - Button with variants (default, destructive, outline, ghost, link)
+- `input.tsx` - Text input with label
+- `textarea.tsx` - Textarea with auto-resize
+- `select.tsx` - Select dropdown
+- `checkbox.tsx` - Checkbox with label
+- `radio.tsx` - Radio button group
+- `switch.tsx` - Toggle switch
+- `badge.tsx` - Badge for labels and status
+- `avatar.tsx` - User avatar with fallback
+- `skeleton.tsx` - Loading skeleton
+- `card.tsx` - Card container
+- `dialog.tsx` - Modal dialog
+- `dropdown-menu.tsx` - Dropdown menu
+- `toast.tsx` - Toast notifications
+- `tabs.tsx` - Tab navigation
+- `logo.tsx` - Platform logo
+- `theme-toggle.tsx` - Dark/light mode toggle
+
+### Hub Components
+
+**Location:** `frontend/src/components/hub/`
+
+**Components:**
+- `comment-item.tsx` - Single comment with actions
+- `twitter-reply-input.tsx` - Twitter-style comment input
+- `twitter-style-content.tsx` - Twitter-style content card
+- `content-renderers/` - Content type specific renderers
+  - `video-content.tsx` - Video player
+  - `thread-content.tsx` - Twitter thread display
+  - `podcast-content.tsx` - Audio player
+  - `guide-content.tsx` - Rich text guide
+  - `default-content.tsx` - Fallback renderer
+
+### Badge Components
+
+**Location:** `frontend/src/components/badges/`
+
+**Components:**
+- `badge-display.tsx` - Badge display utilities
+  - `BadgeDisplay` - Single badge
+  - `BadgeGrid` - Grid of badges
+  - `PinnedBadges` - Pinned badges showcase
+- `badge-shapes.tsx` - SVG badge shape library
+
+### Admin Components
+
+**Location:** `frontend/src/components/admin/`
+
+**Components:**
+- `admin-sidebar.tsx` - Admin navigation sidebar
+- `create-content-modal.tsx` - Content creation modal
+- `edit-role-modal.tsx` - Role editing modal
+
+### Layout Components
+
+**Location:** `frontend/src/components/layout/`
+
+**Components:**
+- `header.tsx` - Main header
+- `footer.tsx` - Main footer
+- `authenticated-layout.tsx` - Layout for authenticated pages
+
+---
+
+## API ENDPOINTS SUMMARY
+
+**Full documentation:** See `API_ENDPOINTS.md` for complete API specification (~185 endpoints)
+
+### Authentication
+
+```
+POST   /api/auth/twitter                    # Twitter OAuth login
+GET    /api/auth/twitter/callback           # OAuth callback
+POST   /api/auth/wallet/connect             # Wallet connect
+POST   /api/auth/wallet/verify              # Verify wallet signature
+POST   /api/auth/refresh                    # Refresh access token
+GET    /api/auth/me                         # Get current user
+POST   /api/auth/logout                     # Logout
+```
+
+### Hub Content
+
+```
+GET    /api/hub/content                     # List content (with filters)
+GET    /api/hub/content/:id                 # Get single content
+POST   /api/hub/content                     # Create content
+PUT    /api/hub/content/:id                 # Update content
+DELETE /api/hub/content/:id                 # Delete content
+POST   /api/hub/content/:id/like            # Toggle like
+POST   /api/hub/content/:id/bookmark        # Toggle bookmark
+GET    /api/hub/featured                    # Get featured content
+```
+
+### Comments
+
+```
+GET    /api/comments/:contentType/:contentId        # Get comments
+GET    /api/comments/single/:commentId              # Get single comment
+GET    /api/comments/:commentId/replies             # Get replies
+POST   /api/comments/:contentType/:contentId        # Create comment
+POST   /api/comments/:commentId/like                # Toggle like
+DELETE /api/comments/:commentId                     # Delete comment
+```
+
+### Users
+
+```
+GET    /api/users/:id                               # Get user profile
+PUT    /api/users/profile                           # Update profile
+GET    /api/users/:id/badges                        # Get badges
+GET    /api/users/:id/badges/pinned                 # Get pinned badges
+POST   /api/users/badges/:badgeId/pin               # Pin badge
+DELETE /api/users/badges/:badgeId/pin               # Unpin badge
+PATCH  /api/users/badges/:badgeId/visibility        # Toggle visibility
+GET    /api/users/:id/badges/stats                  # Badge stats
+```
+
+### Admin
+
+```
+GET    /api/admin/users                             # List users
+PUT    /api/admin/users/:id/roles                   # Update roles
+DELETE /api/admin/users/:id                         # Delete user
+GET    /api/admin/content                           # List all content
+PUT    /api/admin/content/:id/approve               # Approve content
+PUT    /api/admin/content/:id/reject                # Reject content
+GET    /api/admin/analytics                         # Get analytics
+GET    /api/admin/logs                              # Get activity logs
+```
+
+### Dynamic Content
+
+```
+GET    /api/dynamic-content/:type                   # Get types
+POST   /api/dynamic-content/:type                   # Create type
+PUT    /api/dynamic-content/:type/:id               # Update type
+DELETE /api/dynamic-content/:type/:id               # Delete type
+```
+
+**Types:** `hub-content-types`, `studio-request-types`, `academy-categories`, `info-platforms`, `info-engagement-types`, `alpha-categories`
+
+---
+
+## SUMMARY
+
+This document provides a complete overview of the Jobless platform structure as of 2025-01-22.
+
+**Key Features:**
+- ✅ 7 Core Modules (Hub, Studio, Academy, Info, Alpha, Center, Admin)
+- ✅ 10-Role Permission System
+- ✅ Dual Authentication (Twitter OAuth + Wallet)
+- ✅ Comment System with Real-time Updates
+- ✅ Badge System (88 badges, 6 categories)
+- ✅ WebSocket Integration for Live Updates
+- ✅ Dynamic Content Management (Admin-controlled dropdowns)
+- ✅ Middle-Click Navigation Support
+- ✅ Responsive Design (Mobile, Tablet, Desktop)
+- ✅ Dark/Light Theme Support
+
+**For detailed API documentation, see:** `API_ENDPOINTS.md`
+**For implementation guide, see:** `CLAUDE.md`
+
+---
+
+**End of STRUCTURE.md**

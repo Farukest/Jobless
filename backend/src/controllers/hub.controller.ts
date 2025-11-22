@@ -5,7 +5,7 @@ import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { configHelper } from '../utils/config-helper'
 import { engagementService } from '../services/engagement.service'
-import { emitLikeUpdate, emitBookmarkUpdate, emitViewUpdate } from '../socket'
+import { emitLikeUpdate, emitBookmarkUpdate, emitViewUpdate, emitContentCreated } from '../socket'
 import { canUserCreateContentType } from '../utils/content-permissions'
 import { BadgeService } from '../services/badge.service'
 import mongoose from 'mongoose'
@@ -97,9 +97,26 @@ export const getContent = asyncHandler(
         return next(new AppError('Content not found', 404))
       }
 
-      // Track view with engagement service (non-blocking, catch errors silently)
+      // Authorization check for non-published content
       const authReq = req as AuthRequest
       const userId = authReq.user?._id || null
+      const userRoles = authReq.user?.roles || []
+
+      // Only published content is publicly visible
+      // draft/rejected/archived can only be viewed by author or admin/super_admin
+      if (content.status !== 'published') {
+        const isAuthor = userId && content.authorId && content.authorId.toString() === userId.toString()
+        const isAdmin = userRoles.some((role: any) =>
+          (typeof role === 'string' ? role : role.name) === 'admin' ||
+          (typeof role === 'string' ? role : role.name) === 'super_admin'
+        )
+
+        if (!isAuthor && !isAdmin) {
+          return next(new AppError('Content not found', 404))
+        }
+      }
+
+      // Track view with engagement service (non-blocking, catch errors silently)
 
       try {
         const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown'
@@ -220,6 +237,9 @@ export const createContent = asyncHandler(
       status: status || 'draft',
     })
 
+    // Populate author for socket emission
+    await content.populate('authorId', 'displayName twitterUsername profileImage walletAddress')
+
     // Update user stats
     await User.findByIdAndUpdate(userId, {
       $inc: { contentCreated: 1 },
@@ -229,6 +249,11 @@ export const createContent = asyncHandler(
     BadgeService.checkActivityBadges(userId, 'hub').catch(err => {
       console.error('Badge check error:', err)
     })
+
+    // Emit WebSocket event if content is published
+    if (content.status === 'published') {
+      emitContentCreated(content)
+    }
 
     res.status(201).json({
       success: true,

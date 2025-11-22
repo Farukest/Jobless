@@ -7,8 +7,22 @@ interface GuideContentProps {
 }
 
 export function GuideContent({ content }: GuideContentProps) {
+  // If no body, show empty state
+  if (!content.body || content.body.trim().length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-8">
+        <div className="text-center text-muted-foreground">
+          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-sm">No content available</p>
+        </div>
+      </div>
+    )
+  }
+
   // Extract sections from body (by ## headings)
-  const sections = content.body?.split(/(?=^##\s)/m).filter((s: string) => s.trim()) || []
+  const sections = content.body.split(/(?=^##\s)/m).filter((s: string) => s.trim()) || []
   const [activeSection, setActiveSection] = useState(0)
 
   // Parse section title

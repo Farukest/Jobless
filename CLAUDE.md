@@ -692,7 +692,397 @@ cd backend && node seed-test-data.js
 
 ---
 
-**Last Updated:** 2025-01-21
+---
+
+## COMMENT SYSTEM & REAL-TIME FEATURES
+
+### Comment Deletion System
+
+**Overview:**
+Complete comment deletion system with cascade delete and real-time WebSocket updates across all clients.
+
+**Backend Implementation:**
+
+1. **Delete Controller** - `backend/src/controllers/comment.controller.ts`
+```typescript
+export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response) => {
+  // Authorization: Author or moderator only
+  const isAuthor = comment.userId.toString() === userId.toString()
+  if (!isAuthor && !isModerator) {
+    throw new AppError('Not authorized to delete this comment', 403)
+  }
+
+  // Cascade Delete Logic:
+  if (!comment.parentCommentId) {
+    // Parent comment - delete all replies
+    const replies = await Comment.find({ parentCommentId: id })
+    deletedReplies = replies.map(reply => reply._id.toString())
+    await Comment.deleteMany({ parentCommentId: id })
+    // Decrement content's comment count
+    await Content.findByIdAndUpdate(comment.contentId, { $inc: { commentsCount: -1 } })
+  } else {
+    // Reply - decrement parent comment's reply count
+    await Comment.findByIdAndUpdate(comment.parentCommentId, { $inc: { repliesCount: -1 } })
+  }
+
+  // Delete the comment
+  await comment.deleteOne()
+
+  // Emit WebSocket event to all clients
+  emitCommentDeleted(id, contentId, contentType, parentCommentId, deletedReplies)
+})
+```
+
+2. **WebSocket Emission** - `backend/src/socket/index.ts`
+```typescript
+export const emitCommentDeleted = (
+  commentId: string,
+  contentId: string,
+  contentType: string,
+  parentCommentId: string | undefined,
+  deletedReplies: string[]
+) => {
+  const data = { commentId, parentCommentId, deletedReplies }
+
+  // Multi-room emission strategy:
+  // 1. Content room - for content page listeners
+  io.to(`content:${contentId}`).emit('commentDeleted', data)
+
+  // 2. Parent comment room - for reply listeners
+  if (parentCommentId) {
+    io.to(`comment:${parentCommentId}`).emit('commentDeleted', data)
+  }
+
+  // 3. Own comment room - for modals open on this comment
+  io.to(`comment:${commentId}`).emit('commentDeleted', data)
+}
+```
+
+**Frontend Implementation:**
+
+1. **Content Page Listener** - `frontend/src/app/hub/content/[id]/page.tsx`
+```typescript
+const handleCommentDeleted = (data: any) => {
+  const { commentId, parentCommentId, deletedReplies } = data
+  const allDeletedIds = [commentId, ...deletedReplies]
+
+  // Remove deleted comments from cache
+  queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
+    return {
+      ...old,
+      count: Math.max(0, old.count - allDeletedIds.length),
+      data: old.data.filter(comment => !allDeletedIds.includes(comment._id))
+    }
+  })
+
+  // Update content's comment count
+  queryClient.setQueryData(['hub', 'content', id], (old: any) => {
+    return {
+      ...old,
+      data: { ...old.data, commentsCount: Math.max(0, old.data.commentsCount - 1) }
+    }
+  })
+}
+
+socket.on('commentDeleted', handleCommentDeleted)
+```
+
+2. **Comment Detail Page Listener** - `frontend/src/app/hub/content/[id]/comment/[commentId]/page.tsx`
+```typescript
+const handleCommentDeleted = (data: any) => {
+  const { commentId: deletedId, deletedReplies } = data
+
+  // If parent comment deleted, redirect to content page
+  if (deletedId === commentId) {
+    router.push(`/hub/content/${contentId}`)
+    return
+  }
+
+  // If modal open on deleted comment, show warning
+  if (replyModalComment && deletedId === replyModalComment._id) {
+    setIsModalCommentDeleted(true) // Shows warning banner
+  }
+
+  // Remove deleted reply from cache
+  queryClient.setQueryData(['replies', commentId], (old: any) => {
+    const allDeletedIds = [deletedId, ...deletedReplies]
+    return {
+      ...old,
+      count: Math.max(0, old.count - allDeletedIds.length),
+      data: old.data.filter(reply => !allDeletedIds.includes(reply._id))
+    }
+  })
+}
+```
+
+3. **Modal Warning UI**
+```tsx
+{isModalCommentDeleted && (
+  <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+    <div className="flex items-center gap-2">
+      <svg className="w-5 h-5 text-red-500">...</svg>
+      <p className="text-sm text-red-500 font-medium">This comment has been deleted</p>
+    </div>
+    <p className="text-xs text-red-500/70 mt-1 ml-7">
+      You cannot reply to a deleted comment
+    </p>
+  </div>
+)}
+
+<TwitterReplyInput
+  disabled={isModalCommentDeleted} // Disable input
+  placeholder={isModalCommentDeleted ? "Cannot reply to deleted comment" : "Post your reply..."}
+/>
+```
+
+4. **Delete Hook** - `frontend/src/hooks/use-hub.ts`
+```typescript
+export function useDeleteComment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (commentId: string) => {
+      const { data } = await api.delete(`/comments/${commentId}`)
+      return data
+    },
+    onSuccess: () => {
+      // WebSocket handles real-time updates
+      // Just invalidate queries for refetch if needed
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+      queryClient.invalidateQueries({ queryKey: ['replies'] })
+    },
+  })
+}
+```
+
+**Key Features:**
+- ✅ Cascade delete (parent deletion deletes all child replies)
+- ✅ Authorization check (author or moderator only)
+- ✅ Real-time WebSocket updates across all clients
+- ✅ Multi-room emission (content, parent, comment rooms)
+- ✅ Modal warning when replying to deleted comment
+- ✅ Disabled input to prevent posting to deleted comments
+- ✅ Auto-redirect if viewing deleted parent comment
+- ✅ Optimistic cache updates with React Query
+
+---
+
+## UI/UX IMPROVEMENTS
+
+### Three-Dot Menu for Delete Button
+
+**Problem:** Delete button was inline with like/reply buttons, causing UI clutter.
+
+**Solution:** Moved delete button to three-dot dropdown menu in comment header.
+
+**Implementation** - `frontend/src/components/hub/comment-item.tsx`:
+```tsx
+{/* Three-dot menu (only for author or moderator) */}
+{canDelete && (
+  <div className="ml-auto relative options-menu-container">
+    <button onClick={() => setShowOptionsMenu(!showOptionsMenu)}>
+      <svg>...</svg> {/* Three-dot icon */}
+    </button>
+
+    {/* Dropdown */}
+    {showOptionsMenu && (
+      <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg">
+        <button onClick={() => setShowDeleteConfirm(true)}>
+          <svg>...</svg> Delete
+        </button>
+      </div>
+    )}
+  </div>
+)}
+```
+
+**Outside Click Detection:**
+```tsx
+useEffect(() => {
+  if (!showOptionsMenu) return
+
+  const handleClickOutside = (e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (!target.closest('.options-menu-container')) {
+      setShowOptionsMenu(false)
+    }
+  }
+
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, [showOptionsMenu])
+```
+
+### View More Button Fix
+
+**Problem:** "View more" button was triggering both expand/collapse AND navigation to detail page (double trigger).
+
+**Solution:** Added `e.stopPropagation()` to prevent event bubbling.
+
+**Implementation:**
+```tsx
+{shouldTruncate && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation() // Prevent parent click handlers
+      setIsExpanded(!isExpanded)
+    }}
+    className="text-xs text-primary hover:underline mt-1"
+  >
+    {isExpanded ? 'Show less' : 'View more'}
+  </button>
+)}
+```
+
+---
+
+## MIDDLE-CLICK NAVIGATION SUPPORT
+
+### Overview
+
+Complete middle-click (scroll wheel) and right-click "open in new tab" support throughout the application.
+
+**Key Principle:** All navigation links use `<Link>` component instead of `<button onClick>` for proper browser navigation support.
+
+### CommentItem Component
+
+**Before:**
+```tsx
+{onCommentClick ? (
+  <button onClick={() => onCommentClick(comment._id)}>
+    {comment.content}
+  </button>
+) : (
+  <p>{comment.content}</p>
+)}
+```
+
+**After:**
+```tsx
+interface CommentItemProps {
+  commentDetailUrl?: string // New prop for detail page URL
+  // Removed: onCommentClick?: (commentId: string) => void
+}
+
+{commentDetailUrl ? (
+  <Link href={commentDetailUrl} onClick={(e) => e.stopPropagation()}>
+    {comment.content}
+  </Link>
+) : (
+  <p>{comment.content}</p>
+)}
+```
+
+**Usage:**
+```tsx
+<CommentItem
+  comment={comment}
+  commentDetailUrl={`/hub/content/${id}/comment/${comment._id}`}
+  onReplyClick={handleReplyClick}
+/>
+```
+
+**All clickable elements converted to Links:**
+- Profile avatar: `<Link href={/center/profile/${userId}}>`
+- Profile name: `<Link href={/center/profile/${userId}}>`
+- Timestamp: `<Link href={commentDetailUrl}>`
+- Comment content: `<Link href={commentDetailUrl}>`
+
+### Back Button Support
+
+**Content Page:**
+```tsx
+<Link href="/hub" className="flex items-center gap-2">
+  <svg>...</svg> Back
+</Link>
+```
+
+**Comment Detail Page:**
+```tsx
+<Link href={`/hub/content/${contentId}`} className="flex items-center gap-2">
+  <svg>...</svg> Back
+</Link>
+```
+
+### Header Profile Icon
+
+**Challenge:** Profile icon should open dropdown on left-click, but support middle-click navigation.
+
+**Solution:** Smart click handling with `onClick` and `onMouseDown` events.
+
+**Implementation** - `frontend/src/components/layout/header.tsx`:
+```tsx
+<Link
+  href="/center/profile"
+  onClick={(e) => {
+    // Only prevent default on left click without modifiers
+    if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+      setIsDropdownOpen(!isDropdownOpen) // Open dropdown
+    }
+    // Middle-click (button 1) and Ctrl+click navigate normally
+  }}
+  onMouseDown={(e) => {
+    // Prevent dropdown from opening on middle-click
+    if (e.button === 1) {
+      e.stopPropagation()
+    }
+  }}
+>
+  {/* Profile image */}
+</Link>
+```
+
+**Behavior:**
+- Left-click: Open dropdown menu
+- Ctrl/Cmd + left-click: Open in new tab
+- Middle-click (scroll wheel): Open in new tab
+- Right-click: Show "Open in new tab" context menu
+
+### Footer Cleanup
+
+**Removed:** "Comprehensive Web3 Ecosystem Platform" description text
+**File:** `frontend/src/components/layout/footer.tsx`
+
+```tsx
+// Before
+<div className="space-y-4">
+  <Logo />
+  <p className="text-sm text-muted-foreground">
+    Comprehensive Web3 Ecosystem Platform
+  </p>
+</div>
+
+// After
+<div className="space-y-4">
+  <Logo />
+</div>
+```
+
+---
+
+## FILES MODIFIED IN THIS SESSION
+
+### Backend:
+1. `backend/src/controllers/comment.controller.ts` - Delete logic with cascade
+2. `backend/src/socket/index.ts` - emitCommentDeleted helper function
+
+### Frontend Components:
+1. `frontend/src/components/hub/comment-item.tsx` - Three-dot menu, Link navigation, commentDetailUrl prop
+2. `frontend/src/components/hub/twitter-reply-input.tsx` - Added disabled prop
+3. `frontend/src/components/layout/header.tsx` - Middle-click support for profile icon
+4. `frontend/src/components/layout/footer.tsx` - Removed description text
+
+### Frontend Pages:
+1. `frontend/src/app/hub/content/[id]/page.tsx` - Delete listener, Link back button
+2. `frontend/src/app/hub/content/[id]/comment/[commentId]/page.tsx` - Delete listener, modal warning, Link back button
+
+### Frontend Hooks:
+1. `frontend/src/hooks/use-hub.ts` - useDeleteComment hook
+
+---
+
+**Last Updated:** 2025-01-22
 **Project Status:**
 - ✅ All dynamic content models implemented
 - ✅ Seed scripts functional (dynamic content + badges)
@@ -701,8 +1091,14 @@ cd backend && node seed-test-data.js
 - ✅ Wallet authentication working
 - ✅ Badge integration on login and role changes
 - ✅ Profile page shows badges (grid, pinned, stats)
-- 🔄 SVG badge designs in progress (user creating from HTML)
+- ✅ **Comment deletion system with real-time WebSocket updates**
+- ✅ **Three-dot menu UI pattern for delete actions**
+- ✅ **Middle-click navigation support throughout app**
+- ✅ **Modal warning system for deleted comments**
+- ✅ **Smart click handling for dropdown + navigation**
+
 **Next Steps:**
-- Complete SVG badge designs (user importing from HTML)
-- Test badge awarding for different activities
 - Implement remaining modules (Academy enrollment, Studio requests, etc.)
+- Add edit comment functionality
+- Add comment reporting system
+- Implement comment moderation dashboard

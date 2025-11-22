@@ -345,7 +345,7 @@ export default function ContentDetailPage() {
   }
 
   const content = data.data
-  const isAuthor = user?._id === content.authorId._id
+  const isAuthor = user?._id === content.authorId?._id
 
   return (
     <AuthenticatedLayout>
@@ -521,15 +521,13 @@ export default function ContentDetailPage() {
                           Replying to{' '}
                           {users.map((userObj, index) => (
                             <span key={userObj.username}>
-                              <span
-                                className="text-primary hover:underline cursor-pointer"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  router.push(`/center/profile/${userObj.userId}`)
-                                }}
+                              <Link
+                                href={`/center/profile/${userObj.userId}`}
+                                className="text-primary hover:underline"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 @{userObj.username}
-                              </span>
+                              </Link>
                               {index < users.length - 2 && ', '}
                               {index === users.length - 2 && ' and '}
                             </span>

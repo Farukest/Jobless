@@ -189,6 +189,9 @@ export function TwitterReplyInput({
             onChange={(e) => onChange(e.target.value)}
             onFocus={() => !disabled && setIsFocused(true)}
             onBlur={(e) => {
+              // If autoFocus is true (modal mode), keep toolbar visible
+              if (autoFocus) return
+
               // Check if blur is due to clicking emoji picker or toolbar buttons
               const relatedTarget = e.relatedTarget as HTMLElement
               if (relatedTarget && containerRef.current?.contains(relatedTarget)) {

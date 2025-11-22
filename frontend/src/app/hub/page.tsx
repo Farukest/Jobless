@@ -6,26 +6,27 @@ import { useAuth } from '@/hooks/use-auth'
 import { usePublicConfigs, formatAsOptions } from '@/hooks/use-configs'
 import { useHubContent, useFeaturedContent, useToggleLike, useToggleBookmark, Content } from '@/hooks/use-hub'
 import { Skeleton, CardSkeleton } from '@/components/ui/skeleton'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import Image from 'next/image'
-import toast from 'react-hot-toast'
+import { getSocket } from '@/lib/socket'
+import { useQueryClient } from '@tanstack/react-query'
 
 function ContentCard({ content }: { content: Content }) {
+  const router = useRouter()
   const { mutate: toggleLike } = useToggleLike()
   const { mutate: toggleBookmark } = useToggleBookmark()
 
-  const handleLike = () => {
-    toggleLike(content._id, {
-      onSuccess: () => toast.success('Liked!'),
-      onError: () => toast.error('Failed to like'),
-    })
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleLike(content._id)
   }
 
-  const handleBookmark = () => {
-    toggleBookmark(content._id, {
-      onSuccess: () => toast.success('Bookmarked!'),
-      onError: () => toast.error('Failed to bookmark'),
-    })
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleBookmark(content._id)
+  }
+
+  const handleCardClick = () => {
+    router.push(`/hub/content/${content._id}`)
   }
 
   const getDifficultyColor = (difficulty?: string) => {
@@ -42,7 +43,10 @@ function ContentCard({ content }: { content: Content }) {
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors">
+    <div
+      onClick={handleCardClick}
+      className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors cursor-pointer"
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3 flex-1">
           {content.authorId?.profileImage ? (
@@ -163,10 +167,17 @@ export default function HubPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
   const { data: configs, isLoading: configsLoading } = usePublicConfigs()
+  const queryClient = useQueryClient()
+  const [mounted, setMounted] = useState(false)
   const [page, setPage] = useState(1)
   const [contentType, setContentType] = useState('')
   const [category, setCategory] = useState('')
   const [difficulty, setDifficulty] = useState('')
+
+  // Handle client-side mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Dynamic config options with "All" prepended
   const configContentTypes = configs?.content_types || []
@@ -196,10 +207,13 @@ export default function HubPage() {
     })),
   ]
 
+  // Get hub limits from config (default: 24 for home)
+  const homeLimit = configs?.hub_limits?.home_page_limit || 24
+
   const { data: featured, isLoading: featuredLoading } = useFeaturedContent(3)
   const { data: contents, isLoading: contentsLoading } = useHubContent({
     page,
-    limit: 12,
+    limit: homeLimit,
     contentType: contentType || undefined,
     category: category || undefined,
     difficulty: difficulty || undefined,
@@ -207,39 +221,181 @@ export default function HubPage() {
     sortOrder: 'desc',
   })
 
+  // WebSocket listeners for real-time updates
+  useEffect(() => {
+    const socket = getSocket()
+
+    // Like update
+    const handleLikeUpdate = (data: { contentId: string; likesCount: number; isLiked?: boolean }) => {
+      console.log('[Hub Home] Like update:', data)
+
+      // Update contents query
+      queryClient.setQueryData(['hub', 'content', {
+        page,
+        limit: homeLimit,
+        contentType: contentType || undefined,
+        category: category || undefined,
+        difficulty: difficulty || undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      }], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((content: Content) =>
+            content._id === data.contentId
+              ? { ...content, likesCount: data.likesCount }
+              : content
+          ),
+        }
+      })
+
+      // Update featured query
+      queryClient.setQueryData(['hub', 'featured', 3], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((content: Content) =>
+            content._id === data.contentId
+              ? { ...content, likesCount: data.likesCount }
+              : content
+          ),
+        }
+      })
+    }
+
+    // Bookmark update
+    const handleBookmarkUpdate = (data: { contentId: string; bookmarksCount: number; isBookmarked?: boolean }) => {
+      console.log('[Hub Home] Bookmark update:', data)
+
+      // Update contents query
+      queryClient.setQueryData(['hub', 'content', {
+        page,
+        limit: homeLimit,
+        contentType: contentType || undefined,
+        category: category || undefined,
+        difficulty: difficulty || undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      }], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((content: Content) =>
+            content._id === data.contentId
+              ? { ...content, bookmarksCount: data.bookmarksCount }
+              : content
+          ),
+        }
+      })
+
+      // Update featured query
+      queryClient.setQueryData(['hub', 'featured', 3], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((content: Content) =>
+            content._id === data.contentId
+              ? { ...content, bookmarksCount: data.bookmarksCount }
+              : content
+          ),
+        }
+      })
+    }
+
+    // Comment created (updates comment count)
+    const handleCommentCreated = (data: { contentId: string }) => {
+      console.log('[Hub Home] Comment created:', data)
+
+      // Update contents query
+      queryClient.setQueryData(['hub', 'content', {
+        page,
+        limit: homeLimit,
+        contentType: contentType || undefined,
+        category: category || undefined,
+        difficulty: difficulty || undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      }], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((content: Content) =>
+            content._id === data.contentId
+              ? { ...content, commentsCount: (content.commentsCount || 0) + 1 }
+              : content
+          ),
+        }
+      })
+
+      // Update featured query
+      queryClient.setQueryData(['hub', 'featured', 3], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((content: Content) =>
+            content._id === data.contentId
+              ? { ...content, commentsCount: (content.commentsCount || 0) + 1 }
+              : content
+          ),
+        }
+      })
+    }
+
+    // Listen to global hub events (no need to join rooms)
+    socket.on('hub:likeUpdate', handleLikeUpdate)
+    socket.on('hub:bookmarkUpdate', handleBookmarkUpdate)
+    socket.on('hub:commentCreated', handleCommentCreated)
+
+    return () => {
+      socket.off('hub:likeUpdate', handleLikeUpdate)
+      socket.off('hub:bookmarkUpdate', handleBookmarkUpdate)
+      socket.off('hub:commentCreated', handleCommentCreated)
+    }
+  }, [queryClient, page, contentType, category, difficulty])
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login')
     }
   }, [authLoading, isAuthenticated, router])
 
-  if (authLoading || configsLoading) {
+  // Show skeleton only after client-side mount
+  if (!mounted || authLoading || configsLoading) {
     return (
-      <AuthenticatedLayout>
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-7xl">
-            <Skeleton className="h-10 w-64 mb-8" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <CardSkeleton />
-              <CardSkeleton />
-              <CardSkeleton />
+      <div className="container mx-auto px-4 max-w-7xl">
+        {/* Filters Skeleton - matches real filters structure */}
+            <div className="bg-card rounded-lg border border-border p-6 mb-8">
+              <Skeleton className="h-6 w-20 mb-4" /> {/* "Filters" title */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Skeleton className="h-4 w-28 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
             </div>
-          </div>
+
+        {/* Content Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
-      </AuthenticatedLayout>
+      </div>
     )
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">J Hub</h1>
-          <p className="text-muted-foreground">Discover and share valuable content</p>
-        </div>
-
-        {/* Featured Content */}
+    <div className="container mx-auto px-4 max-w-7xl">
+      {/* Featured Content */}
         {featured && featured.data.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4">Featured Content</h2>
@@ -363,8 +519,6 @@ export default function HubPage() {
             </button>
           </div>
         )}
-      </div>
-      </div>
-    </AuthenticatedLayout>
+    </div>
   )
 }

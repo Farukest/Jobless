@@ -14,6 +14,7 @@ interface TwitterStyleContentProps {
   content: any
   onLike?: () => void
   onBookmark?: () => void
+  onComment?: () => void
   showFullContent?: boolean // false = preview in feed, true = full in detail
 }
 
@@ -21,6 +22,7 @@ export function TwitterStyleContent({
   content,
   onLike,
   onBookmark,
+  onComment,
   showFullContent = false
 }: TwitterStyleContentProps) {
   const router = useRouter()
@@ -52,7 +54,10 @@ export function TwitterStyleContent({
   }
 
   return (
-    <article className="bg-card border border-border rounded-lg hover:border-primary/30 transition-colors mb-3">
+    <div
+      onClick={() => router.push(`/hub/content/${content._id}`)}
+      className="block bg-card border border-border rounded-lg hover:border-primary/30 transition-colors mb-3 cursor-pointer"
+    >
       <div className="p-4">
         {/* Header: Avatar + User Info + Timestamp */}
         <div className="flex gap-3 mb-3">
@@ -146,9 +151,20 @@ export function TwitterStyleContent({
                   {['guide', 'tutorial'].includes(content.contentType.toLowerCase()) && <GuideContent content={content} />}
                   {['document', 'pdf', 'doc'].includes(content.contentType.toLowerCase()) && <DocumentContent content={content} />}
                   {!['video', 'podcast', 'thread', 'guide', 'tutorial', 'document', 'pdf', 'doc'].includes(content.contentType.toLowerCase()) && (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <div className="whitespace-pre-wrap">{content.body}</div>
-                    </div>
+                    content.body && content.body.trim().length > 0 ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <div className="whitespace-pre-wrap">{content.body}</div>
+                      </div>
+                    ) : (
+                      <div className="bg-card border border-border rounded-lg p-8">
+                        <div className="text-center text-muted-foreground">
+                          <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <p className="text-sm">No content available</p>
+                        </div>
+                      </div>
+                    )
                   )}
                 </>
               ) : (
@@ -199,7 +215,13 @@ export function TwitterStyleContent({
               </div>
 
               {/* Comments */}
-              <button className="flex items-center gap-1.5 text-sm hover:text-blue-500 transition-colors group">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onComment?.()
+                }}
+                className="flex items-center gap-1.5 text-sm hover:text-blue-500 transition-colors group"
+              >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
@@ -237,6 +259,6 @@ export function TwitterStyleContent({
           </div>
         </div>
       </div>
-    </article>
+    </div>
   )
 }

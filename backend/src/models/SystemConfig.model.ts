@@ -229,4 +229,14 @@ export const DEFAULT_SYSTEM_CONFIGS = [
     },
     description: 'Feature toggles for modules',
   },
+  // Hub Pagination Limits
+  {
+    configKey: 'hub_limits',
+    configType: 'object',
+    value: {
+      home_page_limit: 24,
+      feed_page_limit: 10,
+    },
+    description: 'Number of content items per page/load for Hub Home and Feed',
+  },
 ]
