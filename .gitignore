@@ -54,3 +54,7 @@ coverage.json
 # Uploads
 uploads/
 temp/
+
+# Security Documentation (contains vulnerability details - DO NOT COMMIT)
+SECURITY_AUDIT.md
+SECURITY_IMPLEMENTATION_STATUS.md
