@@ -5,6 +5,7 @@ import { Comment } from '../models/Comment.model'
 import { Content } from '../models/Content.model'
 import { AlphaPost } from '../models/AlphaPost.model'
 import { Course } from '../models/Course.model'
+import { sanitizeHelper } from '../utils/sanitize-helper'
 import { emitNewComment, emitNewReply, emitCommentLikeUpdate, emitCommentDeleted } from '../socket'
 
 /**
@@ -101,6 +102,7 @@ export const createComment = asyncHandler(
     const { content, parentCommentId } = req.body
     const userId = req.user._id
 
+    // 1. VALIDATE REQUIRED FIELDS (before sanitization)
     if (!content || content.trim().length === 0) {
       throw new AppError('Comment content is required', 400)
     }
@@ -111,12 +113,27 @@ export const createComment = asyncHandler(
       throw new AppError('Invalid content type', 400)
     }
 
-    // Create comment
+    // 2. SANITIZE USER INPUT
+    const sanitizedContent = sanitizeHelper.sanitizeRichText(content.trim())
+
+    // 3. ENFORCE LENGTH LIMIT (2000 chars for comments)
+    const COMMENT_MAX_LENGTH = 2000
+    try {
+      sanitizeHelper.enforceMaxLength(
+        sanitizedContent,
+        COMMENT_MAX_LENGTH,
+        'Comment'
+      )
+    } catch (error: any) {
+      throw new AppError(error.message, 400)
+    }
+
+    // 4. CREATE WITH SANITIZED DATA
     const comment = await Comment.create({
       userId,
       contentType,
       contentId,
-      content,
+      content: sanitizedContent,
       parentCommentId: parentCommentId || undefined,
     })
 
@@ -190,11 +207,28 @@ export const updateComment = asyncHandler(
       throw new AppError('Not authorized to update this comment', 403)
     }
 
+    // 1. VALIDATE REQUIRED FIELDS
     if (!content || content.trim().length === 0) {
       throw new AppError('Comment content is required', 400)
     }
 
-    comment.content = content
+    // 2. SANITIZE USER INPUT
+    const sanitizedContent = sanitizeHelper.sanitizeRichText(content.trim())
+
+    // 3. ENFORCE LENGTH LIMIT (2000 chars for comments)
+    const COMMENT_MAX_LENGTH = 2000
+    try {
+      sanitizeHelper.enforceMaxLength(
+        sanitizedContent,
+        COMMENT_MAX_LENGTH,
+        'Comment'
+      )
+    } catch (error: any) {
+      throw new AppError(error.message, 400)
+    }
+
+    // 4. UPDATE WITH SANITIZED DATA
+    comment.content = sanitizedContent
     comment.isEdited = true
     comment.editedAt = new Date()
 

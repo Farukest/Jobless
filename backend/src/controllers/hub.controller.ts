@@ -4,6 +4,7 @@ import { User } from '../models/User.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { configHelper } from '../utils/config-helper'
+import { sanitizeHelper } from '../utils/sanitize-helper'
 import { engagementService } from '../services/engagement.service'
 import { emitLikeUpdate, emitBookmarkUpdate, emitViewUpdate, emitContentCreated } from '../socket'
 import { canUserCreateContentType } from '../utils/content-permissions'
@@ -195,7 +196,47 @@ export const createContent = asyncHandler(
       status,
     } = req.body
 
-    // Validate against dynamic config
+    // 1. VALIDATE REQUIRED FIELDS (before sanitization)
+    if (!title || !title.trim()) {
+      return next(new AppError('Title is required', 400))
+    }
+
+    if (!body || !body.trim()) {
+      return next(new AppError('Content body is required', 400))
+    }
+
+    // 2. SANITIZE USER INPUT
+    const sanitizedTitle = sanitizeHelper.sanitizeHTML(title.trim())
+    const sanitizedDescription = description
+      ? sanitizeHelper.sanitizeRichText(description.trim())
+      : ''
+    const sanitizedBody = sanitizeHelper.sanitizeRichText(body.trim())
+
+    // 3. ENFORCE LENGTH LIMITS
+    const hubLimits = await configHelper.get('hub_limits')
+
+    try {
+      sanitizeHelper.enforceMaxLength(
+        sanitizedTitle,
+        hubLimits.content_title_max_length,
+        'Title'
+      )
+      sanitizeHelper.enforceMaxLength(
+        sanitizedBody,
+        hubLimits.content_body_max_length,
+        'Body'
+      )
+    } catch (error: any) {
+      return next(new AppError(error.message, 400))
+    }
+
+    // 4. VALIDATE ARRAYS
+    const validatedMediaUrls = mediaUrls
+      ? sanitizeHelper.validateURLArray(mediaUrls, 10)
+      : []
+    const validatedTags = tags ? sanitizeHelper.validateTagArray(tags) : []
+
+    // 5. VALIDATE AGAINST DYNAMIC CONFIG
     const validCategories = await configHelper.get('content_categories')
     if (category && !validCategories.includes(category)) {
       return next(new AppError('Invalid content category', 400))
@@ -224,14 +265,15 @@ export const createContent = asyncHandler(
       }
     }
 
+    // 6. CREATE WITH SANITIZED DATA
     const content = await Content.create({
       authorId: userId,
-      title,
-      description,
+      title: sanitizedTitle,
+      description: sanitizedDescription,
       contentType,
-      body,
-      mediaUrls: mediaUrls || [],
-      tags: tags || [],
+      body: sanitizedBody,
+      mediaUrls: validatedMediaUrls,
+      tags: validatedTags,
       category,
       difficulty,
       status: status || 'draft',
@@ -298,13 +340,51 @@ export const updateContent = asyncHandler(
       isPinned,
     } = req.body
 
-    // Update allowed fields
-    if (title !== undefined) content.title = title
-    if (description !== undefined) content.description = description
+    // Get hub limits for validation
+    const hubLimits = await configHelper.get('hub_limits')
+
+    // Update allowed fields with sanitization
+    if (title !== undefined) {
+      const sanitizedTitle = sanitizeHelper.sanitizeHTML(title.trim())
+      try {
+        sanitizeHelper.enforceMaxLength(
+          sanitizedTitle,
+          hubLimits.content_title_max_length,
+          'Title'
+        )
+        content.title = sanitizedTitle
+      } catch (error: any) {
+        return next(new AppError(error.message, 400))
+      }
+    }
+
+    if (description !== undefined) {
+      content.description = sanitizeHelper.sanitizeRichText(description.trim())
+    }
+
+    if (body !== undefined) {
+      const sanitizedBody = sanitizeHelper.sanitizeRichText(body.trim())
+      try {
+        sanitizeHelper.enforceMaxLength(
+          sanitizedBody,
+          hubLimits.content_body_max_length,
+          'Body'
+        )
+        content.body = sanitizedBody
+      } catch (error: any) {
+        return next(new AppError(error.message, 400))
+      }
+    }
+
+    if (mediaUrls !== undefined) {
+      content.mediaUrls = sanitizeHelper.validateURLArray(mediaUrls, 10)
+    }
+
+    if (tags !== undefined) {
+      content.tags = sanitizeHelper.validateTagArray(tags)
+    }
+
     if (contentType !== undefined) content.contentType = contentType
-    if (body !== undefined) content.body = body
-    if (mediaUrls !== undefined) content.mediaUrls = mediaUrls
-    if (tags !== undefined) content.tags = tags
     if (category !== undefined) content.category = category
     if (difficulty !== undefined) content.difficulty = difficulty
     if (status !== undefined) content.status = status
