@@ -4,6 +4,209 @@
 
 ---
 
+## ⚠️ COMMON PITFALLS AND TESTING STRATEGIES
+
+### Database Update Issues (Mongoose Mixed Types)
+
+**Problem:** Mongoose doesn't detect changes to `Mixed` type fields automatically.
+
+**What Went Wrong:**
+- Used `findOneAndUpdate()` for SystemConfig updates
+- Mongoose didn't save changes to `value` field (Mixed type)
+- Updates appeared successful but didn't persist to database
+
+**Solutions:**
+1. **Use `updateOne` with `$set` operator:**
+   ```typescript
+   await SystemConfig.updateOne(
+     { configKey },
+     { $set: { value: newValue, isActive: true } }
+   )
+   ```
+
+2. **OR use `findOne` → `markModified` → `save` pattern:**
+   ```typescript
+   const config = await SystemConfig.findOne({ configKey })
+   config.value = newValue
+   config.markModified('value')  // CRITICAL for Mixed types
+   await config.save()
+   ```
+
+**Testing Strategy:**
+```javascript
+// ALWAYS test updates with a verification script
+const result = await Model.updateOne({ key }, { $set: { value } })
+const verify = await Model.findOne({ key })
+console.log('Updated value:', verify.value) // Must match expected
+```
+
+---
+
+### Cache Invalidation Issues
+
+**Problem:** Multiple caching layers can return stale data.
+
+**What Went Wrong:**
+1. Backend `configHelper` had its own cache
+2. Frontend React Query had a separate cache with different queryKey
+3. Updates cleared one cache but not the other
+
+**Critical Layers:**
+- **Backend Cache:** `configHelper` singleton instance
+- **Frontend Cache:** React Query with queryKey
+- **Database:** The source of truth
+
+**Solutions:**
+1. **Backend:** Always clear configHelper cache after updates
+   ```typescript
+   await SystemConfig.updateOne(...)
+   configHelper.clearCache()  // CRITICAL
+   ```
+
+2. **Frontend:** Use EXACT queryKey for invalidation
+   ```typescript
+   // Hook uses: queryKey: ['public-configs']
+   // Invalidate with: queryKey: ['public-configs']  (NOT ['configs'])
+   await queryClient.invalidateQueries({ queryKey: ['public-configs'] })
+   ```
+
+**Testing Strategy:**
+```javascript
+// Test the full cycle
+1. Update value in database
+2. Clear all caches
+3. Fetch from API
+4. Verify API returns new value
+5. Refresh frontend
+6. Verify UI shows new value
+```
+
+---
+
+### Missing Required Fields
+
+**Problem:** Queries filter by fields that don't exist in documents.
+
+**What Went Wrong:**
+- `configHelper.get()` queries: `{ configKey, isActive: true }`
+- Old documents didn't have `isActive` field
+- Query returned null even though document existed
+
+**Solutions:**
+1. **Always check schema requirements:**
+   ```typescript
+   // Check actual document in DB
+   const doc = await Model.findOne({ key })
+   console.log('Document fields:', Object.keys(doc))
+   ```
+
+2. **Set defaults on updates:**
+   ```typescript
+   await Model.updateOne(
+     { key },
+     { $set: { value, isActive: true } }  // Set ALL required fields
+   )
+   ```
+
+**Testing Strategy:**
+```javascript
+// Verify document has all required fields
+const doc = await Model.findOne({ key })
+const required = ['field1', 'field2', 'isActive']
+required.forEach(field => {
+  if (!(field in doc)) {
+    console.error(`Missing field: ${field}`)
+  }
+})
+```
+
+---
+
+### Public API Endpoint Synchronization
+
+**Problem:** Adding new configs but forgetting to expose them in public endpoint.
+
+**What Went Wrong:**
+- Added `hub_limits` to database
+- Frontend expected it in `/api/configs/public`
+- But endpoint only returned specific hardcoded keys
+- New config was null in frontend
+
+**Solutions:**
+1. **When adding new config, update public endpoint:**
+   ```typescript
+   // config.controller.ts
+   export const getPublicConfigs = asyncHandler(async () => {
+     const publicKeys = [
+       'existing_config',
+       'new_config',  // ADD THIS
+     ]
+     // ...
+   })
+   ```
+
+2. **OR use dynamic approach (fetch ALL active configs):**
+   ```typescript
+   const configs = await SystemConfig.find({ isActive: true })
+   ```
+
+**Testing Strategy:**
+```bash
+# Test public endpoint directly
+curl http://localhost:5000/api/configs/public | jq '.data.new_config'
+# Should NOT be null
+```
+
+---
+
+### Pre-Implementation Testing Checklist
+
+**Before implementing ANY database update feature:**
+
+1. ✅ **Test the update query directly:**
+   ```javascript
+   // Create test script in backend/test-[feature].js
+   const result = await Model.updateOne(...)
+   console.log('Matched:', result.matchedCount)
+   console.log('Modified:', result.modifiedCount)
+   ```
+
+2. ✅ **Verify persistence:**
+   ```javascript
+   // Simulate page refresh - fetch fresh from DB
+   const fresh = await Model.findOne({ key })
+   console.log('After refresh:', fresh.value)
+   ```
+
+3. ✅ **Test cache invalidation:**
+   ```javascript
+   // Clear caches and verify new value returned
+   configHelper.clearCache()
+   const cached = await configHelper.get(key)
+   console.log('After cache clear:', cached)
+   ```
+
+4. ✅ **Test full API flow:**
+   ```bash
+   # POST update
+   curl -X PUT localhost:5000/api/endpoint -d '{"value": "new"}'
+   # GET fresh data
+   curl localhost:5000/api/endpoint
+   ```
+
+5. ✅ **Test frontend React Query:**
+   ```typescript
+   // In browser console after update
+   queryClient.invalidateQueries({ queryKey: ['key'] })
+   // Manually refetch and check network tab
+   ```
+
+**Golden Rule:**
+> "Database says success" ≠ "Frontend shows success"
+> ALWAYS test the complete round trip: Update → Clear Caches → Fetch → Display
+
+---
+
 ## PROJECT OVERVIEW
 
 **Platform:** Jobless - Web3 Ecosystem for Content Creators, Designers, Learners & Researchers
