@@ -236,7 +236,9 @@ export const DEFAULT_SYSTEM_CONFIGS = [
     value: {
       home_page_limit: 24,
       feed_page_limit: 10,
+      content_title_max_length: 200,
+      content_body_max_length: 20000,
     },
-    description: 'Number of content items per page/load for Hub Home and Feed',
+    description: 'Limits for Hub pagination and content creation (character limits, page sizes)',
   },
 ]

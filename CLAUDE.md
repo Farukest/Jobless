@@ -58,6 +58,15 @@
   - ✅ `text-foreground` `bg-card` `border-border` `text-muted-foreground`
   - ❌ `text-black` `bg-white` `border-gray-200` `text-gray-600`
 
+### 6. **NEVER Use Emojis in UI**
+- NEVER use emojis in production UI code (❌ '⚙️', '🧩', '🎨', '⚡')
+- ALWAYS design custom SVG icons instead
+- Icons should be theme-aware and match platform design
+- Use simple, clean SVG paths for icons
+- Examples:
+  - ✅ Custom SVG with `stroke="currentColor"`
+  - ❌ Emoji characters in labels or buttons
+
 ---
 
 ## USER ROLES & PERMISSIONS
@@ -74,24 +83,72 @@
 9. **mentor** - Can create J Academy courses
 10. **scout** - Can submit J Alpha research posts
 
-### Role-Based Access Patterns:
+### ⚠️ CRITICAL: Permission-Based Access Control
+
+**ALWAYS use permissions, NOT hardcoded role checks!**
 
 ```typescript
-// Middleware usage
-router.use(protect) // All authenticated users
-router.use(authorize('admin', 'super_admin')) // Admin only
-router.use(authorize('mentor', 'admin')) // Mentor or admin
+// ❌ WRONG - Hardcoded role check
+if (user.roles.includes('admin') || user.roles.includes('content_creator')) {
+  // Allow content creation
+}
 
-// Owner or Admin check
-if (userId !== ownerId && !userRoles.includes('admin')) {
+// ✅ CORRECT - Permission check (permissions is an object, not array)
+if (user.permissions.canCreateContent) {
+  // Allow content creation
+}
+
+// ✅ CORRECT - Multiple permissions
+if (user.permissions.canModerateContent) {
+  // Allow moderation
+}
+```
+
+**Permission Hierarchy:**
+- `super_admin` → Has ALL permissions (wraps everything)
+- `admin` → Has specific permissions (canCreateContent, canModerateContent, etc.)
+- `content_creator` → Has canCreateContent + canPublishImmediately
+- Other roles → Have specific permissions per module
+
+**Common Permissions:**
+- `canAccessJHub`, `canCreateContent`, `canModerateContent`
+- `canAccessStudio`, `canClaimStudioRequest`
+- `canAccessAcademy`, `canCreateCourse`, `canEnrollCourse`
+- `canAccessAlpha`, `canSubmitAlpha`
+- `canAccessInfo`, `canSubmitEngagement`
+
+### Access Control Patterns:
+
+```typescript
+// Middleware usage (backend)
+router.use(protect) // All authenticated users
+router.use(authorize('admin', 'super_admin')) // Admin only (legacy, use permissions in controller)
+
+// ✅ Ownership + Permission check (CORRECT)
+const isOwner = userId.toString() === ownerId.toString()
+const canModerate = user.permissions.canModerateContent
+
+if (!isOwner && !canModerate) {
   throw new AppError('Unauthorized', 403)
 }
 
-// Content creator special behavior
-if (!userRoles.includes('content_creator')) {
-  content.status = 'draft' // Others can only draft
-}
+// ✅ Content status based on permission (CORRECT)
+const status = user.permissions.canPublishImmediately
+  ? 'published'
+  : 'draft'
+
+// Frontend permission check (permissions is an object, not array)
+const canCreate = user?.permissions?.canCreateContent
+const canPublish = user?.permissions?.canPublishImmediately
+const canModerate = user?.permissions?.canModerateContent
+
+{canCreate && <CreateButton />}
 ```
+
+**Key Principles:**
+- Ownership checks (`userId === ownerId`) are VALID and necessary
+- Permission checks should be used for role-based capabilities
+- Combine ownership + permission for edit/delete: "owner OR has permission"
 
 ---
 
@@ -1057,6 +1114,359 @@ interface CommentItemProps {
 <div className="space-y-4">
   <Logo />
 </div>
+```
+
+---
+
+## WEBSOCKET PATTERNS & BEST PRACTICES
+
+### ⚠️ CRITICAL: Always Follow These Patterns
+
+**When implementing any feature with real-time updates, ALWAYS use this exact pattern:**
+
+### Backend WebSocket Emission Pattern
+
+**Location:** `backend/src/socket/index.ts`
+
+```typescript
+// ALWAYS create helper functions for WebSocket events
+export const emitEventName = (
+  contentId: string,
+  count: number,
+  additionalData?: any
+) => {
+  const data = { contentId, count, ...additionalData }
+
+  // ALWAYS emit to appropriate rooms:
+  // 1. Global module room (e.g., 'hub:eventName')
+  io.emit('hub:eventName', data)
+
+  // 2. Specific content room (if applicable)
+  io.to(`content:${contentId}`).emit('eventName', data)
+}
+
+// Example: Like Update
+export const emitLikeUpdate = (contentId: string, likesCount: number, isLiked?: boolean) => {
+  io.emit('hub:likeUpdate', { contentId, likesCount, isLiked })
+}
+
+// Example: Comment Created
+export const emitCommentCreated = (contentId: string) => {
+  io.emit('hub:commentCreated', { contentId })
+}
+```
+
+**Controller Usage:**
+```typescript
+import { emitLikeUpdate, emitCommentCreated } from '../socket/index'
+
+// After database update
+await Content.findByIdAndUpdate(id, { $inc: { likesCount: 1 } })
+emitLikeUpdate(id, updatedContent.likesCount, true)
+```
+
+### Frontend WebSocket Listener Pattern
+
+**Location:** Page components (e.g., `frontend/src/app/hub/page.tsx`, `feed/page.tsx`)
+
+```typescript
+import { getSocket } from '@/lib/socket'
+import { useQueryClient } from '@tanstack/react-query'
+
+// ALWAYS use useEffect for WebSocket listeners
+useEffect(() => {
+  const socket = getSocket()
+
+  // Handler function - updates React Query cache
+  const handleEventName = (data: { contentId: string; count: number }) => {
+    console.log('[Page Name] Event:', data)
+
+    // Update query cache - NEVER manual state updates
+    queryClient.setQueryData(['queryKey', params], (old: any) => {
+      if (!old) return old
+      return {
+        ...old,
+        data: old.data.map((item) =>
+          item._id === data.contentId
+            ? { ...item, count: data.count }
+            : item
+        ),
+      }
+    })
+  }
+
+  // Listen to event
+  socket.on('hub:eventName', handleEventName)
+
+  // ALWAYS cleanup
+  return () => {
+    socket.off('hub:eventName', handleEventName)
+  }
+}, [queryClient, /* dependencies */])
+```
+
+### React Query Mutation Pattern
+
+**DO NOT manually update counts in onSuccess - Let WebSocket handle it**
+
+```typescript
+// ❌ WRONG - Double increment bug
+const { mutate: createComment } = useCreateComment()
+
+createComment(data, {
+  onSuccess: () => {
+    // DON'T DO THIS - WebSocket will also increment
+    setCommentCount(prev => prev + 1)
+  }
+})
+
+// ✅ CORRECT - Only cleanup, WebSocket updates count
+const { mutate: createComment } = useCreateComment()
+
+createComment(data, {
+  onSuccess: () => {
+    setCommentText('')
+    setSelectedContent(null)
+    // WebSocket will handle count update via hub:commentCreated event
+  }
+})
+```
+
+### Infinite Query WebSocket Updates
+
+**Pattern for infinite queries (Feed pages):**
+
+```typescript
+const handleEventUpdate = (data: { contentId: string; count: number }) => {
+  queryClient.setQueryData(['hub', 'feed'], (old: any) => {
+    if (!old) return old
+    return {
+      ...old,
+      pages: old.pages.map((page: FeedResponse) => ({
+        ...page,
+        data: page.data.map((content) =>
+          content._id === data.contentId
+            ? { ...content, count: data.count }
+            : content
+        ),
+      })),
+    }
+  })
+}
+```
+
+### Multi-Query Updates
+
+**When event affects multiple queries (e.g., featured + all content):**
+
+```typescript
+const handleLikeUpdate = (data: { contentId: string; likesCount: number }) => {
+  // Update main content query
+  queryClient.setQueryData(['hub', 'content', filters], (old: any) => {
+    /* update logic */
+  })
+
+  // Also update featured query
+  queryClient.setQueryData(['hub', 'featured', 3], (old: any) => {
+    /* update logic */
+  })
+}
+```
+
+### React Fragment Pattern for Multiple Root Elements
+
+**ALWAYS use Fragment when returning multiple root elements:**
+
+```typescript
+// ❌ WRONG - Syntax error
+return (
+  <div className="container">...</div>
+  {modal && <div>...</div>}
+)
+
+// ✅ CORRECT - Use Fragment
+return (
+  <>
+    <div className="container">...</div>
+    {modal && <div>...</div>}
+  </>
+)
+```
+
+### Shared Layout Pattern
+
+**Use Next.js layout for shared headers/navigation:**
+
+```typescript
+// app/module/layout.tsx
+export default function ModuleLayout({ children }) {
+  return (
+    <AuthenticatedLayout>
+      <div className="min-h-screen">
+        {/* Fixed Header + Tabs - rendered once */}
+        <div className="container">
+          <h1>Module Name</h1>
+          <Tabs />
+        </div>
+
+        {/* Page content - changes per route */}
+        {children}
+      </div>
+    </AuthenticatedLayout>
+  )
+}
+
+// app/module/page.tsx
+export default function ModulePage() {
+  // NO AuthenticatedLayout here - it's in layout
+  // NO header/tabs here - it's in layout
+  return (
+    <div className="container">
+      {/* Only page-specific content */}
+    </div>
+  )
+}
+```
+
+### Skeleton Loading Pattern
+
+**ALWAYS match skeleton structure to actual content:**
+
+```typescript
+// Client-side mount detection
+const [mounted, setMounted] = useState(false)
+useEffect(() => { setMounted(true) }, [])
+
+// Show skeleton before mount OR during loading
+if (!mounted || authLoading || dataLoading) {
+  return (
+    <div className="container">
+      {/* Match exact structure of real content */}
+      <div className="filters">
+        <Skeleton className="h-6 w-20" /> {/* Title */}
+        <Skeleton className="h-10 w-full" /> {/* Dropdown */}
+      </div>
+      <div className="grid">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <CardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### WebSocket Event Naming Convention
+
+**Follow these naming patterns:**
+
+- **Global module events:** `moduleName:eventType` (e.g., `hub:likeUpdate`, `hub:commentCreated`)
+- **Room-specific events:** `eventType` (e.g., `commentDeleted`, `likeUpdate`) - emitted to specific rooms
+- **Rooms:** `resourceType:resourceId` (e.g., `content:123`, `comment:456`)
+
+### Common WebSocket Mistakes to Avoid
+
+1. ❌ **Double increment:** Manual state update + WebSocket update
+2. ❌ **Missing cleanup:** Forgetting `socket.off()` in useEffect return
+3. ❌ **Wrong query key:** Cache update targets wrong query key
+4. ❌ **Sync state:** Using useState instead of React Query cache
+5. ❌ **Missing dependencies:** useEffect dependencies incomplete
+6. ❌ **Manual navigation:** Using onClick instead of Link for navigation
+7. ❌ **Missing Fragment:** Multiple root elements without Fragment wrapper
+
+### Checklist for Any Real-time Feature
+
+- [ ] Backend: Created helper function in `socket/index.ts`
+- [ ] Backend: Called emit function after database update
+- [ ] Frontend: Added WebSocket listener in useEffect
+- [ ] Frontend: Updated React Query cache (not useState)
+- [ ] Frontend: Added socket.off() cleanup
+- [ ] Frontend: Used correct query keys
+- [ ] Frontend: Removed manual state updates from onSuccess
+- [ ] Frontend: Tested with multiple browser tabs
+- [ ] Frontend: Used Fragment for multiple root elements
+- [ ] Frontend: Used shared layout for persistent headers
+
+---
+
+## SHARED LAYOUT IMPLEMENTATION
+
+### Hub Module Layout Structure
+
+**File:** `frontend/src/app/hub/layout.tsx`
+
+```typescript
+'use client'
+
+import { usePathname, useRouter } from 'next/navigation'
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+
+export default function HubLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const isHome = pathname === '/hub'
+  const isFeed = pathname === '/hub/feed'
+
+  return (
+    <AuthenticatedLayout>
+      <div className="min-h-screen bg-background pb-20">
+        {/* Fixed Header - rendered once, persists across tab switches */}
+        <div className="container mx-auto px-4 pt-8 max-w-7xl">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold">J Hub</h1>
+            <p className="text-muted-foreground">Discover and share valuable content</p>
+
+            {/* Navigation Tabs */}
+            <div className="flex gap-1 border-b border-border">
+              <button onClick={() => router.push('/hub')} className={isHome ? 'active' : ''}>
+                Home
+              </button>
+              <button onClick={() => router.push('/hub/feed')} className={isFeed ? 'active' : ''}>
+                Feed
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Content - each page controls its own container width */}
+        {children}
+      </div>
+    </AuthenticatedLayout>
+  )
+}
+```
+
+**Benefits:**
+- ✅ Header doesn't re-render when switching tabs
+- ✅ No layout jumping between pages
+- ✅ Each page controls its own content width
+- ✅ Cleaner code - no duplicate headers
+
+**Individual Pages:**
+```typescript
+// app/hub/page.tsx (Home)
+export default function HubPage() {
+  return (
+    <div className="container mx-auto px-4 max-w-7xl">
+      {/* No AuthenticatedLayout - in layout.tsx */}
+      {/* No header - in layout.tsx */}
+      {/* Only page-specific content */}
+    </div>
+  )
+}
+
+// app/hub/feed/page.tsx (Feed)
+export default function HubFeedPage() {
+  return (
+    <>
+      <div className="container mx-auto px-4 max-w-2xl">
+        {/* Twitter-style narrow feed */}
+      </div>
+      {modal && <div>...</div>} {/* Fragment allows modal outside container */}
+    </>
+  )
+}
 ```
 
 ---

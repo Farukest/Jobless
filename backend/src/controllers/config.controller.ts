@@ -203,6 +203,9 @@ export const getPublicConfigs = asyncHandler(async (req: Request, res: Response)
     'alpha_categories',
     'supported_blockchains',
     'link_types',
+    'hub_limits',
+    'points_config',
+    'max_file_sizes',
   ]
 
   const configs = await configHelper.getMultiple(publicKeys)

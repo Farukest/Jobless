@@ -22,6 +22,7 @@ import {
   addDifficultyLevel,
   deleteDifficultyLevel,
   renameDifficultyLevel,
+  updateSystemConfig,
 } from '../controllers/admin.controller'
 import { engagementCriteriaController } from '../controllers/engagementCriteria.controller'
 
@@ -77,5 +78,8 @@ router.put('/hub/types/:oldSlug', authorize('super_admin'), renameContentType)
 router.post('/hub/difficulty', authorize('super_admin'), addDifficultyLevel)
 router.delete('/hub/difficulty/:slug', authorize('super_admin'), deleteDifficultyLevel)
 router.put('/hub/difficulty/:oldSlug', authorize('super_admin'), renameDifficultyLevel)
+
+// System Config (super_admin only)
+router.put('/system-config/:configKey', authorize('super_admin'), updateSystemConfig)
 
 export default router

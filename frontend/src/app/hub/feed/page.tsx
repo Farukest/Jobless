@@ -10,6 +10,7 @@ import { getSocket } from '@/lib/socket'
 import { TwitterStyleContent } from '@/components/hub/twitter-style-content'
 import { Skeleton, TwitterFeedSkeleton } from '@/components/ui/skeleton'
 import { TwitterReplyInput } from '@/components/hub/twitter-reply-input'
+import { TwitterPostComposer } from '@/components/hub/twitter-post-composer'
 import { useToggleLike, useToggleBookmark, useCreateComment } from '@/hooks/use-hub'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -280,9 +281,17 @@ export default function HubFeedPage() {
 
   const allContents = data?.pages.flatMap((page) => page.data) || []
 
+  const handlePostCreated = () => {
+    // Refetch feed to show new post
+    queryClient.invalidateQueries({ queryKey: ['hub', 'feed'] })
+  }
+
   return (
     <>
       <div className="container mx-auto max-w-2xl px-4">
+        {/* Post Composer */}
+        <TwitterPostComposer onPostCreated={handlePostCreated} />
+
         {/* New Posts Banner */}
         {newPostsCount > 0 && (
           <button

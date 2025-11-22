@@ -12,7 +12,7 @@ import {
   useRemoveBadgeFromUser
 } from '@/hooks/use-badges'
 import { BadgeDisplay } from '@/components/badges/badge-display'
-import { toast } from 'sonner'
+import toast from 'react-hot-toast'
 
 interface BadgeFormData {
   name: string

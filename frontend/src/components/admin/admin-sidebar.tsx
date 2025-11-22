@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 
 interface NavItem {
   name: string
-  href: string
+  href?: string
   icon: React.ReactNode
   badge?: number
+  subItems?: NavItem[]
 }
 
 interface NavSection {
@@ -19,7 +20,46 @@ interface NavSection {
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [openDropdowns, setOpenDropdowns] = useState<string[]>([])
+
+  // Auto-open Settings dropdown if on settings page
+  useEffect(() => {
+    if (pathname.startsWith('/admin/settings')) {
+      setOpenDropdowns(prev => prev.includes('Settings') ? prev : [...prev, 'Settings'])
+    }
+  }, [pathname])
+
+  const toggleDropdown = (itemName: string) => {
+    setOpenDropdowns(prev =>
+      prev.includes(itemName)
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    )
+  }
+
+  const isSubItemActive = (href: string) => {
+    // For regular links without query params
+    if (!href.includes('?')) return pathname === href
+
+    // For links with query params (like ?tab=general)
+    const [path, query] = href.split('?')
+    if (pathname !== path) return false
+
+    // Extract tab parameter from the href
+    const hrefParams = new URLSearchParams(query)
+    const hrefTab = hrefParams.get('tab')
+
+    // Get current tab from URL
+    const currentTab = searchParams.get('tab')
+
+    // If no tab in URL and href is asking for 'general', that's the default
+    if (!currentTab && hrefTab === 'general') return true
+
+    // Otherwise compare the tabs
+    return currentTab === hrefTab
+  }
 
   const navSections: NavSection[] = [
     {
@@ -140,14 +180,51 @@ export function AdminSidebar() {
           ),
         },
         {
-          name: 'Site Settings',
-          href: '/admin/settings',
+          name: 'Settings',
           icon: (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           ),
+          subItems: [
+            {
+              name: 'General',
+              href: '/admin/settings?tab=general',
+              icon: (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+            },
+            {
+              name: 'Modules',
+              href: '/admin/settings?tab=modules',
+              icon: (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              ),
+            },
+            {
+              name: 'Theme',
+              href: '/admin/settings?tab=theme',
+              icon: (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+              ),
+            },
+            {
+              name: 'System Config',
+              href: '/admin/settings?tab=system',
+              icon: (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+              ),
+            },
+          ],
         },
         {
           name: 'Activity Logs',
@@ -333,28 +410,82 @@ export function AdminSidebar() {
             )}
             <ul className="space-y-1">
               {section.items.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors ${
-                      isActive(item.href)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                    }`}
-                    title={isCollapsed ? item.name : undefined}
-                  >
-                    {item.icon}
-                    {!isCollapsed && (
-                      <div className="flex items-center justify-between flex-1">
-                        <span className="text-sm font-medium">{item.name}</span>
-                        {item.badge !== undefined && item.badge > 0 && (
-                          <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                            {item.badge}
-                          </span>
+                <li key={item.href || item.name}>
+                  {/* Dropdown Item */}
+                  {item.subItems ? (
+                    <div>
+                      <button
+                        onClick={() => toggleDropdown(item.name)}
+                        className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md transition-colors ${
+                          openDropdowns.includes(item.name)
+                            ? 'bg-muted text-foreground'
+                            : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                        }`}
+                        title={isCollapsed ? item.name : undefined}
+                      >
+                        {item.icon}
+                        {!isCollapsed && (
+                          <div className="flex items-center justify-between flex-1">
+                            <span className="text-sm font-medium">{item.name}</span>
+                            <svg
+                              className={`w-4 h-4 transition-transform ${
+                                openDropdowns.includes(item.name) ? 'rotate-180' : ''
+                              }`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
                         )}
-                      </div>
-                    )}
-                  </Link>
+                      </button>
+
+                      {/* Sub Items */}
+                      {!isCollapsed && openDropdowns.includes(item.name) && (
+                        <ul className="mt-1 ml-4 space-y-1 border-l border-border pl-2">
+                          {item.subItems.map((subItem) => (
+                            <li key={subItem.href}>
+                              <Link
+                                href={subItem.href!}
+                                className={`flex items-center space-x-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                                  isSubItemActive(subItem.href!)
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                {subItem.icon}
+                                <span>{subItem.name}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    /* Regular Item */
+                    <Link
+                      href={item.href!}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors ${
+                        isActive(item.href!)
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                      }`}
+                      title={isCollapsed ? item.name : undefined}
+                    >
+                      {item.icon}
+                      {!isCollapsed && (
+                        <div className="flex items-center justify-between flex-1">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

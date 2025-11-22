@@ -7,6 +7,7 @@ import { Content } from '../models/Content.model'
 import { asyncHandler, AppError } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { BadgeService } from '../services/badge.service'
+import { configHelper } from '../utils/config-helper'
 import mongoose from 'mongoose'
 
 export const getAllUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -1024,5 +1025,43 @@ export const renameDifficultyLevel = asyncHandler(async (req: AuthRequest, res: 
     message: 'Difficulty level renamed successfully',
     data: config.value,
     updatedContent: result.modifiedCount
+  })
+})
+
+// System Config Update
+export const updateSystemConfig = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const { configKey } = req.params
+  const { value } = req.body
+
+  if (!value) {
+    throw new AppError('Value is required', 400)
+  }
+
+  // Use updateOne with $set to properly update Mixed type fields
+  const result = await SystemConfig.updateOne(
+    { configKey },
+    {
+      $set: {
+        value: value,
+        updatedBy: req.user._id,
+        isActive: true
+      }
+    }
+  )
+
+  if (result.matchedCount === 0) {
+    throw new AppError('System config not found', 404)
+  }
+
+  // Clear configHelper cache to ensure fresh data on next request
+  configHelper.clearCache()
+
+  // Fetch updated document to return
+  const config = await SystemConfig.findOne({ configKey })
+
+  res.status(200).json({
+    success: true,
+    message: 'System config updated successfully',
+    data: config
   })
 })
