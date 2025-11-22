@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 import { useContent, useToggleLike, useToggleBookmark, useComments, useCreateComment, useToggleCommentLike } from '@/hooks/use-hub'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Skeleton } from '@/components/ui/skeleton'
 import Image from 'next/image'
 import { TwitterStyleContent } from '@/components/hub/twitter-style-content'
@@ -305,38 +304,34 @@ export default function ContentDetailPage() {
 
   if (authLoading || isLoading) {
     return (
-      <AuthenticatedLayout>
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <Skeleton className="h-10 w-full mb-4" />
-            <Skeleton className="h-6 w-3/4 mb-8" />
-            <Skeleton className="h-96 w-full" />
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Skeleton className="h-10 w-full mb-4" />
+          <Skeleton className="h-6 w-3/4 mb-8" />
+          <Skeleton className="h-96 w-full" />
         </div>
-      </AuthenticatedLayout>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <AuthenticatedLayout>
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <div className="bg-card rounded-lg border border-border p-12 text-center">
-              <h2 className="text-2xl font-bold mb-2">Content Not Found</h2>
-              <p className="text-muted-foreground mb-6">
-                The content you're looking for doesn't exist or has been removed.
-              </p>
-              <Link
-                href="/hub"
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors inline-block"
-              >
-                Back to Hub
-              </Link>
-            </div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="bg-card rounded-lg border border-border p-12 text-center">
+            <h2 className="text-2xl font-bold mb-2">Content Not Found</h2>
+            <p className="text-muted-foreground mb-6">
+              The content you're looking for doesn't exist or has been removed.
+            </p>
+            <Link
+              href="/hub"
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors inline-block"
+            >
+              Back to Hub
+            </Link>
           </div>
         </div>
-      </AuthenticatedLayout>
+      </div>
     )
   }
 
@@ -348,9 +343,7 @@ export default function ContentDetailPage() {
   const isAuthor = user?._id === content.authorId?._id
 
   return (
-    <AuthenticatedLayout>
-      <div className="min-h-screen bg-background pb-20">
-        <div className="container mx-auto max-w-2xl">
+    <div className="container mx-auto max-w-2xl">
           {/* Back Button */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
             <Link
@@ -442,11 +435,10 @@ export default function ContentDetailPage() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Reply Modal */}
-        {replyModalComment && (
-          <div
+      {/* Reply Modal */}
+      {replyModalComment && (
+        <div
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
             onClick={() => setReplyModalComment(null)}
           >
@@ -550,9 +542,8 @@ export default function ContentDetailPage() {
                 />
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </AuthenticatedLayout>
+        </div>
+      )}
+    </div>
   )
 }

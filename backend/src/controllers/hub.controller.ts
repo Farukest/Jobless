@@ -377,7 +377,7 @@ export const updateContent = asyncHandler(
     }
 
     if (mediaUrls !== undefined) {
-      content.mediaUrls = sanitizeHelper.validateURLArray(mediaUrls, 10)
+      content.mediaUrls = sanitizeHelper.validateURLArray(mediaUrls, 10) as any
     }
 
     if (tags !== undefined) {

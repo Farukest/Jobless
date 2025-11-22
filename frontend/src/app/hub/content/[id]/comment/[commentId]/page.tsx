@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 import { useCommentById, useReplies, useCreateComment, useToggleCommentLike } from '@/hooks/use-hub'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CommentItem } from '@/components/hub/comment-item'
 import { TwitterReplyInput } from '@/components/hub/twitter-reply-input'
@@ -288,23 +287,20 @@ export default function CommentDetailPage() {
 
   if (authLoading || commentLoading) {
     return (
-      <AuthenticatedLayout>
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-2xl">
-            <Skeleton className="h-10 w-full mb-4" />
-            <Skeleton className="h-6 w-3/4 mb-8" />
-            <Skeleton className="h-96 w-full" />
-          </div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <Skeleton className="h-10 w-full mb-4" />
+          <Skeleton className="h-6 w-3/4 mb-8" />
+          <Skeleton className="h-96 w-full" />
         </div>
-      </AuthenticatedLayout>
+      </div>
     )
   }
 
   if (commentError || !commentData?.data) {
     return (
-      <AuthenticatedLayout>
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
             <div className="bg-card rounded-lg border border-border p-12 text-center">
               <h2 className="text-2xl font-bold mb-2">Comment Not Found</h2>
               <p className="text-muted-foreground mb-6">
@@ -317,18 +313,15 @@ export default function CommentDetailPage() {
                 Back to Content
               </Link>
             </div>
-          </div>
         </div>
-      </AuthenticatedLayout>
+      </div>
     )
   }
 
   const comment = commentData.data
 
   return (
-    <AuthenticatedLayout>
-      <div className="min-h-screen bg-background pb-20">
-        <div className="container mx-auto max-w-2xl">
+    <div className="container mx-auto max-w-2xl">
           {/* Back Button */}
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
             <Link
@@ -542,7 +535,6 @@ export default function CommentDetailPage() {
             </div>
           </div>
         )}
-      </div>
-    </AuthenticatedLayout>
+    </div>
   )
 }

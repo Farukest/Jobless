@@ -8,8 +8,13 @@
  * - SSRF (Server-Side Request Forgery)
  */
 
-import DOMPurify from 'isomorphic-dompurify'
+import DOMPurify from 'dompurify'
+import { JSDOM } from 'jsdom'
 import validator from 'validator'
+
+// Create a DOMPurify instance for Node.js
+const window = new JSDOM('').window
+const purify = DOMPurify(window as any)
 
 class SanitizeHelper {
   /**
@@ -20,7 +25,7 @@ class SanitizeHelper {
     if (!input || typeof input !== 'string') return ''
 
     // Strip all HTML tags
-    const cleaned = DOMPurify.sanitize(input, {
+    const cleaned = purify.sanitize(input, {
       ALLOWED_TAGS: [], // No tags allowed
       ALLOWED_ATTR: [], // No attributes allowed
       KEEP_CONTENT: true, // Keep text content
@@ -40,7 +45,7 @@ class SanitizeHelper {
     if (!input || typeof input !== 'string') return ''
 
     // Allow safe HTML subset for rich text
-    const cleaned = DOMPurify.sanitize(input, {
+    const cleaned = purify.sanitize(input, {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'b', 'i', 'u',
         'ul', 'ol', 'li',
@@ -94,7 +99,7 @@ class SanitizeHelper {
    * Validate URL array
    * Filters out invalid URLs, returns cleaned array
    */
-  validateURLArray(urls: any[], maxCount: number = 10): string[] {
+  validateURLArray(urls: any[], maxCount: number = 10): any[] {
     if (!Array.isArray(urls)) return []
 
     // Take only first maxCount items
@@ -114,9 +119,9 @@ class SanitizeHelper {
         }
         return null
       })
-      .filter((url): url is string | { type: string; url: string } => url !== null)
+      .filter(url => url !== null)
 
-    return validated as string[]
+    return validated
   }
 
   /**

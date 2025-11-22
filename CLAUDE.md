@@ -857,10 +857,6 @@ Title of change
 
 - Bullet point 1
 - Bullet point 2
-
-🤖 Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 git push
