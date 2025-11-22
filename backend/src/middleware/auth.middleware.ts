@@ -28,7 +28,10 @@ export const protect = asyncHandler(async (
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string }
 
-    const user = await User.findById(decoded.id).select('-twitterAccessToken -twitterRefreshToken')
+    // Populate roles to have access to role names for authorization
+    const user = await User.findById(decoded.id)
+      .populate('roles', 'name displayName')
+      .select('-twitterAccessToken -twitterRefreshToken')
 
     if (!user) {
       throw new AppError('User not found', 404)
@@ -51,11 +54,35 @@ export const authorize = (...roles: string[]) => {
       throw new AppError('Not authorized', 401)
     }
 
-    const hasRole = roles.some(role => req.user.roles.includes(role))
+    // Check if user has any of the required roles (roles are now populated objects)
+    const userRoleNames = req.user.roles.map((role: any) => role.name)
+    const hasRole = roles.some(role => userRoleNames.includes(role))
 
     if (!hasRole) {
       throw new AppError(
-        `User role ${req.user.roles.join(', ')} is not authorized to access this route`,
+        `User role ${userRoleNames.join(', ')} is not authorized to access this route`,
+        403
+      )
+    }
+
+    next()
+  }
+}
+
+// Alias for authorize (same functionality)
+export const requireRole = (roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      throw new AppError('Not authorized', 401)
+    }
+
+    // Check if user has any of the required roles (roles are now populated objects)
+    const userRoleNames = req.user.roles.map((role: any) => role.name)
+    const hasRole = roles.some(role => userRoleNames.includes(role))
+
+    if (!hasRole) {
+      throw new AppError(
+        `User role ${userRoleNames.join(', ')} is not authorized to access this route`,
         403
       )
     }

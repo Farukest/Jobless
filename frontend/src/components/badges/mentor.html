@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jobless Mentor Badges</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            padding: 40px;
+            margin: 0;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; text-align: center; margin-bottom: 40px; }
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 35px;
+            padding: 20px;
+        }
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge-icon {
+            width: 110px;
+            height: 110px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .badge-item:hover .badge-icon { transform: scale(1.15) rotate(5deg); }
+        .badge-name { color: white; font-size: 14px; font-weight: 600; text-align: center; }
+        .badge-tier { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-rarity { font-size: 11px; font-weight: 500; }
+        .rarity-common { color: #9CA3AF; }
+        .rarity-rare { color: #F59E0B; }
+        .rarity-epic { color: #A855F7; }
+        .rarity-legendary { color: #FDE047; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="green-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#6EE7B7"/>
+                <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+            <linearGradient id="blue-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#93C5FD"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="cyan-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#67E8F9"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+            <linearGradient id="purple-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#C4B5FD"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+            <linearGradient id="orange-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+            <linearGradient id="pink-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#F9A8D4"/>
+                <stop offset="100%" stop-color="#EC4899"/>
+            </linearGradient>
+            <linearGradient id="purple2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#D8B4FE"/>
+                <stop offset="100%" stop-color="#A855F7"/>
+            </linearGradient>
+            <linearGradient id="green2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#86EFAC"/>
+                <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+            <linearGradient id="gold-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="50%" stop-color="#FBBF24"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+            <linearGradient id="gold2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="50%" stop-color="#F59E0B"/>
+                <stop offset="100%" stop-color="#D97706"/>
+            </linearGradient>
+        </defs>
+
+        <!-- 1. MENTOR - Shield with book -->
+        <symbol id="badge-mentor" viewBox="0 0 100 100">
+            <path d="M50 8 L88 24 L88 56 Q88 72 50 92 Q12 72 12 56 L12 24 Z"
+                  fill="url(#green-g)" stroke="#059669" stroke-width="2.5"/>
+            <path d="M50 16 L80 30 L80 56 Q80 68 50 84 Q20 68 20 56 L20 30 Z"
+                  fill="#065F46" opacity="0.4"/>
+            <!-- Book icon -->
+            <rect x="38" y="42" width="24" height="20" rx="2" fill="#D1FAE5"/>
+            <line x1="50" y1="42" x2="50" y2="62" stroke="#065F46" stroke-width="2"/>
+            <line x1="42" y1="47" x2="47" y2="47" stroke="#065F46" stroke-width="1"/>
+            <line x1="42" y1="52" x2="47" y2="52" stroke="#065F46" stroke-width="1"/>
+            <line x1="53" y1="47" x2="58" y2="47" stroke="#065F46" stroke-width="1"/>
+            <line x1="53" y1="52" x2="58" y2="52" stroke="#065F46" stroke-width="1"/>
+        </symbol>
+
+        <!-- 2. FIRST COURSE - Circle -->
+        <symbol id="badge-first-course" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#1E3A8A" opacity="0.4"/>
+            <!-- Graduation cap -->
+            <rect x="38" y="48" width="24" height="8" rx="1" fill="#DBEAFE"/>
+            <path d="M32 48 L50 40 L68 48 L50 56 Z" fill="#DBEAFE"/>
+            <rect x="64" y="52" width="3" height="12" rx="1" fill="#DBEAFE"/>
+            <circle cx="65.5" cy="65" r="2" fill="#DBEAFE"/>
+        </symbol>
+
+        <!-- 3. COURSE STARTER - Pentagon -->
+        <symbol id="badge-course-starter" viewBox="0 0 100 100">
+            <path d="M50 10 L88 38 L74 85 L26 85 L12 38 Z"
+                  fill="url(#cyan-g)" stroke="#0891B2" stroke-width="2.5"/>
+            <path d="M50 18 L80 42 L68 80 L32 80 L20 42 Z"
+                  fill="#164E63" opacity="0.4"/>
+            <!-- Three books -->
+            <rect x="36" y="44" width="8" height="12" rx="1" fill="#CFFAFE" opacity="0.6"/>
+            <rect x="38" y="40" width="8" height="12" rx="1" fill="#CFFAFE" opacity="0.8"/>
+            <rect x="40" y="36" width="8" height="12" rx="1" fill="#CFFAFE"/>
+            <rect x="48" y="44" width="8" height="12" rx="1" fill="#CFFAFE" opacity="0.6"/>
+            <rect x="50" y="40" width="8" height="12" rx="1" fill="#CFFAFE" opacity="0.8"/>
+            <rect x="52" y="36" width="8" height="12" rx="1" fill="#CFFAFE"/>
+            <text x="50" y="68" font-size="12" font-weight="bold" text-anchor="middle" fill="#CFFAFE">3</text>
+        </symbol>
+
+        <!-- 4. POPULAR MENTOR - Hexagon with star -->
+        <symbol id="badge-popular-mentor" viewBox="0 0 100 100">
+            <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="2.5"/>
+            <path d="M50 18 L78 34 L78 66 L50 82 L22 66 L22 34 Z"
+                  fill="#6D28D9" opacity="0.4"/>
+            <!-- Popular star with number -->
+            <path d="M50 36 L53 46 L64 46 L55 52 L58 62 L50 56 L42 62 L45 52 L36 46 L47 46 Z"
+                  fill="#EDE9FE"/>
+            <text x="50" y="80" font-size="9" font-weight="bold" text-anchor="middle" fill="#EDE9FE">50+</text>
+        </symbol>
+
+        <!-- 5. ACTIVE MENTOR - Square with books -->
+        <symbol id="badge-active-mentor" viewBox="0 0 100 100">
+            <rect x="12" y="12" width="76" height="76" rx="12"
+                  fill="url(#orange-g)" stroke="#EA580C" stroke-width="2.5"/>
+            <rect x="18" y="18" width="64" height="64" rx="10"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Stack of 10 books -->
+            <rect x="36" y="52" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.3"/>
+            <rect x="36" y="48" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.4"/>
+            <rect x="36" y="44" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.5"/>
+            <rect x="36" y="40" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.6"/>
+            <rect x="36" y="36" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.7"/>
+            <rect x="36" y="32" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.8"/>
+            <rect x="36" y="28" width="28" height="4" rx="1" fill="#FED7AA" opacity="0.9"/>
+            <rect x="36" y="56" width="28" height="4" rx="1" fill="#FED7AA"/>
+            <text x="50" y="72" font-size="12" font-weight="bold" text-anchor="middle" fill="#FED7AA">10</text>
+        </symbol>
+
+        <!-- 6. BELOVED MENTOR - Heart with ribbon -->
+        <symbol id="badge-beloved-mentor" viewBox="0 0 100 100">
+            <path d="M50 85 Q15 55 15 35 Q15 15 35 15 Q45 15 50 25 Q55 15 65 15 Q85 15 85 35 Q85 55 50 85 Z"
+                  fill="url(#pink-g)" stroke="#DB2777" stroke-width="2.5"/>
+            <path d="M50 78 Q22 52 22 36 Q22 22 36 22 Q44 22 50 30 Q56 22 64 22 Q78 22 78 36 Q78 52 50 78 Z"
+                  fill="#831843" opacity="0.4"/>
+            <!-- Heart with graduation cap -->
+            <rect x="42" y="44" width="16" height="6" rx="1" fill="#FCE7F3"/>
+            <path d="M38 44 L50 38 L62 44 L50 50 Z" fill="#FCE7F3"/>
+            <text x="50" y="68" font-size="8" font-weight="bold" text-anchor="middle" fill="#FCE7F3">100+</text>
+        </symbol>
+
+        <!-- 7. PROLIFIC MENTOR - Diamond -->
+        <symbol id="badge-prolific-mentor" viewBox="0 0 100 100">
+            <path d="M50 8 L88 50 L50 92 L12 50 Z"
+                  fill="url(#purple2-g)" stroke="#9333EA" stroke-width="2.5"/>
+            <path d="M50 18 L78 50 L50 82 L22 50 Z"
+                  fill="#6B21A8" opacity="0.4"/>
+            <!-- Books arranged in diamond -->
+            <rect x="46" y="38" width="8" height="12" rx="1" fill="#F3E8FF"/>
+            <rect x="36" y="46" width="8" height="12" rx="1" fill="#F3E8FF"/>
+            <rect x="56" y="46" width="8" height="12" rx="1" fill="#F3E8FF"/>
+            <rect x="46" y="54" width="8" height="12" rx="1" fill="#F3E8FF"/>
+            <text x="50" y="78" font-size="11" font-weight="bold" text-anchor="middle" fill="#F3E8FF">25</text>
+        </symbol>
+
+        <!-- 8. MASTER MENTOR - Octagon with crown -->
+        <symbol id="badge-master-mentor" viewBox="0 0 100 100">
+            <path d="M30 12 L70 12 L88 30 L88 70 L70 88 L30 88 L12 70 L12 30 Z"
+                  fill="url(#green2-g)" stroke="#059669" stroke-width="2.5"/>
+            <path d="M33 16 L67 16 L84 33 L84 67 L67 84 L33 84 L16 67 L16 33 Z"
+                  fill="#065F46" opacity="0.4"/>
+            <!-- Master crown -->
+            <path d="M35 36 L38 30 L42 36 L46 32 L50 28 L54 32 L58 36 L62 30 L65 36 L63 46 L37 46 Z"
+                  fill="#D1FAE5"/>
+            <circle cx="38" cy="33" r="2" fill="#FCD34D"/>
+            <circle cx="46" cy="34" r="2" fill="#FCD34D"/>
+            <circle cx="50" cy="31" r="2.5" fill="#FCD34D"/>
+            <circle cx="54" cy="34" r="2" fill="#FCD34D"/>
+            <circle cx="62" cy="33" r="2" fill="#FCD34D"/>
+            <!-- Book -->
+            <rect x="40" y="52" width="20" height="16" rx="2" fill="#D1FAE5"/>
+            <line x1="50" y1="52" x2="50" y2="68" stroke="#065F46" stroke-width="2"/>
+            <text x="50" y="82" font-size="11" font-weight="bold" text-anchor="middle" fill="#D1FAE5">50</text>
+        </symbol>
+
+        <!-- 9. CELEBRITY MENTOR - Star with fans -->
+        <symbol id="badge-celebrity-mentor" viewBox="0 0 100 100">
+            <path d="M50 8 L56 35 L62 10 L60 36 L70 15 L65 38 L77 23 L68 40 L83 33 L71 42 L87 45 L73 46 L90 57 L74 51 L88 69 L75 59 L82 80 L72 65 L74 89 L67 70 L66 94 L62 73 L58 96 L56 75 L50 97 L50 75 L42 96 L44 73 L34 94 L38 70 L26 89 L33 65 L18 80 L28 59 L12 69 L26 51 L10 57 L27 46 L13 45 L29 42 L17 33 L32 40 L23 23 L35 38 L30 15 L40 36 L38 10 L44 35 Z"
+                  fill="url(#gold-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="20" fill="#92400E" opacity="0.4"/>
+            <!-- Graduation cap in center -->
+            <rect x="42" y="48" width="16" height="6" rx="1" fill="#FEF3C7"/>
+            <path d="M38 48 L50 42 L62 48 L50 54 Z" fill="#FEF3C7"/>
+            <!-- People icons (fans) -->
+            <circle cx="35" cy="58" r="2" fill="#FEF3C7"/>
+            <circle cx="50" cy="62" r="2" fill="#FEF3C7"/>
+            <circle cx="65" cy="58" r="2" fill="#FEF3C7"/>
+            <text x="50" y="80" font-size="7" font-weight="bold" text-anchor="middle" fill="#FEF3C7">500+</text>
+        </symbol>
+
+        <!-- 10. LEGENDARY MENTOR - Ultimate shield with everything -->
+        <symbol id="badge-legendary-mentor" viewBox="0 0 100 100">
+            <!-- Glow layers -->
+            <circle cx="50" cy="50" r="46" fill="url(#gold2-g)" opacity="0.2"/>
+            <circle cx="50" cy="50" r="43" fill="url(#gold2-g)" opacity="0.3"/>
+            <!-- Main shield -->
+            <path d="M50 5 L92 22 L92 58 Q92 78 50 97 Q8 78 8 58 L8 22 Z"
+                  fill="url(#gold2-g)" stroke="#F59E0B" stroke-width="3.5"/>
+            <!-- Wings -->
+            <path d="M6 32 Q0 37 -2 48 Q4 44 10 38 L12 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M94 32 Q100 37 102 48 Q96 44 90 38 L88 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M6 52 Q0 47 -2 42 Q4 46 10 50 L12 48" fill="#FDE68A" opacity="0.9"/>
+            <path d="M94 52 Q100 47 102 42 Q96 46 90 50 L88 48" fill="#FDE68A" opacity="0.9"/>
+            <path d="M50 14 L84 28 L84 58 Q84 74 50 88 Q16 74 16 58 L16 28 Z"
+                  fill="#92400E" opacity="0.5"/>
+            <path d="M50 22 L76 33 L76 58 Q76 69 50 80 Q24 69 24 58 L24 33 Z"
+                  fill="#B45309" opacity="0.4"/>
+            <!-- Supreme crown -->
+            <path d="M34 26 L38 18 L42 26 L46 20 L50 16 L54 20 L58 26 L62 18 L66 26 L64 38 L36 38 Z"
+                  fill="#FEF3C7"/>
+            <circle cx="38" cy="23" r="2.5" fill="#DC2626"/>
+            <circle cx="46" cy="24" r="2.5" fill="#3B82F6"/>
+            <circle cx="50" cy="20" r="3" fill="#10B981"/>
+            <circle cx="54" cy="24" r="2.5" fill="#3B82F6"/>
+            <circle cx="62" cy="23" r="2.5" fill="#DC2626"/>
+            <!-- Open book with light -->
+            <rect x="38" y="46" width="24" height="18" rx="2" fill="#FEF3C7"/>
+            <line x1="50" y1="46" x2="50" y2="64" stroke="#92400E" stroke-width="2"/>
+            <line x1="42" y1="50" x2="47" y2="50" stroke="#92400E" stroke-width="1"/>
+            <line x1="42" y1="54" x2="47" y2="54" stroke="#92400E" stroke-width="1"/>
+            <line x1="42" y1="58" x2="47" y2="58" stroke="#92400E" stroke-width="1"/>
+            <line x1="53" y1="50" x2="58" y2="50" stroke="#92400E" stroke-width="1"/>
+            <line x1="53" y1="54" x2="58" y2="54" stroke="#92400E" stroke-width="1"/>
+            <line x1="53" y1="58" x2="58" y2="58" stroke="#92400E" stroke-width="1"/>
+            <!-- Light rays from book -->
+            <line x1="35" y1="52" x2="30" y2="47" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="65" y1="52" x2="70" y2="47" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="35" y1="58" x2="30" y2="63" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="65" y1="58" x2="70" y2="63" stroke="#FEF3C7" stroke-width="2"/>
+            <!-- Laurels -->
+            <path d="M28 50 Q24 54 28 58 M72 50 Q76 54 72 58"
+                  stroke="#FEF3C7" stroke-width="2" fill="none"/>
+            <text x="50" y="85" font-size="8" font-weight="bold" text-anchor="middle" fill="#FEF3C7">100</text>
+        </symbol>
+
+    </svg>
+</div>
+
+<div class="container">
+    <h1>🎓 Mentor Badges</h1>
+    <p class="subtitle">Category 7 of 8 • 10 Badges • J Academy</p>
+
+    <div class="badge-grid">
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-mentor"/></svg>
+            <div class="badge-name">Mentor</div>
+            <div class="badge-tier">Shield</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-first-course"/></svg>
+            <div class="badge-name">First Course</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-course-starter"/></svg>
+            <div class="badge-name">Course Starter</div>
+            <div class="badge-tier">Pentagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-popular-mentor"/></svg>
+            <div class="badge-name">Popular Mentor</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-active-mentor"/></svg>
+            <div class="badge-name">Active Mentor</div>
+            <div class="badge-tier">Square</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-beloved-mentor"/></svg>
+            <div class="badge-name">Beloved Mentor</div>
+            <div class="badge-tier">Heart</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-prolific-mentor"/></svg>
+            <div class="badge-name">Prolific Mentor</div>
+            <div class="badge-tier">Diamond</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-master-mentor"/></svg>
+            <div class="badge-name">Master Mentor</div>
+            <div class="badge-tier">Octagon+Crown</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-celebrity-mentor"/></svg>
+            <div class="badge-name">Celebrity Mentor</div>
+            <div class="badge-tier">Star</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-legendary-mentor"/></svg>
+            <div class="badge-name">Legendary Mentor</div>
+            <div class="badge-tier">Ultimate Shield</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -192,3 +192,83 @@ export function useSubmitFeedback() {
     },
   })
 }
+
+// Studio Member interfaces
+export interface StudioMember {
+  _id: string
+  userId: {
+    _id: string
+    displayName?: string
+    twitterUsername?: string
+    profileImage?: string
+  }
+  specialty: 'graphic_designer' | 'video_editor' | 'animator' | '3d_artist' | 'other'
+  skills: string[]
+  portfolio: Array<{
+    title: string
+    description?: string
+    mediaUrl: string
+    projectDate?: string
+  }>
+  requestsCompleted: number
+  averageRating: number
+  totalPointsEarned: number
+  availability: 'available' | 'busy' | 'unavailable'
+  joinedAt: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudioMemberFilters {
+  specialty?: string
+  availability?: string
+}
+
+// Fetch studio team members
+export function useStudioMembers(filters: StudioMemberFilters = {}) {
+  return useQuery<{
+    data: StudioMember[]
+    count: number
+  }>({
+    queryKey: ['studio', 'members', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (filters.specialty) params.append('specialty', filters.specialty)
+      if (filters.availability) params.append('availability', filters.availability)
+
+      const { data } = await api.get(`/studio-members?${params.toString()}`)
+      return data
+    },
+  })
+}
+
+// Create studio member profile
+export function useCreateStudioMember() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (memberData: any) => {
+      const { data } = await api.post('/studio-members', memberData)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['studio', 'members'] })
+    },
+  })
+}
+
+// Update studio member profile
+export function useUpdateStudioMember() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (memberData: any) => {
+      const { data } = await api.put('/studio-members', memberData)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['studio', 'members'] })
+    },
+  })
+}

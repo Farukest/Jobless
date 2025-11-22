@@ -4,6 +4,7 @@ import path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
 import express, { Application } from 'express'
+import { createServer } from 'http'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
@@ -15,8 +16,10 @@ import { connectDB } from './config/database'
 import { errorHandler } from './middleware/error-handler'
 import { logger } from './utils/logger'
 import routes from './routes'
+import { setupSocketIO } from './socket'
 
 const app: Application = express()
+const httpServer = createServer(app)
 const PORT = process.env.PORT || 5000
 
 // Security middleware
@@ -34,15 +37,21 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.APP_URL || 'http://localhost:3000',
+  origin: [
+    process.env.APP_URL || 'http://localhost:3000',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
 }))
 
-// Rate limiting
+// Rate limiting - Disabled in development, strict in production
 const limiter = rateLimit({
   windowMs: (process.env.RATE_LIMIT_WINDOW ? parseInt(process.env.RATE_LIMIT_WINDOW) : 15) * 60 * 1000,
-  max: process.env.RATE_LIMIT_MAX_REQUESTS ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) : 100,
+  max: process.env.NODE_ENV === 'production'
+    ? (process.env.RATE_LIMIT_MAX_REQUESTS ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) : 100)
+    : 10000, // Very high limit in development
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -100,7 +109,11 @@ const startServer = async () => {
   try {
     await connectDB()
 
-    app.listen(PORT, () => {
+    // Setup Socket.IO
+    setupSocketIO(httpServer)
+    logger.info('WebSocket server initialized')
+
+    httpServer.listen(PORT, () => {
       logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
     })
   } catch (error) {
@@ -126,3 +139,4 @@ process.on('uncaughtException', (err: Error) => {
 export default app
 
  
+// Force restart

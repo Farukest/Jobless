@@ -26,6 +26,11 @@ export interface Course {
   tags: string[]
   learningObjectives: string[]
   prerequisites: string[]
+  viewsCount: number
+  likesCount: number
+  bookmarksCount: number
+  isLiked?: boolean
+  isBookmarked?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -216,6 +221,184 @@ export function useDeleteCourse() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['academy', 'courses'] })
       queryClient.invalidateQueries({ queryKey: ['academy', 'my-courses'] })
+    },
+  })
+}
+
+// Course Request interfaces
+export interface CourseRequest {
+  _id: string
+  requesterId: {
+    _id: string
+    displayName?: string
+    twitterUsername?: string
+    profileImage?: string
+  }
+  title: string
+  description: string
+  category: string
+  votes: number
+  voters: string[]
+  status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'rejected'
+  approvedBy?: {
+    _id: string
+    displayName?: string
+    twitterUsername?: string
+  }
+  approvedAt?: string
+  assignedMentor?: {
+    _id: string
+    displayName?: string
+    twitterUsername?: string
+    profileImage?: string
+  }
+  assignedAt?: string
+  courseId?: string
+  completedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CourseRequestFilters {
+  page?: number
+  limit?: number
+  status?: string
+  category?: string
+  sortBy?: string
+  sortOrder?: string
+}
+
+// Fetch course requests with filters
+export function useCourseRequests(filters: CourseRequestFilters = {}) {
+  return useQuery<{
+    data: CourseRequest[]
+    count: number
+    total: number
+    page: number
+    pages: number
+  }>({
+    queryKey: ['academy', 'course-requests', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (filters.page) params.append('page', filters.page.toString())
+      if (filters.limit) params.append('limit', filters.limit.toString())
+      if (filters.status) params.append('status', filters.status)
+      if (filters.category) params.append('category', filters.category)
+      if (filters.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
+
+      const { data } = await api.get(`/academy/course-requests?${params.toString()}`)
+      return data
+    },
+  })
+}
+
+// Create a new course request
+export function useCreateCourseRequest() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (requestData: { title: string; description: string; category: string }) => {
+      const { data } = await api.post('/academy/course-requests', requestData)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['academy', 'course-requests'] })
+    },
+  })
+}
+
+// Vote on a course request
+export function useVoteCourseRequest() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      const { data } = await api.post(`/academy/course-requests/${requestId}/vote`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['academy', 'course-requests'] })
+    },
+  })
+}
+
+// Toggle course like
+export function useToggleCourseLike() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (courseId: string) => {
+      const { data } = await api.post(`/academy/courses/${courseId}/like`)
+      return data.data
+    },
+    onMutate: async (courseId) => {
+      await queryClient.cancelQueries({ queryKey: ['academy', 'course', courseId] })
+
+      const previousCourse = queryClient.getQueryData<{ data: Course }>(['academy', 'course', courseId])
+
+      if (previousCourse) {
+        queryClient.setQueryData<{ data: Course }>(['academy', 'course', courseId], {
+          data: {
+            ...previousCourse.data,
+            isLiked: !previousCourse.data.isLiked,
+            likesCount: previousCourse.data.isLiked
+              ? previousCourse.data.likesCount - 1
+              : previousCourse.data.likesCount + 1
+          }
+        })
+      }
+
+      return { previousCourse }
+    },
+    onError: (err, courseId, context) => {
+      if (context?.previousCourse) {
+        queryClient.setQueryData(['academy', 'course', courseId], context.previousCourse)
+      }
+    },
+    onSettled: (data, error, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['academy', 'course', courseId] })
+      queryClient.invalidateQueries({ queryKey: ['academy', 'courses'] })
+    },
+  })
+}
+
+// Toggle course bookmark
+export function useToggleCourseBookmark() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (courseId: string) => {
+      const { data } = await api.post(`/academy/courses/${courseId}/bookmark`)
+      return data.data
+    },
+    onMutate: async (courseId) => {
+      await queryClient.cancelQueries({ queryKey: ['academy', 'course', courseId] })
+
+      const previousCourse = queryClient.getQueryData<{ data: Course }>(['academy', 'course', courseId])
+
+      if (previousCourse) {
+        queryClient.setQueryData<{ data: Course }>(['academy', 'course', courseId], {
+          data: {
+            ...previousCourse.data,
+            isBookmarked: !previousCourse.data.isBookmarked,
+            bookmarksCount: previousCourse.data.isBookmarked
+              ? previousCourse.data.bookmarksCount - 1
+              : previousCourse.data.bookmarksCount + 1
+          }
+        })
+      }
+
+      return { previousCourse }
+    },
+    onError: (err, courseId, context) => {
+      if (context?.previousCourse) {
+        queryClient.setQueryData(['academy', 'course', courseId], context.previousCourse)
+      }
+    },
+    onSettled: (data, error, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['academy', 'course', courseId] })
+      queryClient.invalidateQueries({ queryKey: ['academy', 'courses'] })
     },
   })
 }

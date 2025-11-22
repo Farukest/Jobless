@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { useAdminAnalytics } from '@/hooks/use-admin'
 import { AdminLayout } from '@/components/admin/admin-layout'
+import { userHasAnyRole } from '@/lib/utils'
 
 export default function AdminAnalyticsPage() {
   const router = useRouter()
@@ -19,10 +20,18 @@ export default function AdminAnalyticsPage() {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || authLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [authLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, authLoading, isAuthenticated, user, router])
 
   if (!mounted || authLoading) {
     return (
@@ -30,6 +39,10 @@ export default function AdminAnalyticsPage() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
+  }
+
+  if (!isAuthenticated || !userHasAnyRole(user, ['admin', 'super_admin'])) {
+    return null
   }
 
   return (
@@ -121,7 +134,6 @@ export default function AdminAnalyticsPage() {
               </div>
             </>
           ) : null}
-        </div>
       </div>
     </AdminLayout>
   )

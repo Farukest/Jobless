@@ -28,8 +28,11 @@ export interface IUser extends Document {
     github?: string
   }
 
-  // Roles
-  roles: string[]
+  // Roles (references to Role model)
+  roles: mongoose.Types.ObjectId[]
+
+  // Content Type Overrides (optional - overrides role's allowedContentTypes)
+  contentTypeOverrides?: string[]
 
   // Permissions
   permissions: {
@@ -135,9 +138,14 @@ const UserSchema = new Schema<IUser>(
 
     // Roles
     roles: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
+      default: [], // Will be populated via migration or on first login
+    },
+
+    // Content Type Overrides (optional)
+    contentTypeOverrides: {
       type: [String],
-      default: ['member'],
-      enum: ['member', 'content_creator', 'admin', 'super_admin', 'scout', 'mentor', 'learner', 'requester'],
+      default: undefined, // undefined means use role's allowedContentTypes
     },
 
     // Permissions
@@ -238,5 +246,8 @@ UserSchema.pre('save', function (next) {
   }
   next()
 })
+
+// Note: Role sorting will be handled by populating roles and sorting on the frontend
+// since roles are now ObjectIds that need to be populated to access their hierarchy
 
 export const User = mongoose.model<IUser>('User', UserSchema)

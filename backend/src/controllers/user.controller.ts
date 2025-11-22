@@ -8,6 +8,8 @@ import { EngagementPost } from '../models/EngagementPost.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { FileProcessor } from '../utils/file-processor'
+import { BadgeService } from '../services/badge.service'
+import mongoose from 'mongoose'
 
 /**
  * @desc    Get user profile
@@ -18,7 +20,9 @@ export const getUserProfile = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { userId } = req.params
 
-    const user = await User.findById(userId).select('-twitterAccessToken -twitterRefreshToken')
+    const user = await User.findById(userId)
+      .populate('roles', 'name displayName description')
+      .select('-twitterAccessToken -twitterRefreshToken')
 
     if (!user) {
       return next(new AppError('User not found', 404))
@@ -341,6 +345,86 @@ export const getLeaderboard = asyncHandler(
       page,
       pages: Math.ceil(total / limit),
       data: users,
+    })
+  }
+)
+
+/**
+ * @desc    Search users for mentions
+ * @route   GET /api/users/search?q=query
+ * @access  Private
+ */
+export const searchUsers = asyncHandler(
+  async (req: Request, res: Response) => {
+    const query = (req.query.q as string) || ''
+    const limit = parseInt(req.query.limit as string) || 10
+
+    if (!query || query.trim().length < 1) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      })
+    }
+
+    const searchTerm = query.trim()
+
+    // Search by displayName or twitterUsername (case-insensitive, partial match)
+    const users = await User.find({
+      status: 'active',
+      $or: [
+        { displayName: { $regex: searchTerm, $options: 'i' } },
+        { twitterUsername: { $regex: searchTerm, $options: 'i' } },
+      ],
+    })
+      .select('_id displayName twitterUsername profileImage')
+      .limit(limit)
+      .lean()
+
+    res.status(200).json({
+      success: true,
+      data: users,
+    })
+  }
+)
+
+/**
+ * @desc    Get user badges
+ * @route   GET /api/users/:userId/badges
+ * @access  Private
+ */
+export const getUserBadges = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params
+    const onlyVisible = req.query.onlyVisible === 'true'
+
+    const badges = await BadgeService.getUserBadges(
+      new mongoose.Types.ObjectId(userId),
+      onlyVisible
+    )
+
+    res.status(200).json({
+      success: true,
+      data: badges,
+    })
+  }
+)
+
+/**
+ * @desc    Get user badge stats
+ * @route   GET /api/users/:userId/badges/stats
+ * @access  Private
+ */
+export const getUserBadgeStats = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params
+
+    const stats = await BadgeService.getBadgeStats(
+      new mongoose.Types.ObjectId(userId)
+    )
+
+    res.status(200).json({
+      success: true,
+      data: stats,
     })
   }
 )

@@ -20,7 +20,9 @@ export interface AlphaPost {
   status: 'active' | 'expired' | 'verified'
   bullishVotes: number
   bearishVotes: number
-  viewCount: number
+  viewsCount: number
+  likesCount: number
+  isLiked?: boolean
   resourceLinks: Array<{
     url: string
     title: string
@@ -166,6 +168,46 @@ export function useDeleteAlphaPost() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alpha', 'posts'] })
       queryClient.invalidateQueries({ queryKey: ['alpha', 'my-posts'] })
+    },
+  })
+}
+
+// Toggle alpha post like
+export function useToggleAlphaLike() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { data } = await api.post(`/alpha/posts/${postId}/like`)
+      return data.data
+    },
+    onMutate: async (postId) => {
+      await queryClient.cancelQueries({ queryKey: ['alpha', 'post', postId] })
+
+      const previousPost = queryClient.getQueryData<{ data: AlphaPost }>(['alpha', 'post', postId])
+
+      if (previousPost) {
+        queryClient.setQueryData<{ data: AlphaPost }>(['alpha', 'post', postId], {
+          data: {
+            ...previousPost.data,
+            isLiked: !previousPost.data.isLiked,
+            likesCount: previousPost.data.isLiked
+              ? previousPost.data.likesCount - 1
+              : previousPost.data.likesCount + 1
+          }
+        })
+      }
+
+      return { previousPost }
+    },
+    onError: (err, postId, context) => {
+      if (context?.previousPost) {
+        queryClient.setQueryData(['alpha', 'post', postId], context.previousPost)
+      }
+    },
+    onSettled: (data, error, postId) => {
+      queryClient.invalidateQueries({ queryKey: ['alpha', 'post', postId] })
+      queryClient.invalidateQueries({ queryKey: ['alpha', 'posts'] })
     },
   })
 }

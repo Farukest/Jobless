@@ -9,6 +9,7 @@ import {
   voteOnAlphaPost,
   getAlphaComments,
   addAlphaComment,
+  toggleAlphaLike,
 } from '../controllers/alpha.controller'
 
 const router = Router()
@@ -22,6 +23,9 @@ router.delete('/posts/:id', protect, deleteAlphaPost)
 
 // Voting
 router.post('/posts/:id/vote', protect, voteOnAlphaPost)
+
+// Engagement
+router.post('/posts/:id/like', protect, toggleAlphaLike)
 
 // Comments
 router.get('/posts/:id/comments', protect, getAlphaComments)

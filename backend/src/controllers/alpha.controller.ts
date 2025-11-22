@@ -3,6 +3,9 @@ import { AlphaPost } from '../models/AlphaPost.model'
 import { User } from '../models/User.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
+import { engagementService } from '../services/engagement.service'
+import { BadgeService } from '../services/badge.service'
+import mongoose from 'mongoose'
 
 /**
  * @desc    Get all alpha posts with filtering and pagination
@@ -70,13 +73,37 @@ export const getAlphaPost = asyncHandler(
       return next(new AppError('Alpha post not found', 404))
     }
 
-    // Increment view count
-    post.views += 1
-    await post.save()
+    // Track view with engagement service
+    const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown'
+    const userAgent = req.headers['user-agent']
+    const authReq = req as AuthRequest
+    const userId = authReq.user?._id || null
+
+    await engagementService.trackView(
+      userId,
+      post._id as mongoose.Types.ObjectId,
+      'alpha_post',
+      ipAddress,
+      userAgent
+    )
+
+    // Get like status for authenticated users
+    let isLiked = false
+
+    if (authReq.user) {
+      isLiked = await engagementService.getLikeStatus(
+        authReq.user._id,
+        post._id as mongoose.Types.ObjectId,
+        'alpha_post'
+      )
+    }
 
     res.status(200).json({
       success: true,
-      data: post,
+      data: {
+        ...post.toObject(),
+        isLiked,
+      },
     })
   }
 )
@@ -90,8 +117,9 @@ export const createAlphaPost = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = req.user._id
 
-    // Check if user has scout role
-    if (!req.user.roles.includes('scout')) {
+    // Check if user has scout role (roles are populated objects with .name)
+    const userRoleNames = req.user.roles.map((role: any) => role.name)
+    if (!userRoleNames.includes('scout') && !userRoleNames.includes('admin') && !userRoleNames.includes('super_admin')) {
       return next(
         new AppError('Only scouts can create alpha posts', 403)
       )
@@ -169,6 +197,11 @@ export const createAlphaPost = asyncHandler(
       status: status || 'pending',
     })
 
+    // Check for badge awards (non-blocking)
+    BadgeService.checkActivityBadges(userId, 'alpha').catch(err => {
+      console.error('Badge check error:', err)
+    })
+
     res.status(201).json({
       success: true,
       data: post,
@@ -185,7 +218,8 @@ export const updateAlphaPost = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
     const userId = req.user._id
-    const isAdmin = req.user.roles.includes('admin')
+    const userRoleNames = req.user.roles.map((role: any) => role.name)
+    const isAdmin = userRoleNames.includes('admin') || userRoleNames.includes('super_admin')
 
     const post = await AlphaPost.findById(id)
 
@@ -407,7 +441,8 @@ export const deleteAlphaPost = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
     const userId = req.user._id
-    const isAdmin = req.user.roles.includes('admin')
+    const userRoleNames = req.user.roles.map((role: any) => role.name)
+    const isAdmin = userRoleNames.includes('admin') || userRoleNames.includes('super_admin')
 
     const post = await AlphaPost.findById(id)
 
@@ -427,6 +462,36 @@ export const deleteAlphaPost = asyncHandler(
     res.status(200).json({
       success: true,
       message: 'Alpha post deleted successfully',
+    })
+  }
+)
+
+/**
+ * @desc    Toggle alpha post like
+ * @route   POST /api/alpha/posts/:id/like
+ * @access  Private
+ */
+export const toggleAlphaLike = asyncHandler(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { id } = req.params
+    const userId = req.user._id
+
+    // Verify post exists
+    const post = await AlphaPost.findById(id)
+    if (!post) {
+      return next(new AppError('Alpha post not found', 404))
+    }
+
+    // Toggle like using engagement service
+    const result = await engagementService.toggleLike(
+      userId,
+      new mongoose.Types.ObjectId(id),
+      'alpha_post'
+    )
+
+    res.status(200).json({
+      success: true,
+      data: result,
     })
   }
 )

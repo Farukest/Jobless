@@ -1,0 +1,7 @@
+#### 3. Kullanıcı Yönetimi 
+Search çalışıyor mu? - hayır
+Filter (status, role) çalışıyor mu? - hayır
+
+Her rolün izinleri listelenmiş mi? - evet ama burada wiew members diyip filtrelenmiş sayfaya gidebilmesi gerek. her rol altıdna yok bu linkler
+**TEST:** Yeni rol ekle butonu var mı? - yok
+**TEST:** Rol izinlerini düzenle - yok Roles sayfasında super admin için sadece görme işlemi var. role ait izinleri düzenleme yok

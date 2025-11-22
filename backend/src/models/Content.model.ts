@@ -4,7 +4,7 @@ export interface IContent extends Document {
   authorId: mongoose.Types.ObjectId
   title: string
   description?: string
-  contentType: 'video' | 'thread' | 'podcast' | 'guide' | 'tutorial'
+  contentType: string // Dynamic - managed by SystemConfig (content_types)
 
   body?: string
   mediaUrls: Array<{
@@ -16,14 +16,15 @@ export interface IContent extends Document {
   }>
 
   tags: string[]
-  category: string
-  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  category: string // Dynamic - managed by SystemConfig (content_categories)
+  difficulty?: string // Dynamic - managed by SystemConfig (difficulty_levels)
 
-  views: number
-  likes: number
-  bookmarks: number
+  viewsCount: number
+  likesCount: number
+  bookmarksCount: number
+  commentsCount: number
 
-  status: 'draft' | 'published' | 'archived'
+  status: 'draft' | 'published' | 'archived' | 'rejected'
   publishedAt?: Date
 
   moderatedBy?: mongoose.Types.ObjectId
@@ -32,6 +33,7 @@ export interface IContent extends Document {
 
   isFeatured: boolean
   isPinned: boolean
+  isAdminPinned: boolean // Admin-only pin for prioritization in admin panel
 }
 
 const ContentSchema = new Schema<IContent>(
@@ -56,7 +58,8 @@ const ContentSchema = new Schema<IContent>(
     contentType: {
       type: String,
       required: true,
-      enum: ['video', 'thread', 'podcast', 'guide', 'tutorial'],
+      // Dynamic content types managed by SystemConfig (content_types)
+      // Validation happens in controller using configHelper
     },
     body: {
       type: String,
@@ -85,27 +88,33 @@ const ContentSchema = new Schema<IContent>(
     category: {
       type: String,
       required: true,
-      enum: ['airdrop', 'defi', 'nft', 'node', 'trading', 'tutorial', 'guide', 'news', 'other'],
+      // Dynamic categories managed by SystemConfig (content_categories)
+      // Validation happens in controller using configHelper
     },
     difficulty: {
       type: String,
-      enum: ['beginner', 'intermediate', 'advanced'],
+      // Dynamic difficulty levels managed by SystemConfig (difficulty_levels)
+      // Optional field - validation happens in controller
     },
-    views: {
+    viewsCount: {
       type: Number,
       default: 0,
     },
-    likes: {
+    likesCount: {
       type: Number,
       default: 0,
     },
-    bookmarks: {
+    bookmarksCount: {
+      type: Number,
+      default: 0,
+    },
+    commentsCount: {
       type: Number,
       default: 0,
     },
     status: {
       type: String,
-      enum: ['draft', 'published', 'archived'],
+      enum: ['draft', 'published', 'archived', 'rejected'],
       default: 'draft',
     },
     publishedAt: Date,
@@ -120,6 +129,10 @@ const ContentSchema = new Schema<IContent>(
       default: false,
     },
     isPinned: {
+      type: Boolean,
+      default: false,
+    },
+    isAdminPinned: {
       type: Boolean,
       default: false,
     },

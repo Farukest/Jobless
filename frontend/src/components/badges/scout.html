@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jobless Scout Badges</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            padding: 40px;
+            margin: 0;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; text-align: center; margin-bottom: 40px; }
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 35px;
+            padding: 20px;
+        }
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge-icon {
+            width: 110px;
+            height: 110px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .badge-item:hover .badge-icon { transform: scale(1.15) rotate(5deg); }
+        .badge-name { color: white; font-size: 14px; font-weight: 600; text-align: center; }
+        .badge-tier { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-rarity { font-size: 11px; font-weight: 500; }
+        .rarity-common { color: #9CA3AF; }
+        .rarity-rare { color: #F59E0B; }
+        .rarity-epic { color: #A855F7; }
+        .rarity-legendary { color: #FDE047; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="gray-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#9CA3AF"/>
+                <stop offset="100%" stop-color="#6B7280"/>
+            </linearGradient>
+            <linearGradient id="green-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#6EE7B7"/>
+                <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+            <linearGradient id="blue-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#93C5FD"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="purple-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#C4B5FD"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+            <linearGradient id="orange-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+            <linearGradient id="gold-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="50%" stop-color="#F59E0B"/>
+                <stop offset="100%" stop-color="#D97706"/>
+            </linearGradient>
+        </defs>
+
+        <!-- 1. TALENT SPOTTER - Simple Circle -->
+        <symbol id="badge-talent-spotter" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#gray-g)" stroke="#4B5563" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#374151" opacity="0.4"/>
+            <!-- Eye icon -->
+            <ellipse cx="50" cy="50" rx="16" ry="10" fill="#E5E7EB"/>
+            <circle cx="50" cy="50" r="6" fill="#1F2937"/>
+            <circle cx="52" cy="48" r="2" fill="#9CA3AF"/>
+        </symbol>
+
+        <!-- 2. REFERRAL STARTER - Pentagon -->
+        <symbol id="badge-referral-starter" viewBox="0 0 100 100">
+            <path d="M50 10 L88 38 L74 85 L26 85 L12 38 Z"
+                  fill="url(#gray-g)" stroke="#4B5563" stroke-width="2.5"/>
+            <path d="M50 18 L80 42 L68 80 L32 80 L20 42 Z"
+                  fill="#374151" opacity="0.4"/>
+            <!-- Link icon -->
+            <circle cx="42" cy="48" r="5" fill="none" stroke="#E5E7EB" stroke-width="2.5"/>
+            <circle cx="58" cy="52" r="5" fill="none" stroke="#E5E7EB" stroke-width="2.5"/>
+            <line x1="45" y1="50" x2="55" y2="50" stroke="#E5E7EB" stroke-width="2.5"/>
+        </symbol>
+
+        <!-- 3. NETWORK BUILDER - Hexagon -->
+        <symbol id="badge-network-builder" viewBox="0 0 100 100">
+            <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
+                  fill="url(#green-g)" stroke="#059669" stroke-width="2.5"/>
+            <path d="M50 18 L78 34 L78 66 L50 82 L22 66 L22 34 Z"
+                  fill="#065F46" opacity="0.4"/>
+            <!-- Network nodes -->
+            <circle cx="50" cy="38" r="4" fill="#D1FAE5"/>
+            <circle cx="38" cy="50" r="4" fill="#D1FAE5"/>
+            <circle cx="62" cy="50" r="4" fill="#D1FAE5"/>
+            <circle cx="44" cy="62" r="4" fill="#D1FAE5"/>
+            <circle cx="56" cy="62" r="4" fill="#D1FAE5"/>
+            <line x1="50" y1="38" x2="38" y2="50" stroke="#D1FAE5" stroke-width="1.5"/>
+            <line x1="50" y1="38" x2="62" y2="50" stroke="#D1FAE5" stroke-width="1.5"/>
+            <line x1="38" y1="50" x2="44" y2="62" stroke="#D1FAE5" stroke-width="1.5"/>
+            <line x1="62" y1="50" x2="56" y2="62" stroke="#D1FAE5" stroke-width="1.5"/>
+        </symbol>
+
+        <!-- 4. COMMUNITY CONNECTOR - Square -->
+        <symbol id="badge-community-connector" viewBox="0 0 100 100">
+            <rect x="12" y="12" width="76" height="76" rx="12"
+                  fill="url(#green-g)" stroke="#059669" stroke-width="2.5"/>
+            <rect x="18" y="18" width="64" height="64" rx="10"
+                  fill="#065F46" opacity="0.4"/>
+            <!-- People icon -->
+            <circle cx="42" cy="45" r="5" fill="#D1FAE5"/>
+            <circle cx="58" cy="45" r="5" fill="#D1FAE5"/>
+            <ellipse cx="42" cy="58" rx="7" ry="5" fill="#D1FAE5"/>
+            <ellipse cx="58" cy="58" rx="7" ry="5" fill="#D1FAE5"/>
+        </symbol>
+
+        <!-- 5. RECRUITER PRO - Star -->
+        <symbol id="badge-recruiter-pro" viewBox="0 0 100 100">
+            <path d="M50 8 L56 35 L62 10 L60 36 L70 15 L65 38 L77 23 L68 40 L83 33 L71 42 L87 45 L73 46 L90 57 L74 51 L88 69 L75 59 L82 80 L72 65 L74 89 L67 70 L66 94 L62 73 L58 96 L56 75 L50 97 L50 75 L42 96 L44 73 L34 94 L38 70 L26 89 L33 65 L18 80 L28 59 L12 69 L26 51 L10 57 L27 46 L13 45 L29 42 L17 33 L32 40 L23 23 L35 38 L30 15 L40 36 L38 10 L44 35 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="18" fill="#1E3A8A" opacity="0.4"/>
+            <!-- Trophy icon -->
+            <path d="M42 42 L42 48 L46 52 L54 52 L58 48 L58 42 Z" fill="#DBEAFE"/>
+            <rect x="47" y="52" width="6" height="6" fill="#DBEAFE"/>
+            <rect x="45" y="58" width="10" height="2" rx="1" fill="#DBEAFE"/>
+        </symbol>
+
+        <!-- 6. HEADHUNTER - Shield -->
+        <symbol id="badge-headhunter" viewBox="0 0 100 100">
+            <path d="M50 8 L88 24 L88 56 Q88 72 50 92 Q12 72 12 56 L12 24 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <path d="M50 16 L80 30 L80 56 Q80 68 50 84 Q20 68 20 56 L20 30 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Target icon -->
+            <circle cx="50" cy="50" r="14" fill="none" stroke="#DBEAFE" stroke-width="2"/>
+            <circle cx="50" cy="50" r="9" fill="none" stroke="#DBEAFE" stroke-width="2"/>
+            <circle cx="50" cy="50" r="4" fill="#DBEAFE"/>
+        </symbol>
+
+        <!-- 7. TALENT MAGNET - Diamond -->
+        <symbol id="badge-talent-magnet" viewBox="0 0 100 100">
+            <path d="M50 8 L88 50 L50 92 L12 50 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <path d="M50 18 L78 50 L50 82 L22 50 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Magnet icon -->
+            <path d="M38 38 L38 50 Q38 58 46 58 Q54 58 54 50 L54 38 M38 38 L32 38 L32 50 M54 38 L60 38 L60 50"
+                  stroke="#DBEAFE" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <line x1="42" y1="62" x2="48" y2="68" stroke="#DBEAFE" stroke-width="2"/>
+            <line x1="48" y1="62" x2="54" y2="68" stroke="#DBEAFE" stroke-width="2"/>
+        </symbol>
+
+        <!-- 8. MATCHMAKER - Heart -->
+        <symbol id="badge-matchmaker" viewBox="0 0 100 100">
+            <path d="M50 85 Q15 55 15 35 Q15 15 35 15 Q45 15 50 25 Q55 15 65 15 Q85 15 85 35 Q85 55 50 85 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <path d="M50 78 Q22 52 22 36 Q22 22 36 22 Q44 22 50 30 Q56 22 64 22 Q78 22 78 36 Q78 52 50 78 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Handshake icon -->
+            <path d="M35 48 L40 43 L45 48 M55 48 L60 43 L65 48"
+                  stroke="#DBEAFE" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <line x1="40" y1="48" x2="60" y2="48" stroke="#DBEAFE" stroke-width="2"/>
+        </symbol>
+
+        <!-- 9. REFERRAL CHAMPION - Octagon -->
+        <symbol id="badge-referral-champion" viewBox="0 0 100 100">
+            <path d="M30 12 L70 12 L88 30 L88 70 L70 88 L30 88 L12 70 L12 30 Z"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="2.5"/>
+            <path d="M33 16 L67 16 L84 33 L84 67 L67 84 L33 84 L16 67 L16 33 Z"
+                  fill="#6D28D9" opacity="0.4"/>
+            <!-- Award ribbon -->
+            <circle cx="50" cy="44" r="10" fill="none" stroke="#EDE9FE" stroke-width="2"/>
+            <path d="M45 52 L42 67 L50 62 L58 67 L55 52" fill="#EDE9FE"/>
+            <text x="50" y="48" font-size="10" fill="#EDE9FE" text-anchor="middle" font-weight="bold">1</text>
+        </symbol>
+
+        <!-- 10. SCOUT MASTER - Star with circle -->
+        <symbol id="badge-scout-master" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="2.5"/>
+            <path d="M50 15 L56 40 L82 40 L62 54 L68 79 L50 65 L32 79 L38 54 L18 40 L44 40 Z"
+                  fill="#EDE9FE"/>
+            <circle cx="50" cy="54" r="12" fill="#6D28D9"/>
+            <!-- Compass icon -->
+            <path d="M50 48 L50 60 M44 54 L56 54" stroke="#EDE9FE" stroke-width="2"/>
+            <circle cx="50" cy="54" r="3" fill="#EDE9FE"/>
+        </symbol>
+
+        <!-- 11. INFLUENCE LEADER - Badge with ribbon -->
+        <symbol id="badge-influence-leader" viewBox="0 0 100 100">
+            <path d="M50 8 Q70 8 78 20 L85 50 Q85 70 70 82 Q50 92 50 92 Q50 92 30 82 Q15 70 15 50 L22 20 Q30 8 50 8"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="2.5"/>
+            <path d="M50 16 Q66 16 73 25 L78 50 Q78 66 66 76 Q50 84 50 84 Q50 84 34 76 Q22 66 22 50 L27 25 Q34 16 50 16"
+                  fill="#6D28D9" opacity="0.4"/>
+            <!-- Crown icon -->
+            <path d="M35 45 L38 52 L50 48 L62 52 L65 45 L62 48 L56 45 L50 49 L44 45 L38 48 Z"
+                  fill="#EDE9FE"/>
+            <circle cx="38" cy="45" r="2" fill="#FCD34D"/>
+            <circle cx="50" cy="42" r="2" fill="#FCD34D"/>
+            <circle cx="62" cy="45" r="2" fill="#FCD34D"/>
+        </symbol>
+
+        <!-- 12. ELITE SCOUT - Complex hexagon -->
+        <symbol id="badge-elite-scout" viewBox="0 0 100 100">
+            <path d="M50 8 L88 28 L88 72 L50 92 L12 72 L12 28 Z"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="2.5"/>
+            <path d="M50 16 L80 32 L80 68 L50 84 L20 68 L20 32 Z"
+                  fill="#6D28D9" opacity="0.3"/>
+            <path d="M50 24 L72 37 L72 63 L50 76 L28 63 L28 37 Z"
+                  fill="none" stroke="#EDE9FE" stroke-width="1.5"/>
+            <!-- Star in center -->
+            <path d="M50 38 L52 46 L61 46 L54 51 L56 59 L50 54 L44 59 L46 51 L39 46 L48 46 Z"
+                  fill="#EDE9FE"/>
+        </symbol>
+
+        <!-- 13. NETWORKING GURU - Ornate circle with wings -->
+        <symbol id="badge-networking-guru" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#gold-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <!-- Wings -->
+            <path d="M15 50 Q10 45 12 40 Q15 35 20 38 Q18 42 15 45 Z" fill="#FCD34D" opacity="0.8"/>
+            <path d="M85 50 Q90 45 88 40 Q85 35 80 38 Q82 42 85 45 Z" fill="#FCD34D" opacity="0.8"/>
+            <path d="M20 52 Q15 48 17 43 Q20 38 25 41 Q23 45 20 48 Z" fill="#FCD34D" opacity="0.6"/>
+            <path d="M80 52 Q85 48 83 43 Q80 38 75 41 Q77 45 80 48 Z" fill="#FCD34D" opacity="0.6"/>
+            <circle cx="50" cy="50" r="28" fill="#92400E" opacity="0.4"/>
+            <!-- Network globe -->
+            <circle cx="50" cy="50" r="16" fill="none" stroke="#FEF3C7" stroke-width="1.5"/>
+            <ellipse cx="50" cy="50" rx="16" ry="8" fill="none" stroke="#FEF3C7" stroke-width="1"/>
+            <ellipse cx="50" cy="50" rx="8" ry="16" fill="none" stroke="#FEF3C7" stroke-width="1"/>
+            <line x1="34" y1="50" x2="66" y2="50" stroke="#FEF3C7" stroke-width="1"/>
+        </symbol>
+
+        <!-- 14. LEGENDARY SCOUT - Complex star with crown -->
+        <symbol id="badge-legendary-scout" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="url(#gold-g)" opacity="0.3"/>
+            <path d="M50 8 L54 38 L85 38 L60 56 L70 85 L50 67 L30 85 L40 56 L15 38 L46 38 Z"
+                  fill="url(#orange-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <path d="M50 18 L52 40 L75 40 L56 52 L62 75 L50 61 L38 75 L44 52 L25 40 L48 40 Z"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Crown -->
+            <path d="M38 28 L40 34 L50 30 L60 34 L62 28 L60 31 L56 29 L50 32 L44 29 L40 31 Z"
+                  fill="#FEF3C7"/>
+            <circle cx="40" cy="28" r="2" fill="#EF4444"/>
+            <circle cx="50" cy="25" r="2" fill="#EF4444"/>
+            <circle cx="60" cy="28" r="2" fill="#EF4444"/>
+            <!-- Scout symbol -->
+            <path d="M45 50 L48 54 L55 47" stroke="#FEF3C7" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- 15. REFERRAL KING - Shield with crown and gems -->
+        <symbol id="badge-referral-king" viewBox="0 0 100 100">
+            <path d="M50 8 L90 28 L90 58 Q90 78 50 95 Q10 78 10 58 L10 28 Z"
+                  fill="url(#gold-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <path d="M50 16 L82 32 L82 58 Q82 74 50 87 Q18 74 18 58 L18 32 Z"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Crown -->
+            <path d="M35 26 L38 32 L50 28 L62 32 L65 26 L62 29 L56 26 L50 30 L44 26 L38 29 Z"
+                  fill="#FEF3C7"/>
+            <circle cx="38" cy="26" r="2.5" fill="#EF4444"/>
+            <circle cx="50" cy="22" r="2.5" fill="#EF4444"/>
+            <circle cx="62" cy="26" r="2.5" fill="#EF4444"/>
+            <!-- Gems -->
+            <path d="M50 48 L54 52 L50 56 L46 52 Z" fill="#3B82F6"/>
+            <path d="M40 54 L43 58 L40 62 L37 58 Z" fill="#10B981"/>
+            <path d="M60 54 L63 58 L60 62 L57 58 Z" fill="#8B5CF6"/>
+        </symbol>
+
+        <!-- 16. TALENT HUNTER ELITE - Double hexagon -->
+        <symbol id="badge-talent-hunter-elite" viewBox="0 0 100 100">
+            <path d="M50 5 L92 28 L92 72 L50 95 L8 72 L8 28 Z"
+                  fill="url(#gold-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <path d="M50 14 L84 33 L84 67 L50 86 L16 67 L16 33 Z"
+                  fill="#92400E" opacity="0.3"/>
+            <path d="M50 23 L76 38 L76 62 L50 77 L24 62 L24 38 Z"
+                  fill="none" stroke="#FEF3C7" stroke-width="1.5"/>
+            <!-- Crosshair -->
+            <circle cx="50" cy="50" r="15" fill="none" stroke="#FEF3C7" stroke-width="2"/>
+            <circle cx="50" cy="50" r="10" fill="none" stroke="#FEF3C7" stroke-width="1.5"/>
+            <circle cx="50" cy="50" r="5" fill="#FEF3C7"/>
+            <line x1="50" y1="35" x2="50" y2="42" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="50" y1="58" x2="50" y2="65" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="35" y1="50" x2="42" y2="50" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="58" y1="50" x2="65" y2="50" stroke="#FEF3C7" stroke-width="2"/>
+        </symbol>
+
+        <!-- 17. SUPREME SCOUT - Ultimate badge -->
+        <symbol id="badge-supreme-scout" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" fill="url(#gold-g)" opacity="0.2"/>
+            <circle cx="50" cy="50" r="43" fill="url(#gold-g)" opacity="0.3"/>
+            <path d="M50 5 L94 26 L94 60 Q94 82 50 97 Q6 82 6 60 L6 26 Z"
+                  fill="url(#orange-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <path d="M50 14 L86 32 L86 60 Q86 78 50 89 Q14 78 14 60 L14 32 Z"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Crown at top -->
+            <path d="M35 22 L38 28 L50 24 L62 28 L65 22 L62 25 L56 22 L50 26 L44 22 L38 25 Z"
+                  fill="#FEF3C7"/>
+            <circle cx="38" cy="22" r="2.5" fill="#EF4444"/>
+            <circle cx="50" cy="18" r="3" fill="#EF4444"/>
+            <circle cx="62" cy="22" r="2.5" fill="#EF4444"/>
+            <!-- Central star -->
+            <path d="M50 40 L53 50 L64 50 L55 56 L58 66 L50 60 L42 66 L45 56 L36 50 L47 50 Z"
+                  fill="#FEF3C7"/>
+            <!-- Laurel wreaths -->
+            <path d="M30 48 Q25 52 30 56 M70 48 Q75 52 70 56"
+                  stroke="#FEF3C7" stroke-width="2" fill="none"/>
+            <path d="M28 50 Q24 52 28 54 M72 50 Q76 52 72 54"
+                  stroke="#FEF3C7" stroke-width="1.5" fill="none"/>
+            <!-- Gems at bottom -->
+            <path d="M45 72 L48 76 L45 80 L42 76 Z" fill="#3B82F6"/>
+            <path d="M50 74 L53 78 L50 82 L47 78 Z" fill="#10B981"/>
+            <path d="M55 72 L58 76 L55 80 L52 76 Z" fill="#8B5CF6"/>
+        </symbol>
+
+    </svg>
+</div>
+
+<div class="container">
+    <h1>🎯 Scout Badges</h1>
+    <p class="subtitle">Category 4 of 6 • 17 Badges • J Scout</p>
+
+    <div class="badge-grid">
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-talent-spotter"/></svg>
+            <div class="badge-name">Talent Spotter</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-referral-starter"/></svg>
+            <div class="badge-name">Referral Starter</div>
+            <div class="badge-tier">Pentagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-network-builder"/></svg>
+            <div class="badge-name">Network Builder</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-community-connector"/></svg>
+            <div class="badge-name">Community Connector</div>
+            <div class="badge-tier">Square</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-recruiter-pro"/></svg>
+            <div class="badge-name">Recruiter Pro</div>
+            <div class="badge-tier">Star</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-headhunter"/></svg>
+            <div class="badge-name">Headhunter</div>
+            <div class="badge-tier">Shield</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-talent-magnet"/></svg>
+            <div class="badge-name">Talent Magnet</div>
+            <div class="badge-tier">Diamond</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-matchmaker"/></svg>
+            <div class="badge-name">Matchmaker</div>
+            <div class="badge-tier">Heart</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-referral-champion"/></svg>
+            <div class="badge-name">Referral Champion</div>
+            <div class="badge-tier">Octagon</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-scout-master"/></svg>
+            <div class="badge-name">Scout Master</div>
+            <div class="badge-tier">Star+Circle</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-influence-leader"/></svg>
+            <div class="badge-name">Influence Leader</div>
+            <div class="badge-tier">Badge+Ribbon</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-elite-scout"/></svg>
+            <div class="badge-name">Elite Scout</div>
+            <div class="badge-tier">Complex Hex</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-networking-guru"/></svg>
+            <div class="badge-name">Networking Guru</div>
+            <div class="badge-tier">Circle+Wings</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-legendary-scout"/></svg>
+            <div class="badge-name">Legendary Scout</div>
+            <div class="badge-tier">Star+Crown</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-referral-king"/></svg>
+            <div class="badge-name">Referral King</div>
+            <div class="badge-tier">Shield+Crown</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-talent-hunter-elite"/></svg>
+            <div class="badge-name">Talent Hunter Elite</div>
+            <div class="badge-tier">Triple Hex</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-supreme-scout"/></svg>
+            <div class="badge-name">Supreme Scout</div>
+            <div class="badge-tier">Ultimate</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

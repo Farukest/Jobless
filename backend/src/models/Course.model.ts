@@ -32,6 +32,10 @@ export interface ICourse extends Document {
   enrolledCount: number
   completedCount: number
 
+  likesCount: number
+  bookmarksCount: number
+  viewsCount: number
+
   isLiveSession: boolean
   sessionDate?: Date
   sessionLink?: string
@@ -131,6 +135,18 @@ const CourseSchema = new Schema<ICourse>(
       default: 0,
     },
     completedCount: {
+      type: Number,
+      default: 0,
+    },
+    likesCount: {
+      type: Number,
+      default: 0,
+    },
+    bookmarksCount: {
+      type: Number,
+      default: 0,
+    },
+    viewsCount: {
       type: Number,
       default: 0,
     },

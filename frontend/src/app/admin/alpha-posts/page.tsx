@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import { api } from '@/lib/api'
+import { userHasAnyRole } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 interface AlphaPost {
@@ -27,7 +28,7 @@ interface AlphaPost {
     type: 'website' | 'twitter' | 'discord' | 'docs' | 'telegram'
     url: string
   }>
-  views: number
+  viewsCount: number
   bullishVotes: number
   bearishVotes: number
   commentsCount: number
@@ -64,13 +65,21 @@ export default function AdminAlphaPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || isLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [isLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, isLoading, isAuthenticated, user, router])
 
   useEffect(() => {
-    if (isAuthenticated && user && (user.roles?.includes('admin') || user.roles?.includes('super_admin'))) {
+    if (isAuthenticated && user && userHasAnyRole(user, ['admin', 'super_admin'])) {
       fetchPosts()
     }
   }, [isAuthenticated, user, currentPage, selectedStatus, selectedCategory, selectedRisk, searchQuery])
@@ -167,7 +176,7 @@ export default function AdminAlphaPage() {
     )
   }
 
-  if (!isAuthenticated || !user || (!user.roles?.includes('admin') && !user.roles?.includes('super_admin'))) {
+  if (!isAuthenticated || !user || !userHasAnyRole(user, ['admin', 'super_admin'])) {
     return null
   }
 
@@ -348,7 +357,7 @@ export default function AdminAlphaPage() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs px-2 py-1 rounded-full bg-purple-500/10 text-purple-500">
+                        <span className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-500">
                           {post.category.replace(/_/g, ' ')}
                         </span>
                       </td>
@@ -384,11 +393,11 @@ export default function AdminAlphaPage() {
                         <div className="text-xs space-y-1">
                           <p className="text-green-500">🐂 {post.bullishVotes} bullish</p>
                           <p className="text-red-500">🐻 {post.bearishVotes} bearish</p>
-                          <p className="text-muted-foreground">👁️ {post.views} views</p>
+                          <p className="text-muted-foreground">👁️ {post.viewsCount} views</p>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                        <span className={`text-xs px-2 py-1 rounded-lg ${
                           post.status === 'pending'
                             ? 'bg-yellow-500/10 text-yellow-500'
                             : post.status === 'published'

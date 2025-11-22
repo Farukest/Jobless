@@ -5,6 +5,7 @@ import { WagmiProvider } from 'wagmi'
 import { RainbowKitProvider, darkTheme, lightTheme } from '@rainbow-me/rainbowkit'
 import { config } from '@/lib/wagmi'
 import { ThemeProvider, useTheme } from '@/components/providers/theme-provider'
+import { SocketProvider } from '@/contexts/socket-context'
 import { Toaster } from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
@@ -121,7 +122,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitWrapper>
-            {children}
+            <SocketProvider>
+              {children}
+            </SocketProvider>
             <Toaster
               position="top-right"
               toastOptions={{

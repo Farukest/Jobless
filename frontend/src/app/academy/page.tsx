@@ -66,7 +66,7 @@ export default function AcademyPage() {
             <p className="text-primary font-medium">View All Courses →</p>
           </button>
 
-          {user?.roles?.includes('mentor') && (
+          {user?.roles?.some((role: any) => role.name === 'mentor' || role === 'mentor') && (
             <button
               onClick={() => router.push('/academy/create')}
               className="bg-card rounded-lg border border-border p-6 hover:border-primary/50 transition-colors text-left"

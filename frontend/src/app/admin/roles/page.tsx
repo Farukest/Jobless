@@ -5,32 +5,103 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { useAllUsers } from '@/hooks/use-admin'
 import { AdminLayout } from '@/components/admin/admin-layout'
+import { userHasAnyRole } from '@/lib/utils'
+
+import { api } from '@/lib/api'
+import toast from 'react-hot-toast'
+import { EditRoleModal } from '@/components/admin/edit-role-modal'
 
 export default function AdminRolesPage() {
   const router = useRouter()
   const { user, isLoading: authLoading, isAuthenticated } = useAuth()
   const [mounted, setMounted] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<any>(null)
+  const [dbRoles, setDbRoles] = useState<any[]>([])
+  const [loadingRoles, setLoadingRoles] = useState(true)
+  const [availableContentTypes, setAvailableContentTypes] = useState<string[]>([])
 
   const { data: usersData } = useAllUsers(1, 1000)
+
+  // Fetch roles from database
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await api.get('/roles')
+        setDbRoles(response.data?.data || [])
+      } catch (error) {
+        console.error('Failed to fetch roles:', error)
+      } finally {
+        setLoadingRoles(false)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchRoles()
+    }
+  }, [isAuthenticated])
+
+  // Fetch available content types
+  useEffect(() => {
+    const fetchHubConfig = async () => {
+      try {
+        const response = await api.get('/admin/hub-config')
+        const types = response.data?.data?.contentTypes || []
+        setAvailableContentTypes(types)
+      } catch (error) {
+        console.error('Failed to fetch hub config:', error)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchHubConfig()
+    }
+  }, [isAuthenticated])
+
+  const handleEditRole = (role: any) => {
+    setSelectedRole(role)
+    setShowEditModal(true)
+  }
+
+  const handleEditSuccess = async () => {
+    // Refresh roles
+    try {
+      const response = await api.get('/roles')
+      setDbRoles(response.data?.data || [])
+    } catch (error) {
+      console.error('Failed to refresh roles:', error)
+    }
+  }
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || authLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [authLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, authLoading, isAuthenticated, user, router])
 
   if (!mounted || authLoading) {
     return (
-      <AdminLayout>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     )
+  }
+
+  if (!isAuthenticated || !userHasAnyRole(user, ['admin', 'super_admin'])) {
+    return null
   }
 
   const roles = [
@@ -142,21 +213,35 @@ export default function AdminRolesPage() {
 
   const getRoleUserCount = (roleName: string) => {
     if (!usersData?.data) return 0
-    return usersData.data.filter((u: any) => u.roles?.includes(roleName)).length
+    return usersData.data.filter((u: any) => u.roles?.some((r: any) => r.name === roleName || r === roleName)).length
   }
 
   return (
     <AdminLayout>
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold tracking-tight mb-2">Role Management</h1>
-            <p className="text-muted-foreground">Overview of user roles and their capabilities</p>
+          <div className="mb-8 flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight mb-2">Role Management</h1>
+              <p className="text-muted-foreground">Overview of user roles and their capabilities</p>
+            </div>
+            {userHasAnyRole(user, ['super_admin']) && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Create New Role
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {roles.map((role) => {
               const userCount = getRoleUserCount(role.name)
+              const dbRole = dbRoles.find((r) => r.name === role.name)
 
               return (
                 <div
@@ -164,17 +249,28 @@ export default function AdminRolesPage() {
                   className={`bg-card rounded-lg border-2 ${role.color} p-6 hover:shadow-lg transition-shadow`}
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-2xl font-bold mb-1">{role.displayName}</h3>
                       <p className="text-sm text-muted-foreground">{role.description}</p>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${role.color}`}>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`px-3 py-1 rounded-lg text-xs font-medium ${role.color}`}>
                         {role.name}
                       </span>
-                      <span className="text-sm text-muted-foreground mt-2">
+                      <span className="text-sm text-muted-foreground">
                         {userCount} {userCount === 1 ? 'user' : 'users'}
                       </span>
+                      {dbRole && userHasAnyRole(user, ['admin', 'super_admin']) && (
+                        <button
+                          onClick={() => handleEditRole(dbRole)}
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -235,17 +331,226 @@ export default function AdminRolesPage() {
               Users can have multiple roles simultaneously.
             </p>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-gray-500/10 text-gray-500 text-sm">Member</span>
+              <span className="px-3 py-1 rounded-lg bg-gray-500/10 text-gray-500 text-sm">Member</span>
               <span>→</span>
-              <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-sm">Creator/Requester/Scout/Mentor/Learner</span>
+              <span className="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-500 text-sm">Creator/Requester/Scout/Mentor/Learner</span>
               <span>→</span>
-              <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 text-sm">Admin</span>
+              <span className="px-3 py-1 rounded-lg bg-orange-500/10 text-orange-500 text-sm">Admin</span>
               <span>→</span>
-              <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-sm">Super Admin</span>
+              <span className="px-3 py-1 rounded-lg bg-red-500/10 text-red-500 text-sm">Super Admin</span>
             </div>
           </div>
+
+          {/* Create Role Modal */}
+          {showCreateModal && (
+            <CreateRoleModal
+              onClose={() => setShowCreateModal(false)}
+              onSuccess={() => {
+                setShowCreateModal(false)
+                // Refresh roles
+                api.get('/roles').then(res => setDbRoles(res.data?.data || []))
+              }}
+            />
+          )}
+
+          {/* Edit Role Modal */}
+          <EditRoleModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false)
+              setSelectedRole(null)
+            }}
+            onSuccess={handleEditSuccess}
+            role={selectedRole}
+            availableContentTypes={availableContentTypes}
+          />
         </div>
       </div>
     </AdminLayout>
+  )
+}
+
+// Create Role Modal Component
+function CreateRoleModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    displayName: '',
+    description: '',
+    permissions: {
+      canAccessJHub: true,
+      canAccessJStudio: true,
+      canAccessJAcademy: true,
+      canAccessJInfo: true,
+      canAccessJAlpha: true,
+      canCreateContent: false,
+      canModerateContent: false,
+      canManageUsers: false,
+      canManageRoles: false,
+      canManageSiteSettings: false,
+      canEnrollCourses: false,
+      canTeachCourses: false,
+      canCreateRequests: false,
+      canSubmitProposals: false,
+      canSubmitProjects: false,
+    }
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const PERMISSION_GROUPS = {
+    'Platform Access': [
+      { key: 'canAccessJHub', label: 'Access J Hub' },
+      { key: 'canAccessJStudio', label: 'Access J Studio' },
+      { key: 'canAccessJAcademy', label: 'Access J Academy' },
+      { key: 'canAccessJInfo', label: 'Access J Info' },
+      { key: 'canAccessJAlpha', label: 'Access J Alpha' },
+    ],
+    'Content Permissions': [
+      { key: 'canCreateContent', label: 'Create Content' },
+      { key: 'canModerateContent', label: 'Moderate Content' },
+    ],
+    'Academy Permissions': [
+      { key: 'canEnrollCourses', label: 'Enroll in Courses' },
+      { key: 'canTeachCourses', label: 'Teach Courses' },
+    ],
+    'Studio Permissions': [
+      { key: 'canCreateRequests', label: 'Create Production Requests' },
+      { key: 'canSubmitProposals', label: 'Submit Proposals' },
+    ],
+    'Alpha Permissions': [
+      { key: 'canSubmitProjects', label: 'Submit Alpha Projects' },
+    ],
+    'Admin Permissions': [
+      { key: 'canManageUsers', label: 'Manage Users' },
+      { key: 'canManageRoles', label: 'Manage Roles' },
+      { key: 'canManageSiteSettings', label: 'Manage Site Settings' },
+    ],
+  }
+
+  const togglePermission = (key: string) => {
+    setFormData({
+      ...formData,
+      permissions: {
+        ...formData.permissions,
+        [key]: !formData.permissions[key as keyof typeof formData.permissions]
+      }
+    })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.name || !formData.displayName) {
+      toast.error('Name and display name are required')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await api.post('/roles', formData)
+      toast.success('Role created successfully')
+      onSuccess()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create role')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-card rounded-lg border border-border p-6 max-w-2xl w-full mx-4 my-8">
+        <h2 className="text-2xl font-bold mb-4">Create New Role</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Role Name <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+              placeholder="e.g. custom_role"
+              className="w-full px-3 py-2 rounded-md border border-border bg-background"
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Lowercase, use underscore for spaces
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Display Name <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.displayName}
+              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+              placeholder="e.g. Custom Role"
+              className="w-full px-3 py-2 rounded-md border border-border bg-background"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Describe this role's purpose..."
+              className="w-full px-3 py-2 rounded-md border border-border bg-background min-h-[100px]"
+            />
+          </div>
+
+          {/* Permissions Section */}
+          <div className="border-t border-border pt-4">
+            <h3 className="text-lg font-semibold mb-3">Permissions</h3>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {Object.entries(PERMISSION_GROUPS).map(([groupName, permissions]) => (
+                <div key={groupName} className="bg-muted/50 rounded-lg p-3">
+                  <h4 className="text-sm font-semibold mb-2 text-primary">{groupName}</h4>
+                  <div className="space-y-2">
+                    {permissions.map((perm) => (
+                      <label
+                        key={perm.key}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-muted/80 p-2 rounded transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.permissions[perm.key as keyof typeof formData.permissions]}
+                          onChange={() => togglePermission(perm.key)}
+                          className="w-4 h-4 rounded border-border"
+                        />
+                        <span className="text-sm">{perm.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Role'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

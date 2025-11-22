@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import { api } from '@/lib/api'
+import { userHasAnyRole } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 interface EngagementPost {
@@ -63,13 +64,21 @@ export default function AdminEngagementPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || isLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [isLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, isLoading, isAuthenticated, user, router])
 
   useEffect(() => {
-    if (isAuthenticated && user && (user.roles?.includes('admin') || user.roles?.includes('super_admin'))) {
+    if (isAuthenticated && user && userHasAnyRole(user, ['admin', 'super_admin'])) {
       fetchPosts()
     }
   }, [isAuthenticated, user, currentPage, selectedStatus, selectedPlatform, selectedVerificationStatus, searchQuery])
@@ -176,7 +185,7 @@ export default function AdminEngagementPage() {
     )
   }
 
-  if (!isAuthenticated || !user || (!user.roles?.includes('admin') && !user.roles?.includes('super_admin'))) {
+  if (!isAuthenticated || !user || !userHasAnyRole(user, ['admin', 'super_admin'])) {
     return null
   }
 
@@ -352,7 +361,7 @@ export default function AdminEngagementPage() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                        <span className={`text-xs px-2 py-1 rounded-lg ${
                           post.platform === 'twitter'
                             ? 'bg-blue-500/10 text-blue-500'
                             : 'bg-purple-500/10 text-purple-500'
@@ -380,7 +389,7 @@ export default function AdminEngagementPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="space-y-1">
-                          <span className={`text-xs px-2 py-1 rounded-full ${
+                          <span className={`text-xs px-2 py-1 rounded-lg ${
                             post.status === 'active'
                               ? 'bg-green-500/10 text-green-500'
                               : post.status === 'completed'

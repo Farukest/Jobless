@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import { api } from '@/lib/api'
+import { userHasAnyRole } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 interface ProductionRequest {
@@ -66,13 +67,21 @@ export default function AdminProductionPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || isLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [isLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, isLoading, isAuthenticated, user, router])
 
   useEffect(() => {
-    if (isAuthenticated && user && (user.roles?.includes('admin') || user.roles?.includes('super_admin'))) {
+    if (isAuthenticated && user && userHasAnyRole(user, ['admin', 'super_admin'])) {
       fetchRequests()
     }
   }, [isAuthenticated, user, currentPage, selectedStatus, selectedType, searchQuery])
@@ -155,7 +164,7 @@ export default function AdminProductionPage() {
     )
   }
 
-  if (!isAuthenticated || !user || (!user.roles?.includes('admin') && !user.roles?.includes('super_admin'))) {
+  if (!isAuthenticated || !user || !userHasAnyRole(user, ['admin', 'super_admin'])) {
     return null
   }
 
@@ -324,7 +333,7 @@ export default function AdminProductionPage() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-500">
+                        <span className="text-xs px-2 py-1 rounded-lg bg-blue-500/10 text-blue-500">
                           {request.requestType.replace(/_/g, ' ')}
                         </span>
                       </td>
@@ -344,7 +353,7 @@ export default function AdminProductionPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                        <span className={`text-xs px-2 py-1 rounded-lg ${
                           request.status === 'pending'
                             ? 'bg-yellow-500/10 text-yellow-500'
                             : request.status === 'proposal_sent'

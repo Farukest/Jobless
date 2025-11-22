@@ -6,13 +6,14 @@ import { useAuth } from '@/hooks/use-auth'
 import { useAllUsers, useUpdateUserRole, useUpdateUserPermissions, useUpdateUser } from '@/hooks/use-admin'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import toast from 'react-hot-toast'
+import { userHasAnyRole } from '@/lib/utils'
 
 interface User {
   _id: string
   displayName?: string
   twitterUsername?: string
   walletAddress?: string
-  roles: string[]
+  roles: Array<string | { _id: string; name: string; displayName: string }>
   permissions: {
     canAccessJHub: boolean
     canAccessJStudio: boolean
@@ -35,6 +36,18 @@ interface User {
 
 const AVAILABLE_ROLES = ['member', 'content_creator', 'requester', 'scout', 'mentor', 'learner', 'admin', 'super_admin']
 
+// Role hierarchy (higher index = higher priority)
+const ROLE_HIERARCHY = ['member', 'learner', 'requester', 'scout', 'content_creator', 'mentor', 'admin', 'super_admin']
+
+// Sort roles by hierarchy (highest priority first)
+const sortRolesByHierarchy = (roles: string[]): string[] => {
+  return [...roles].sort((a, b) => {
+    const indexA = ROLE_HIERARCHY.indexOf(a)
+    const indexB = ROLE_HIERARCHY.indexOf(b)
+    return indexB - indexA // Descending order (super_admin first)
+  })
+}
+
 export default function AdminUsersPage() {
   const router = useRouter()
   const { user: currentUser, isLoading: authLoading, isAuthenticated } = useAuth()
@@ -43,7 +56,21 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
 
-  const { data: usersData, isLoading: usersLoading, refetch } = useAllUsers(page, 20)
+  // Read URL parameters on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const roleParam = params.get('role')
+      const statusParam = params.get('status')
+      const searchParam = params.get('search')
+
+      if (roleParam) setRoleFilter(roleParam)
+      if (statusParam) setStatusFilter(statusParam)
+      if (searchParam) setSearch(searchParam)
+    }
+  }, [])
+
+  const { data: usersData, isLoading: usersLoading, refetch } = useAllUsers(page, 20, search, statusFilter, roleFilter)
   const { mutate: updateRole } = useUpdateUserRole()
   const { mutate: updatePermissions } = useUpdateUserPermissions()
   const { mutate: updateUser } = useUpdateUser()
@@ -59,13 +86,24 @@ export default function AdminUsersPage() {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (!currentUser?.roles?.includes('admin') && !currentUser?.roles?.includes('super_admin')))) {
+    if (!mounted || authLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [authLoading, isAuthenticated, currentUser, router])
+
+    if (!userHasAnyRole(currentUser, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, authLoading, isAuthenticated, currentUser, router])
 
   const handleUpdateRoles = (userId: string, newRoles: string[]) => {
-    updateRole({ userId, roles: newRoles }, {
+    // Sort roles by hierarchy before saving
+    const sortedRoles = sortRolesByHierarchy(newRoles)
+
+    updateRole({ userId, roles: sortedRoles }, {
       onSuccess: () => {
         toast.success('Roles updated successfully')
         setShowRoleModal(false)
@@ -98,15 +136,17 @@ export default function AdminUsersPage() {
 
   if (!mounted || authLoading) {
     return (
-      <AdminLayout>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading...</p>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
-      </AdminLayout>
+      </div>
     )
+  }
+
+  if (!isAuthenticated || !userHasAnyRole(currentUser, ['admin', 'super_admin'])) {
+    return null
   }
 
   return (
@@ -193,20 +233,20 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1">
-                            {user.roles.slice(0, 2).map(role => (
-                              <span key={role} className="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs">
-                                {role.replace('_', ' ')}
+                            {user.roles?.slice(0, 2).map((role: any) => (
+                              <span key={role._id || role.name} className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs">
+                                {role.displayName || role.name || role}
                               </span>
                             ))}
-                            {user.roles.length > 2 && (
-                              <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
+                            {user.roles && user.roles.length > 2 && (
+                              <span className="px-2 py-1 rounded-lg bg-muted text-muted-foreground text-xs">
                                 +{user.roles.length - 2}
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
+                          <span className={`px-2 py-1 rounded-lg text-xs ${
                             user.status === 'active' ? 'bg-green-500/10 text-green-500' :
                             user.status === 'suspended' ? 'bg-yellow-500/10 text-yellow-500' :
                             'bg-red-500/10 text-red-500'
@@ -314,7 +354,11 @@ export default function AdminUsersPage() {
 }
 
 function RoleModal({ user, onClose, onSave }: { user: User; onClose: () => void; onSave: (userId: string, roles: string[]) => void }) {
-  const [selectedRoles, setSelectedRoles] = useState<string[]>(user.roles)
+  // Convert role objects to role names (string array)
+  const initialRoles = user.roles.map((role: any) =>
+    typeof role === 'string' ? role : role.name
+  )
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(initialRoles)
 
   const toggleRole = (role: string) => {
     if (selectedRoles.includes(role)) {
@@ -332,8 +376,20 @@ function RoleModal({ user, onClose, onSave }: { user: User; onClose: () => void;
           User: {user.displayName || user.twitterUsername || 'Anonymous'}
         </p>
 
+        {/* Info Alert */}
+        <div className="mb-4 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+          <div className="flex gap-2">
+            <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <p className="text-xs text-blue-500">
+              Permissions will be automatically updated based on selected roles.
+            </p>
+          </div>
+        </div>
+
         <div className="space-y-2 mb-6">
-          {AVAILABLE_ROLES.map(role => (
+          {[...AVAILABLE_ROLES].reverse().map(role => (
             <label key={role} className="flex items-center gap-3 p-3 rounded-md hover:bg-muted cursor-pointer">
               <input
                 type="checkbox"

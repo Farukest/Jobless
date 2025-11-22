@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount, useSignMessage } from 'wagmi'
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Logo } from '@/components/ui/logo'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { address, isConnected } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
@@ -40,6 +42,9 @@ export default function LoginPage() {
 
       localStorage.setItem('accessToken', data.accessToken)
       localStorage.setItem('refreshToken', data.refreshToken)
+
+      // Invalidate auth query to force refetch with new tokens
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
 
       toast.success('Login successful!')
       router.push('/')

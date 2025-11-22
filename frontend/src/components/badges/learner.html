@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jobless Learner Badges</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            padding: 40px;
+            margin: 0;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; text-align: center; margin-bottom: 40px; }
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 35px;
+            padding: 20px;
+        }
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge-icon {
+            width: 110px;
+            height: 110px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .badge-item:hover .badge-icon { transform: scale(1.15) rotate(5deg); }
+        .badge-name { color: white; font-size: 14px; font-weight: 600; text-align: center; }
+        .badge-tier { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-rarity { font-size: 11px; font-weight: 500; }
+        .rarity-common { color: #9CA3AF; }
+        .rarity-rare { color: #F59E0B; }
+        .rarity-epic { color: #A855F7; }
+        .rarity-legendary { color: #FDE047; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="blue-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#93C5FD"/>
+                <stop offset="100%" stop-color="#60A5FA"/>
+            </linearGradient>
+            <linearGradient id="blue2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#93C5FD"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="green-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#6EE7B7"/>
+                <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+            <linearGradient id="purple-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#C4B5FD"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+            <linearGradient id="cyan-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#67E8F9"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+            <linearGradient id="orange-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#F97316"/>
+            </linearGradient>
+            <linearGradient id="purple2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#D8B4FE"/>
+                <stop offset="100%" stop-color="#A855F7"/>
+            </linearGradient>
+            <linearGradient id="pink-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#F9A8D4"/>
+                <stop offset="100%" stop-color="#EC4899"/>
+            </linearGradient>
+            <linearGradient id="green2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#86EFAC"/>
+                <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+            <linearGradient id="gold-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="50%" stop-color="#FBBF24"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+        </defs>
+
+        <!-- 1. LEARNER - Simple Circle -->
+        <symbol id="badge-learner" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#blue-g)" stroke="#3B82F6" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#1E40AF" opacity="0.4"/>
+            <!-- Book icon -->
+            <rect x="38" y="42" width="24" height="18" rx="2" fill="#DBEAFE"/>
+            <line x1="50" y1="42" x2="50" y2="60" stroke="#1E40AF" stroke-width="2"/>
+            <line x1="42" y1="46" x2="47" y2="46" stroke="#1E40AF" stroke-width="1"/>
+            <line x1="42" y1="50" x2="47" y2="50" stroke="#1E40AF" stroke-width="1"/>
+            <line x1="53" y1="46" x2="58" y2="46" stroke="#1E40AF" stroke-width="1"/>
+            <line x1="53" y1="50" x2="58" y2="50" stroke="#1E40AF" stroke-width="1"/>
+        </symbol>
+
+        <!-- 2. FIRST ENROLLMENT - Pentagon -->
+        <symbol id="badge-first-enrollment" viewBox="0 0 100 100">
+            <path d="M50 10 L88 38 L74 85 L26 85 L12 38 Z"
+                  fill="url(#blue2-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <path d="M50 18 L80 42 L68 80 L32 80 L20 42 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Enrollment ticket -->
+            <rect x="35" y="42" width="30" height="18" rx="2" fill="#DBEAFE"/>
+            <circle cx="39" cy="51" r="1.5" fill="#2563EB"/>
+            <circle cx="43" cy="51" r="1.5" fill="#2563EB"/>
+            <circle cx="47" cy="51" r="1.5" fill="#2563EB"/>
+            <line x1="52" y1="47" x2="61" y2="47" stroke="#2563EB" stroke-width="1.5"/>
+            <line x1="52" y1="51" x2="61" y2="51" stroke="#2563EB" stroke-width="1.5"/>
+            <line x1="52" y1="55" x2="61" y2="55" stroke="#2563EB" stroke-width="1.5"/>
+        </symbol>
+
+        <!-- 3. FIRST COMPLETION - Shield -->
+        <symbol id="badge-first-completion" viewBox="0 0 100 100">
+            <path d="M50 8 L88 24 L88 56 Q88 72 50 92 Q12 72 12 56 L12 24 Z"
+                  fill="url(#green-g)" stroke="#059669" stroke-width="2.5"/>
+            <path d="M50 16 L80 30 L80 56 Q80 68 50 84 Q20 68 20 56 L20 30 Z"
+                  fill="#065F46" opacity="0.4"/>
+            <!-- Checkmark with certificate -->
+            <rect x="38" y="40" width="24" height="20" rx="2" fill="#D1FAE5"/>
+            <path d="M43 50 L48 55 L57 45" stroke="#065F46" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- 4. EAGER LEARNER - Hexagon -->
+        <symbol id="badge-eager-learner" viewBox="0 0 100 100">
+            <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="2.5"/>
+            <path d="M50 18 L78 34 L78 66 L50 82 L22 66 L22 34 Z"
+                  fill="#6D28D9" opacity="0.4"/>
+            <!-- 5 books arranged -->
+            <rect x="32" y="44" width="6" height="10" rx="1" fill="#EDE9FE"/>
+            <rect x="39" y="44" width="6" height="10" rx="1" fill="#EDE9FE"/>
+            <rect x="46" y="44" width="6" height="10" rx="1" fill="#EDE9FE"/>
+            <rect x="53" y="44" width="6" height="10" rx="1" fill="#EDE9FE"/>
+            <rect x="60" y="44" width="6" height="10" rx="1" fill="#EDE9FE"/>
+            <text x="50" y="68" font-size="12" font-weight="bold" text-anchor="middle" fill="#EDE9FE">5</text>
+        </symbol>
+
+        <!-- 5. DEDICATED LEARNER - Square -->
+        <symbol id="badge-dedicated-learner" viewBox="0 0 100 100">
+            <rect x="12" y="12" width="76" height="76" rx="12"
+                  fill="url(#cyan-g)" stroke="#0891B2" stroke-width="2.5"/>
+            <rect x="18" y="18" width="64" height="64" rx="10"
+                  fill="#164E63" opacity="0.4"/>
+            <!-- Trophy with 5 -->
+            <path d="M38 40 L38 48 L42 52 L58 52 L62 48 L62 40 Z" fill="#CFFAFE"/>
+            <rect x="47" y="52" width="6" height="8" fill="#CFFAFE"/>
+            <rect x="44" y="60" width="12" height="3" rx="1" fill="#CFFAFE"/>
+            <!-- Stars -->
+            <path d="M35 46 L36 48 L38 48 L37 49 L37 51 L35 50 L33 51 L33 49 L32 48 L34 48 Z" fill="#0891B2"/>
+            <path d="M40 46 L41 48 L43 48 L42 49 L42 51 L40 50 L38 51 L38 49 L37 48 L39 48 Z" fill="#0891B2"/>
+            <path d="M45 46 L46 48 L48 48 L47 49 L47 51 L45 50 L43 51 L43 49 L42 48 L44 48 Z" fill="#0891B2"/>
+            <path d="M50 46 L51 48 L53 48 L52 49 L52 51 L50 50 L48 51 L48 49 L47 48 L49 48 Z" fill="#0891B2"/>
+            <path d="M55 46 L56 48 L58 48 L57 49 L57 51 L55 50 L53 51 L53 49 L52 48 L54 48 Z" fill="#0891B2"/>
+            <text x="50" y="75" font-size="11" font-weight="bold" text-anchor="middle" fill="#CFFAFE">5</text>
+        </symbol>
+
+        <!-- 6. ACTIVE LEARNER - Diamond -->
+        <symbol id="badge-active-learner" viewBox="0 0 100 100">
+            <path d="M50 8 L88 50 L50 92 L12 50 Z"
+                  fill="url(#orange-g)" stroke="#EA580C" stroke-width="2.5"/>
+            <path d="M50 18 L78 50 L50 82 L22 50 Z"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Stack of courses -->
+            <rect x="36" y="42" width="28" height="5" rx="1" fill="#FED7AA"/>
+            <rect x="36" y="48" width="28" height="5" rx="1" fill="#FED7AA"/>
+            <rect x="36" y="54" width="28" height="5" rx="1" fill="#FED7AA"/>
+            <text x="50" y="72" font-size="12" font-weight="bold" text-anchor="middle" fill="#FED7AA">10</text>
+        </symbol>
+
+        <!-- 7. COURSE COMPLETER - Octagon -->
+        <symbol id="badge-course-completer" viewBox="0 0 100 100">
+            <path d="M30 12 L70 12 L88 30 L88 70 L70 88 L30 88 L12 70 L12 30 Z"
+                  fill="url(#purple2-g)" stroke="#9333EA" stroke-width="2.5"/>
+            <path d="M33 16 L67 16 L84 33 L84 67 L67 84 L33 84 L16 67 L16 33 Z"
+                  fill="#6B21A8" opacity="0.4"/>
+            <!-- Certificate with checkmarks -->
+            <rect x="35" y="38" width="30" height="26" rx="2" fill="#F3E8FF"/>
+            <path d="M40 48 L44 52 L52 43" stroke="#6B21A8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M40 56 L44 60 L52 51" stroke="#6B21A8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <text x="50" y="78" font-size="11" font-weight="bold" text-anchor="middle" fill="#F3E8FF">10</text>
+        </symbol>
+
+        <!-- 8. KNOWLEDGE SEEKER - Heart -->
+        <symbol id="badge-knowledge-seeker" viewBox="0 0 100 100">
+            <path d="M50 85 Q15 55 15 35 Q15 15 35 15 Q45 15 50 25 Q55 15 65 15 Q85 15 85 35 Q85 55 50 85 Z"
+                  fill="url(#pink-g)" stroke="#DB2777" stroke-width="2.5"/>
+            <path d="M50 78 Q22 52 22 36 Q22 22 36 22 Q44 22 50 30 Q56 22 64 22 Q78 22 78 36 Q78 52 50 78 Z"
+                  fill="#831843" opacity="0.4"/>
+            <!-- Brain/knowledge icon -->
+            <circle cx="50" cy="48" r="12" fill="none" stroke="#FCE7F3" stroke-width="2"/>
+            <path d="M44 48 Q44 42 50 42 Q56 42 56 48" stroke="#FCE7F3" stroke-width="2" fill="none"/>
+            <path d="M44 48 Q44 54 50 54 Q56 54 56 48" stroke="#FCE7F3" stroke-width="2" fill="none"/>
+            <text x="50" y="70" font-size="10" font-weight="bold" text-anchor="middle" fill="#FCE7F3">25</text>
+        </symbol>
+
+        <!-- 9. MASTER STUDENT - Star with crown -->
+        <symbol id="badge-master-student" viewBox="0 0 100 100">
+            <path d="M50 8 L56 35 L62 10 L60 36 L70 15 L65 38 L77 23 L68 40 L83 33 L71 42 L87 45 L73 46 L90 57 L74 51 L88 69 L75 59 L82 80 L72 65 L74 89 L67 70 L66 94 L62 73 L58 96 L56 75 L50 97 L50 75 L42 96 L44 73 L34 94 L38 70 L26 89 L33 65 L18 80 L28 59 L12 69 L26 51 L10 57 L27 46 L13 45 L29 42 L17 33 L32 40 L23 23 L35 38 L30 15 L40 36 L38 10 L44 35 Z"
+                  fill="url(#green2-g)" stroke="#059669" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="20" fill="#065F46" opacity="0.4"/>
+            <!-- Crown -->
+            <path d="M40 42 L43 36 L46 42 L50 38 L54 42 L57 36 L60 42 L58 50 L42 50 Z"
+                  fill="#D1FAE5"/>
+            <circle cx="43" cy="39" r="2" fill="#FCD34D"/>
+            <circle cx="50" cy="40" r="2" fill="#FCD34D"/>
+            <circle cx="57" cy="39" r="2" fill="#FCD34D"/>
+            <!-- Graduation cap -->
+            <rect x="43" y="54" width="14" height="5" rx="1" fill="#D1FAE5"/>
+            <path d="M39 54 L50 49 L61 54 L50 59 Z" fill="#D1FAE5"/>
+            <text x="50" y="80" font-size="10" font-weight="bold" text-anchor="middle" fill="#D1FAE5">25</text>
+        </symbol>
+
+        <!-- 10. ETERNAL LEARNER - Ultimate legendary badge -->
+        <symbol id="badge-eternal-learner" viewBox="0 0 100 100">
+            <!-- Glow layers -->
+            <circle cx="50" cy="50" r="46" fill="url(#gold-g)" opacity="0.2"/>
+            <circle cx="50" cy="50" r="43" fill="url(#gold-g)" opacity="0.3"/>
+            <!-- Main shield -->
+            <path d="M50 5 L92 22 L92 58 Q92 78 50 97 Q8 78 8 58 L8 22 Z"
+                  fill="url(#gold-g)" stroke="#F59E0B" stroke-width="3.5"/>
+            <!-- Wings -->
+            <path d="M6 32 Q0 37 -2 48 Q4 44 10 38 L12 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M94 32 Q100 37 102 48 Q96 44 90 38 L88 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M6 52 Q0 47 -2 42 Q4 46 10 50 L12 48" fill="#FDE68A" opacity="0.9"/>
+            <path d="M94 52 Q100 47 102 42 Q96 46 90 50 L88 48" fill="#FDE68A" opacity="0.9"/>
+            <path d="M50 14 L84 28 L84 58 Q84 74 50 88 Q16 74 16 58 L16 28 Z"
+                  fill="#92400E" opacity="0.5"/>
+            <path d="M50 22 L76 33 L76 58 Q76 69 50 80 Q24 69 24 58 L24 33 Z"
+                  fill="#B45309" opacity="0.4"/>
+            <!-- Eternal crown -->
+            <path d="M34 26 L38 18 L42 26 L46 20 L50 16 L54 20 L58 26 L62 18 L66 26 L64 38 L36 38 Z"
+                  fill="#FEF3C7"/>
+            <circle cx="38" cy="23" r="2.5" fill="#DC2626"/>
+            <circle cx="46" cy="24" r="2.5" fill="#3B82F6"/>
+            <circle cx="50" cy="20" r="3" fill="#10B981"/>
+            <circle cx="54" cy="24" r="2.5" fill="#3B82F6"/>
+            <circle cx="62" cy="23" r="2.5" fill="#DC2626"/>
+            <!-- Infinity symbol with book -->
+            <path d="M35 50 Q31 46 31 42 Q31 38 35 38 Q39 38 43 42 L50 49 L57 42 Q61 38 65 38 Q69 38 69 42 Q69 46 65 50 Q61 54 57 52 L50 45 L43 52 Q39 54 35 50 Z"
+                  fill="#FEF3C7"/>
+            <!-- Open book at bottom -->
+            <rect x="40" y="58" width="20" height="14" rx="2" fill="#FEF3C7"/>
+            <line x1="50" y1="58" x2="50" y2="72" stroke="#92400E" stroke-width="1.5"/>
+            <!-- Light rays -->
+            <line x1="35" y1="62" x2="30" y2="57" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="65" y1="62" x2="70" y2="57" stroke="#FEF3C7" stroke-width="2"/>
+            <text x="50" y="88" font-size="8" font-weight="bold" text-anchor="middle" fill="#FEF3C7">50</text>
+        </symbol>
+
+    </svg>
+</div>
+
+<div class="container">
+    <h1>📚 Learner Badges</h1>
+    <p class="subtitle">Category 8 of 8 • 10 Badges • J Academy</p>
+
+    <div class="badge-grid">
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-learner"/></svg>
+            <div class="badge-name">Learner</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-first-enrollment"/></svg>
+            <div class="badge-name">First Enrollment</div>
+            <div class="badge-tier">Pentagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-first-completion"/></svg>
+            <div class="badge-name">First Completion</div>
+            <div class="badge-tier">Shield</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-eager-learner"/></svg>
+            <div class="badge-name">Eager Learner</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-dedicated-learner"/></svg>
+            <div class="badge-name">Dedicated Learner</div>
+            <div class="badge-tier">Square</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-active-learner"/></svg>
+            <div class="badge-name">Active Learner</div>
+            <div class="badge-tier">Diamond</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-course-completer"/></svg>
+            <div class="badge-name">Course Completer</div>
+            <div class="badge-tier">Octagon</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-knowledge-seeker"/></svg>
+            <div class="badge-name">Knowledge Seeker</div>
+            <div class="badge-tier">Heart</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-master-student"/></svg>
+            <div class="badge-name">Master Student</div>
+            <div class="badge-tier">Star+Crown</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-eternal-learner"/></svg>
+            <div class="badge-name">Eternal Learner</div>
+            <div class="badge-tier">Infinity Shield</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

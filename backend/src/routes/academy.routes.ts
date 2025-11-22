@@ -10,6 +10,8 @@ import {
   getCourseRequests,
   createCourseRequest,
   getMyCourses,
+  toggleCourseLike,
+  toggleCourseBookmark,
 } from '../controllers/academy.controller'
 
 const router = Router()
@@ -19,6 +21,10 @@ router.get('/courses', protect, getAllCourses)
 router.get('/courses/:id', protect, getCourse)
 router.post('/courses', protect, createCourse)
 router.put('/courses/:id', protect, updateCourse)
+
+// Course engagement
+router.post('/courses/:id/like', protect, toggleCourseLike)
+router.post('/courses/:id/bookmark', protect, toggleCourseBookmark)
 
 // Enrollment
 router.post('/courses/:id/enroll', protect, enrollInCourse)

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jobless Member Badges v3</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            padding: 40px;
+            margin: 0;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; text-align: center; margin-bottom: 40px; }
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 40px;
+            padding: 20px;
+        }
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .badge-icon {
+            width: 120px;
+            height: 120px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .badge-item:hover .badge-icon { transform: scale(1.15) rotate(5deg); }
+        .badge-name { color: white; font-size: 15px; font-weight: 600; text-align: center; }
+        .badge-tier { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-rarity { font-size: 12px; font-weight: 500; }
+        .rarity-common { color: #9CA3AF; }
+        .rarity-rare { color: #F59E0B; }
+        .rarity-epic { color: #A855F7; }
+        .rarity-legendary { color: #FDE047; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="gray-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#9CA3AF"/>
+                <stop offset="100%" stop-color="#6B7280"/>
+            </linearGradient>
+            <linearGradient id="blue-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#93C5FD"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="green-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#6EE7B7"/>
+                <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+            <linearGradient id="indigo-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#A5B4FC"/>
+                <stop offset="100%" stop-color="#6366F1"/>
+            </linearGradient>
+            <linearGradient id="purple-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#C4B5FD"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+            <linearGradient id="yellow-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE047"/>
+                <stop offset="100%" stop-color="#FBBF24"/>
+            </linearGradient>
+            <linearGradient id="orange-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+            <linearGradient id="red-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCA5A5"/>
+                <stop offset="100%" stop-color="#EF4444"/>
+            </linearGradient>
+            <linearGradient id="cyan-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#67E8F9"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+            <linearGradient id="pink-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#F9A8D4"/>
+                <stop offset="100%" stop-color="#EC4899"/>
+            </linearGradient>
+            <linearGradient id="gold-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="50%" stop-color="#F59E0B"/>
+                <stop offset="100%" stop-color="#D97706"/>
+            </linearGradient>
+        </defs>
+
+        <!-- 1. ROOKIE - Circle with decorative border -->
+        <symbol id="badge-rookie" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#gray-g)" stroke="#4B5563" stroke-width="2"/>
+            <circle cx="50" cy="50" r="37" fill="none" stroke="#4B5563" stroke-width="0.5"/>
+            <!-- Decorative dots around -->
+            <circle cx="50" cy="8" r="1.5" fill="#E5E7EB"/>
+            <circle cx="60" cy="10" r="1.5" fill="#E5E7EB"/>
+            <circle cx="70" cy="15" r="1.5" fill="#E5E7EB"/>
+            <circle cx="78" cy="22" r="1.5" fill="#E5E7EB"/>
+            <circle cx="85" cy="32" r="1.5" fill="#E5E7EB"/>
+            <circle cx="90" cy="42" r="1.5" fill="#E5E7EB"/>
+            <circle cx="92" cy="50" r="1.5" fill="#E5E7EB"/>
+            <circle cx="90" cy="58" r="1.5" fill="#E5E7EB"/>
+            <circle cx="85" cy="68" r="1.5" fill="#E5E7EB"/>
+            <circle cx="78" cy="78" r="1.5" fill="#E5E7EB"/>
+            <circle cx="70" cy="85" r="1.5" fill="#E5E7EB"/>
+            <circle cx="60" cy="90" r="1.5" fill="#E5E7EB"/>
+            <circle cx="50" cy="92" r="1.5" fill="#E5E7EB"/>
+            <circle cx="40" cy="90" r="1.5" fill="#E5E7EB"/>
+            <circle cx="30" cy="85" r="1.5" fill="#E5E7EB"/>
+            <circle cx="22" cy="78" r="1.5" fill="#E5E7EB"/>
+            <circle cx="15" cy="68" r="1.5" fill="#E5E7EB"/>
+            <circle cx="10" cy="58" r="1.5" fill="#E5E7EB"/>
+            <circle cx="8" cy="50" r="1.5" fill="#E5E7EB"/>
+            <circle cx="10" cy="42" r="1.5" fill="#E5E7EB"/>
+            <circle cx="15" cy="32" r="1.5" fill="#E5E7EB"/>
+            <circle cx="22" cy="22" r="1.5" fill="#E5E7EB"/>
+            <circle cx="30" cy="15" r="1.5" fill="#E5E7EB"/>
+            <circle cx="40" cy="10" r="1.5" fill="#E5E7EB"/>
+            <circle cx="50" cy="50" r="32" fill="#1F2937" opacity="0.3"/>
+            <!-- Star icon - CENTERED -->
+            <path d="M50 38 L53 46 L61 46 L55 51 L57 59 L50 54 L43 59 L45 51 L39 46 L47 46 Z" fill="#E5E7EB"/>
+        </symbol>
+
+        <!-- 2. EXPLORER - Octagon (8-gen) -->
+        <symbol id="badge-explorer" viewBox="0 0 100 100">
+            <path d="M30 12 L70 12 L88 30 L88 70 L70 88 L30 88 L12 70 L12 30 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <path d="M32 16 L68 16 L84 32 L84 68 L68 84 L32 84 L16 68 L16 32 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Compass icon - CENTERED -->
+            <circle cx="50" cy="50" r="13" fill="none" stroke="#DBEAFE" stroke-width="2.5"/>
+            <path d="M50 40 L53 50 L50 54 L47 50 Z" fill="#DBEAFE"/>
+            <circle cx="50" cy="50" r="2" fill="#DBEAFE"/>
+        </symbol>
+
+        <!-- 3. CONNECTED - Shield shape -->
+        <symbol id="badge-connected" viewBox="0 0 100 100">
+            <path d="M50 10 L85 25 L85 55 Q85 70 50 85 Q15 70 15 55 L15 25 Z"
+                  fill="url(#green-g)" stroke="#059669" stroke-width="2.5"/>
+            <path d="M50 18 L78 30 L78 55 Q78 66 50 78 Q22 66 22 55 L22 30 Z"
+                  fill="#065F46" opacity="0.4"/>
+            <!-- Link icon - CENTERED -->
+            <circle cx="42" cy="48" r="6" fill="none" stroke="#D1FAE5" stroke-width="2.5"/>
+            <circle cx="58" cy="52" r="6" fill="none" stroke="#D1FAE5" stroke-width="2.5"/>
+            <line x1="45" y1="50" x2="55" y2="50" stroke="#D1FAE5" stroke-width="2.5"/>
+        </symbol>
+
+        <!-- 4. ACTIVE MEMBER - Hexagon with notches -->
+        <symbol id="badge-active-member" viewBox="0 0 100 100">
+            <path d="M50 12 L80 28 L80 62 L50 78 L20 62 L20 28 Z"
+                  fill="url(#indigo-g)" stroke="#4F46E5" stroke-width="2.5"/>
+            <!-- Small triangular notches -->
+            <path d="M50 9 L52 12 L48 12 Z" fill="#818CF8"/>
+            <path d="M82 28 L80 32 L80 24 Z" fill="#818CF8"/>
+            <path d="M82 62 L80 58 L80 66 Z" fill="#818CF8"/>
+            <path d="M50 81 L48 78 L52 78 Z" fill="#818CF8"/>
+            <path d="M18 62 L20 58 L20 66 Z" fill="#818CF8"/>
+            <path d="M18 28 L20 32 L20 24 Z" fill="#818CF8"/>
+            <path d="M50 20 L74 32 L74 58 L50 70 L26 58 L26 32 Z" fill="#312E81" opacity="0.4"/>
+            <!-- Flame icon - CENTERED -->
+            <path d="M50 36 Q46 41 46 46 Q46 51 50 55 Q54 51 54 46 Q54 41 50 36 Z" fill="#C7D2FE"/>
+            <path d="M50 40 Q48 43 48 46 Q48 49 50 51 Q52 49 52 46 Q52 43 50 40 Z" fill="#A5B4FC"/>
+        </symbol>
+
+        <!-- 5. PROFILE COMPLETE - Rounded square -->
+        <symbol id="badge-profile-complete" viewBox="0 0 100 100">
+            <rect x="10" y="10" width="80" height="80" rx="15"
+                  fill="url(#purple-g)" stroke="#7C3AED" stroke-width="2.5"/>
+            <rect x="16" y="16" width="68" height="68" rx="12"
+                  fill="#5B21B6" opacity="0.4"/>
+            <!-- Checkmark in circle - CENTERED -->
+            <circle cx="50" cy="50" r="15" fill="none" stroke="#EDE9FE" stroke-width="2.5"/>
+            <path d="M42 50 L47 55 L59 42" fill="none" stroke="#EDE9FE" stroke-width="3" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- 6. POINT COLLECTOR - Star burst -->
+        <symbol id="badge-point-collector" viewBox="0 0 100 100">
+            <path d="M50 8 L54 30 L59 10 L58 32 L66 14 L62 34 L73 20 L65 36 L79 28 L68 38 L84 37 L71 40 L87 47 L72 44 L88 56 L73 50 L86 65 L74 56 L82 73 L72 62 L76 80 L68 67 L70 86 L64 72 L64 92 L60 76 L58 96 L56 78 L50 98 L50 78 L42 96 L44 76 L36 92 L40 72 L30 86 L36 67 L24 80 L32 62 L18 73 L28 56 L14 65 L26 50 L12 56 L27 44 L13 47 L29 40 L16 37 L32 38 L21 28 L35 36 L27 20 L38 34 L34 14 L42 32 L41 10 L46 30 Z"
+                  fill="url(#yellow-g)" stroke="#EAB308" stroke-width="2"/>
+            <circle cx="50" cy="50" r="22" fill="#713F12" opacity="0.3"/>
+            <!-- J coin - CENTERED -->
+            <circle cx="50" cy="50" r="14" fill="#FEF3C7" stroke="#78350F" stroke-width="2"/>
+            <text x="50" y="56" font-size="16" font-weight="bold" text-anchor="middle" fill="#78350F">J</text>
+        </symbol>
+
+        <!-- 7. VETERAN - Pentagon -->
+        <symbol id="badge-veteran" viewBox="0 0 100 100">
+            <path d="M50 8 L90 38 L75 85 L25 85 L10 38 Z"
+                  fill="url(#orange-g)" stroke="#EA580C" stroke-width="3"/>
+            <path d="M50 16 L82 42 L70 80 L30 80 L18 42 Z"
+                  fill="#C2410C" opacity="0.4"/>
+            <!-- V letter - CENTERED -->
+            <text x="50" y="60" font-size="28" font-weight="bold" text-anchor="middle" fill="#FFFBEB">V</text>
+        </symbol>
+
+        <!-- 8. POINT MASTER - Circle with ribbon -->
+        <symbol id="badge-point-master" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#red-g)" stroke="#DC2626" stroke-width="3"/>
+            <circle cx="50" cy="50" r="36" fill="#7F1D1D" opacity="0.4"/>
+            <!-- Ribbon tails -->
+            <path d="M40 80 L35 95 L40 88 L45 95 Z" fill="#DC2626"/>
+            <path d="M60 80 L55 95 L60 88 L65 95 Z" fill="#DC2626"/>
+            <!-- Trophy - CENTERED -->
+            <path d="M40 40 L40 45 L44 49 L56 49 L60 45 L60 40 Z" fill="#FEE2E2"/>
+            <rect x="46" y="49" width="8" height="8" fill="#FEE2E2"/>
+            <rect x="43" y="57" width="14" height="3" rx="1" fill="#FEE2E2"/>
+        </symbol>
+
+        <!-- 9. CONTRIBUTOR - Heart-shaped badge -->
+        <symbol id="badge-contributor" viewBox="0 0 100 100">
+            <ellipse cx="50" cy="45" rx="40" ry="35" fill="url(#cyan-g)" stroke="#0891B2" stroke-width="3"/>
+            <path d="M50 75 L20 50 Q15 45 15 40 Q15 30 25 30 Q35 30 50 45 Q65 30 75 30 Q85 30 85 40 Q85 45 80 50 Z"
+                  fill="url(#cyan-g)" stroke="#0891B2" stroke-width="3"/>
+            <ellipse cx="50" cy="40" rx="32" ry="28" fill="#164E63" opacity="0.4"/>
+            <!-- Heart icon - CENTERED -->
+            <path d="M50 56 L42 46 Q39 43 39 40 Q39 36 42 36 Q45 36 50 42 Q55 36 58 36 Q61 36 61 40 Q61 43 58 46 Z"
+                  fill="#CFFAFE"/>
+        </symbol>
+
+        <!-- 10. ELITE MEMBER - Diamond/Rhombus with wings -->
+        <symbol id="badge-elite-member" viewBox="0 0 100 100">
+            <path d="M50 8 L88 50 L50 92 L12 50 Z"
+                  fill="url(#purple-g)" stroke="#7C3AED" stroke-width="3.5"/>
+            <!-- Wings -->
+            <path d="M10 45 Q5 48 3 53 Q7 51 12 48 Z" fill="#C4B5FD" opacity="0.8"/>
+            <path d="M90 45 Q95 48 97 53 Q93 51 88 48 Z" fill="#C4B5FD" opacity="0.8"/>
+            <path d="M10 55 Q5 52 3 47 Q7 49 12 52 Z" fill="#C4B5FD" opacity="0.8"/>
+            <path d="M90 55 Q95 52 97 47 Q93 49 88 52 Z" fill="#C4B5FD" opacity="0.8"/>
+            <path d="M50 18 L78 50 L50 82 L22 50 Z" fill="#5B21B6" opacity="0.4"/>
+            <!-- Crown - CENTERED -->
+            <path d="M40 42 L43 37 L46 42 L50 36 L54 42 L57 37 L60 42 L58 50 L42 50 Z" fill="#EDE9FE"/>
+        </symbol>
+
+        <!-- 11. PLATFORM CHAMPION - Hexagon with laurel -->
+        <symbol id="badge-platform-champion" viewBox="0 0 100 100">
+            <path d="M50 8 L85 28 L85 72 L50 92 L15 72 L15 28 Z"
+                  fill="url(#green-g)" stroke="#059669" stroke-width="3.5"/>
+            <!-- Laurel branches -->
+            <path d="M20 45 Q18 48 20 51 Q22 49 21 48 M18 52 Q16 55 18 58 Q20 56 19 55"
+                  fill="none" stroke="#D1FAE5" stroke-width="2"/>
+            <path d="M80 45 Q82 48 80 51 Q78 49 79 48 M82 52 Q84 55 82 58 Q80 56 81 55"
+                  fill="none" stroke="#D1FAE5" stroke-width="2"/>
+            <path d="M50 16 L78 32 L78 68 L50 84 L22 68 L22 32 Z" fill="#065F46" opacity="0.4"/>
+            <!-- Champion badge - CENTERED -->
+            <circle cx="50" cy="50" r="12" fill="#D1FAE5"/>
+            <text x="50" y="55" font-size="14" font-weight="bold" text-anchor="middle" fill="#065F46">1</text>
+        </symbol>
+
+        <!-- 12. LEGEND - Ornate shield with wings and crown -->
+        <symbol id="badge-legend" viewBox="0 0 100 100">
+            <!-- Large shield base -->
+            <path d="M50 5 L90 22 L90 55 Q90 75 50 95 Q10 75 10 55 L10 22 Z"
+                  fill="url(#gold-g)" stroke="#B45309" stroke-width="3.5"/>
+            <!-- Elegant wings -->
+            <path d="M8 30 Q2 35 0 45 Q5 42 10 38 L12 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M92 30 Q98 35 100 45 Q95 42 90 38 L88 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M8 50 Q2 45 0 40 Q5 43 10 47 L12 45" fill="#FDE68A" opacity="0.9"/>
+            <path d="M92 50 Q98 45 100 40 Q95 43 90 47 L88 45" fill="#FDE68A" opacity="0.9"/>
+            <!-- Inner layers -->
+            <path d="M50 14 L82 28 L82 55 Q82 70 50 86 Q18 70 18 55 L18 28 Z" fill="#92400E" opacity="0.5"/>
+            <path d="M50 22 L74 33 L74 55 Q74 66 50 78 Q26 66 26 55 L26 33 Z" fill="#B45309" opacity="0.4"/>
+            <!-- Large ornate crown - CENTERED -->
+            <path d="M35 36 L38 29 L41 36 L44 30 L47 36 L50 26 L53 36 L56 30 L59 36 L62 29 L65 36 L63 48 L37 48 Z" fill="#FEF3C7"/>
+            <circle cx="38" cy="32" r="2" fill="#DC2626"/>
+            <circle cx="44" cy="33" r="2" fill="#3B82F6"/>
+            <circle cx="50" cy="30" r="2.5" fill="#10B981"/>
+            <circle cx="56" cy="33" r="2" fill="#3B82F6"/>
+            <circle cx="62" cy="32" r="2" fill="#DC2626"/>
+            <!-- Large star - CENTERED -->
+            <path d="M50 50 L53 58 L62 58 L56 63 L59 72 L50 67 L41 72 L44 63 L38 58 L47 58 Z" fill="#FEF3C7"/>
+            <circle cx="50" cy="63" r="3" fill="#FEF3C7"/>
+        </symbol>
+
+        <!-- 13. EARLY ADOPTER - Star badge with notches -->
+        <symbol id="badge-early-adopter" viewBox="0 0 100 100">
+            <!-- 8-pointed star -->
+            <path d="M50 8 L56 38 L86 32 L62 50 L86 68 L56 62 L50 92 L44 62 L14 68 L38 50 L14 32 L44 38 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="3"/>
+            <path d="M50 20 L54 42 L76 38 L58 50 L76 62 L54 58 L50 80 L46 58 L24 62 L42 50 L24 38 L46 42 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Lightning bolt - CENTERED -->
+            <path d="M54 35 L46 50 L51 50 L47 65 L58 48 L53 48 Z" fill="#DBEAFE"/>
+            <text x="50" y="85" font-size="8" font-weight="bold" text-anchor="middle" fill="#DBEAFE">1K</text>
+        </symbol>
+
+        <!-- 14. ANNIVERSARY - Ornate decorative circle -->
+        <symbol id="badge-anniversary" viewBox="0 0 100 100">
+            <!-- Decorative outer ring -->
+            <circle cx="50" cy="50" r="44" fill="url(#pink-g)" stroke="#DB2777" stroke-width="2.5"/>
+            <!-- Decorative scallops -->
+            <path d="M50 6 Q52 8 50 10 Q48 8 50 6 M60 7 Q62 10 60 12 Q58 10 60 7 M69 11 Q71 14 69 17 Q67 14 69 11 M77 17 Q79 20 77 23 Q75 20 77 17 M83 25 Q85 28 83 31 Q81 28 83 25 M88 34 Q90 37 88 40 Q86 37 88 34 M91 44 Q93 47 91 50 Q89 47 91 44 M92 54 Q93 57 92 60 Q90 57 92 54 M91 64 Q92 67 91 70 Q89 67 91 64 M88 74 Q89 77 88 80 Q86 77 88 74 M83 83 Q84 86 83 89 Q81 86 83 83 M77 90 Q78 92 77 94 Q75 92 77 90 M69 94 Q70 96 69 98 Q67 96 69 94 M60 96 Q61 98 60 99 Q58 98 60 96 M50 97 Q51 99 50 100 Q49 99 50 97 M40 96 Q41 98 40 99 Q38 98 40 96 M31 94 Q32 96 31 98 Q29 96 31 94 M23 90 Q24 92 23 94 Q21 92 23 90 M17 83 Q18 86 17 89 Q15 86 17 83 M12 74 Q13 77 12 80 Q10 77 12 74 M9 64 Q10 67 9 70 Q7 67 9 64 M8 54 Q9 57 8 60 Q6 57 8 54 M9 44 Q10 47 9 50 Q7 47 9 44 M12 34 Q13 37 12 40 Q10 37 12 34 M17 25 Q18 28 17 31 Q15 28 17 25 M23 17 Q24 20 23 23 Q21 20 23 17 M31 11 Q32 14 31 17 Q29 14 31 11 M40 7 Q41 10 40 12 Q38 10 40 7" fill="#FBCFE8"/>
+            <circle cx="50" cy="50" r="36" fill="#831843" opacity="0.4"/>
+            <!-- Cake - CENTERED -->
+            <rect x="37" y="46" width="26" height="13" rx="2" fill="#FCE7F3"/>
+            <rect x="39" y="41" width="22" height="5" fill="#FBCFE8"/>
+            <rect x="47" y="34" width="6" height="7" fill="#FECDD3"/>
+            <ellipse cx="50" cy="33" rx="4" ry="2" fill="#FDE047"/>
+            <!-- Candle flame -->
+            <path d="M50 29 Q48 31 50 33 Q52 31 50 29" fill="#FDE047" opacity="0.8"/>
+        </symbol>
+
+        <!-- 15. MILESTONE ACHIEVER - Triangle/Mountain badge -->
+        <symbol id="badge-milestone-achiever" viewBox="0 0 100 100">
+            <path d="M50 8 L92 75 L8 75 Z"
+                  fill="url(#purple-g)" stroke="#A855F7" stroke-width="3"/>
+            <path d="M50 18 L82 70 L18 70 Z"
+                  fill="#5B21B6" opacity="0.4"/>
+            <!-- Mountain with flag - CENTERED -->
+            <path d="M35 60 L40 48 L45 55 L50 42 L55 52 L60 60" fill="#DDD6FE" opacity="0.6"/>
+            <rect x="48" y="35" width="2" height="18" fill="#EDE9FE"/>
+            <path d="M50 35 L60 40 L50 45 Z" fill="#C4B5FD"/>
+        </symbol>
+
+    </svg>
+</div>
+
+<div class="container">
+    <h1>🏆 Member Badges v3</h1>
+    <p class="subtitle">15 Unique Shapes • Centered Icons • Progressive Complexity</p>
+
+    <div class="badge-grid">
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-rookie"/></svg>
+            <div class="badge-name">Rookie</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-explorer"/></svg>
+            <div class="badge-name">Explorer</div>
+            <div class="badge-tier">Octagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-connected"/></svg>
+            <div class="badge-name">Connected</div>
+            <div class="badge-tier">Shield</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-active-member"/></svg>
+            <div class="badge-name">Active Member</div>
+            <div class="badge-tier">Hexagon+</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-profile-complete"/></svg>
+            <div class="badge-name">Profile Complete</div>
+            <div class="badge-tier">Square</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-point-collector"/></svg>
+            <div class="badge-name">Point Collector</div>
+            <div class="badge-tier">Starburst</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-veteran"/></svg>
+            <div class="badge-name">Veteran</div>
+            <div class="badge-tier">Pentagon</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-point-master"/></svg>
+            <div class="badge-name">Point Master</div>
+            <div class="badge-tier">Circle+Ribbon</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-contributor"/></svg>
+            <div class="badge-name">Contributor</div>
+            <div class="badge-tier">Heart</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-elite-member"/></svg>
+            <div class="badge-name">Elite Member</div>
+            <div class="badge-tier">Diamond+Wings</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-platform-champion"/></svg>
+            <div class="badge-name">Platform Champion</div>
+            <div class="badge-tier">Hex+Laurel</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-legend"/></svg>
+            <div class="badge-name">Legend</div>
+            <div class="badge-tier">Star+Crown</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-early-adopter"/></svg>
+            <div class="badge-name">Early Adopter</div>
+            <div class="badge-tier">Lightning</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-anniversary"/></svg>
+            <div class="badge-name">Anniversary</div>
+            <div class="badge-tier">Scalloped</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-milestone-achiever"/></svg>
+            <div class="badge-name">Milestone Achiever</div>
+            <div class="badge-tier">Triangle</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

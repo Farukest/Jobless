@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { useSiteSettings, useUpdateSiteSettings } from '@/hooks/use-admin'
 import { AdminLayout } from '@/components/admin/admin-layout'
+import { userHasAnyRole } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function AdminSettingsPage() {
@@ -40,10 +41,18 @@ export default function AdminSettingsPage() {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || authLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [authLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, authLoading, isAuthenticated, user, router])
 
   useEffect(() => {
     if (settingsData?.data) {
@@ -95,12 +104,14 @@ export default function AdminSettingsPage() {
 
   if (!mounted || authLoading) {
     return (
-      <AdminLayout>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     )
+  }
+
+  if (!isAuthenticated || !userHasAnyRole(user, ['admin', 'super_admin'])) {
+    return null
   }
 
   return (

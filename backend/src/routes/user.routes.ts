@@ -9,12 +9,18 @@ import {
   addWhitelistWallet,
   removeWhitelistWallet,
   getLeaderboard,
+  searchUsers,
+  getUserBadges,
+  getUserBadgeStats,
 } from '../controllers/user.controller'
 
 const router = Router()
 
 // Public routes
 router.get('/leaderboard', getLeaderboard)
+
+// Search routes (protected)
+router.get('/search', protect, searchUsers)
 
 // Profile routes
 router.get('/profile/:userId', protect, getUserProfile)
@@ -26,5 +32,9 @@ router.get('/activity', protect, getUserActivity)
 // Wallet management
 router.post('/wallet', protect, addWhitelistWallet)
 router.delete('/wallet/:walletAddress', protect, removeWhitelistWallet)
+
+// Badge routes
+router.get('/:userId/badges', protect, getUserBadges)
+router.get('/:userId/badges/stats', protect, getUserBadgeStats)
 
 export default router

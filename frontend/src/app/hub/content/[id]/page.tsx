@@ -1,13 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
-import { useContent, useToggleLike, useToggleBookmark } from '@/hooks/use-hub'
+import { useContent, useToggleLike, useToggleBookmark, useComments, useCreateComment, useToggleCommentLike } from '@/hooks/use-hub'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Skeleton } from '@/components/ui/skeleton'
 import Image from 'next/image'
-import toast from 'react-hot-toast'
+import { TwitterStyleContent } from '@/components/hub/twitter-style-content'
+import { CommentItem } from '@/components/hub/comment-item'
+import { TwitterReplyInput } from '@/components/hub/twitter-reply-input'
+import { getSocket } from '@/lib/socket'
+import { useQueryClient } from '@tanstack/react-query'
 
 export default function ContentDetailPage() {
   const router = useRouter()
@@ -17,24 +22,271 @@ export default function ContentDetailPage() {
   const { data, isLoading, error } = useContent(id)
   const { mutate: toggleLike, isPending: isLiking } = useToggleLike()
   const { mutate: toggleBookmark, isPending: isBookmarking } = useToggleBookmark()
+  const { data: commentsData, isLoading: commentsLoading } = useComments('hub_content', id)
+  const { mutate: createComment, isPending: isSubmittingComment } = useCreateComment()
+  const { mutate: toggleCommentLike } = useToggleCommentLike()
+  const [commentText, setCommentText] = useState('')
+  const [replyModalComment, setReplyModalComment] = useState<any>(null)
+  const [replyModalText, setReplyModalText] = useState('')
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const queryClient = useQueryClient()
 
+  // Auth check
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login')
     }
   }, [authLoading, isAuthenticated, router])
 
-  const handleLike = () => {
-    toggleLike(id, {
-      onSuccess: () => toast.success('Liked!'),
-      onError: () => toast.error('Failed to like'),
+  // Socket.IO real-time updates
+  useEffect(() => {
+    const socket = getSocket()
+
+    // Join content room
+    socket.emit('join:content', id)
+    console.log('[Socket] Joined content room:', id)
+
+    // Listen for new comments
+    const handleNewComment = (comment: any) => {
+      console.log('[Socket] New comment received:', comment)
+      queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
+        if (!old) {
+          // Initialize if no data exists yet
+          return {
+            success: true,
+            count: 1,
+            total: 1,
+            data: [comment]
+          }
+        }
+        return {
+          ...old,
+          count: (old.count || 0) + 1,
+          total: (old.total || 0) + 1,
+          data: [comment, ...(old.data || [])]
+        }
+      })
+    }
+
+    // Listen for like updates
+    const handleLikeUpdate = (data: any) => {
+      console.log('[Socket] Like update received:', data)
+      queryClient.setQueryData(['hub', 'content', id], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            likesCount: data.likesCount,
+            isLiked: data.isLiked
+          }
+        }
+      })
+    }
+
+    // Listen for bookmark updates
+    const handleBookmarkUpdate = (data: any) => {
+      console.log('[Socket] Bookmark update received:', data)
+      queryClient.setQueryData(['hub', 'content', id], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            bookmarksCount: data.bookmarksCount,
+            isBookmarked: data.isBookmarked
+          }
+        }
+      })
+    }
+
+    // Listen for comment like updates
+    const handleCommentLikeUpdate = (data: any) => {
+      console.log('[Socket] Comment like update received:', data)
+      queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          data: old.data.map((comment: any) =>
+            comment._id === data.commentId
+              ? { ...comment, likes: data.likes, likedBy: data.isLiked ? [...(comment.likedBy || []), data.userId] : (comment.likedBy || []).filter((uid: string) => uid !== data.userId) }
+              : comment
+          )
+        }
+      })
+    }
+
+    // Listen for new replies (to update comment reply count)
+    const handleNewReply = (reply: any) => {
+      console.log('[Socket] New reply received:', reply)
+      if (reply.parentCommentId) {
+        // Increment parent comment's repliesCount
+        queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map((comment: any) =>
+              comment._id === reply.parentCommentId
+                ? { ...comment, repliesCount: (comment.repliesCount || 0) + 1 }
+                : comment
+            )
+          }
+        })
+      }
+    }
+
+    // Listen for comment deletions
+    const handleCommentDeleted = (data: any) => {
+      console.log('[Socket] Comment deleted:', data)
+      const { commentId, parentCommentId, deletedReplies } = data
+
+      queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
+        if (!old) return old
+
+        // Remove the deleted comment and all its replies from cache
+        const allDeletedIds = [commentId, ...deletedReplies]
+
+        return {
+          ...old,
+          count: Math.max(0, old.count - allDeletedIds.length),
+          total: Math.max(0, old.total - allDeletedIds.length),
+          data: old.data.filter((comment: any) => !allDeletedIds.includes(comment._id))
+        }
+      })
+
+      // Update content's comment count
+      queryClient.setQueryData(['hub', 'content', id], (old: any) => {
+        if (!old?.data) return old
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            commentsCount: Math.max(0, old.data.commentsCount - 1)
+          }
+        }
+      })
+    }
+
+    socket.on('newComment', handleNewComment)
+    socket.on('likeUpdate', handleLikeUpdate)
+    socket.on('bookmarkUpdate', handleBookmarkUpdate)
+    socket.on('commentLikeUpdate', handleCommentLikeUpdate)
+    socket.on('newReply', handleNewReply)
+    socket.on('commentDeleted', handleCommentDeleted)
+
+    console.log('[Socket] Event listeners registered for content:', id)
+
+    // Test listener
+    socket.onAny((eventName, ...args) => {
+      console.log('[Socket] ANY EVENT:', eventName, args)
     })
+
+    // Cleanup
+    return () => {
+      socket.emit('leave:content', id)
+      socket.off('newComment', handleNewComment)
+      socket.off('likeUpdate', handleLikeUpdate)
+      socket.off('bookmarkUpdate', handleBookmarkUpdate)
+      socket.off('commentLikeUpdate', handleCommentLikeUpdate)
+      socket.off('newReply', handleNewReply)
+      socket.off('commentDeleted', handleCommentDeleted)
+      socket.offAny()
+      console.log('[Socket] Left content room:', id)
+    }
+  }, [id, queryClient])
+
+  const handleLike = () => {
+    toggleLike(id)
   }
 
   const handleBookmark = () => {
-    toggleBookmark(id, {
-      onSuccess: () => toast.success('Bookmarked!'),
-      onError: () => toast.error('Failed to bookmark'),
+    toggleBookmark(id)
+  }
+
+  const handleSubmitComment = () => {
+    if (!commentText.trim()) return
+
+    createComment({
+      contentType: 'hub_content',
+      contentId: id,
+      content: commentText.trim()
+    }, {
+      onSuccess: () => {
+        setCommentText('')
+      }
+    })
+  }
+
+  const handleCommentLike = (commentId: string) => {
+    toggleCommentLike(commentId)
+  }
+
+  const handleReplyClick = (comment: any) => {
+    setReplyModalComment(comment)
+    setReplyModalText('')
+  }
+
+  // Get all unique users in the reply chain with their IDs
+  const getReplyingToUsers = (comment: any) => {
+    const usersMap = new Map<string, string>() // username -> userId
+
+    // Get username or displayName or wallet for content author
+    const contentAuthorUsername =
+      content?.authorId?.twitterUsername ||
+      content?.authorId?.displayName ||
+      (content?.authorId?.walletAddress ? `${content.authorId.walletAddress.slice(0, 6)}...${content.authorId.walletAddress.slice(-4)}` : null)
+
+    const commentAuthorUsername =
+      comment.userId?.twitterUsername ||
+      comment.userId?.displayName ||
+      (comment.userId?.walletAddress ? `${comment.userId.walletAddress.slice(0, 6)}...${comment.userId.walletAddress.slice(-4)}` : null)
+
+    // Add content author (if different from comment author)
+    if (contentAuthorUsername && contentAuthorUsername !== commentAuthorUsername) {
+      usersMap.set(contentAuthorUsername, content.authorId._id)
+    }
+
+    // Always add parent comment author
+    if (commentAuthorUsername) {
+      usersMap.set(commentAuthorUsername, comment.userId._id)
+    }
+
+    // Remove current user from the list
+    const currentUsername =
+      user?.twitterUsername ||
+      user?.displayName ||
+      (user?.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : null)
+
+    // Filter out current user
+    if (currentUsername) {
+      usersMap.delete(currentUsername)
+    }
+
+    // If list is empty after filtering (replying to own comment), show comment author
+    if (usersMap.size === 0 && commentAuthorUsername) {
+      usersMap.set(commentAuthorUsername, comment.userId._id)
+    }
+
+    // Return array of {username, userId} objects
+    return Array.from(usersMap.entries()).map(([username, userId]) => ({
+      username,
+      userId
+    }))
+  }
+
+  const handleModalReplySubmit = () => {
+    if (!replyModalText.trim() || !replyModalComment) return
+
+    createComment({
+      contentType: 'hub_content',
+      contentId: id,
+      content: replyModalText.trim(),
+      parentCommentId: replyModalComment._id
+    }, {
+      onSuccess: () => {
+        setReplyModalText('')
+        setReplyModalComment(null)
+      }
     })
   }
 
@@ -75,12 +327,12 @@ export default function ContentDetailPage() {
               <p className="text-muted-foreground mb-6">
                 The content you're looking for doesn't exist or has been removed.
               </p>
-              <button
-                onClick={() => router.push('/hub')}
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
+              <Link
+                href="/hub"
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors inline-block"
               >
                 Back to Hub
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -97,241 +349,211 @@ export default function ContentDetailPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="min-h-screen bg-background pb-20">
+        <div className="container mx-auto max-w-2xl">
           {/* Back Button */}
-          <button
-            onClick={() => router.push('/hub')}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to Hub
-          </button>
-
-          {/* Content Header */}
-          <div className="bg-card rounded-lg border border-border p-8 mb-6">
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                {content.contentType}
-              </span>
-              <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-                {content.category}
-              </span>
-              {content.difficulty && (
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(content.difficulty)}`}>
-                  {content.difficulty}
-                </span>
-              )}
-              {content.isFeatured && (
-                <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-xs font-medium">
-                  Featured
-                </span>
-              )}
-              {content.isPinned && (
-                <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-xs font-medium">
-                  Pinned
-                </span>
-              )}
-              {content.status === 'draft' && (
-                <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 text-xs font-medium">
-                  Draft
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h1 className="text-4xl font-bold mb-4">{content.title}</h1>
-
-            {/* Description */}
-            {content.description && (
-              <p className="text-lg text-muted-foreground mb-6">{content.description}</p>
-            )}
-
-            {/* Author Info */}
-            <div className="flex items-center justify-between border-t border-border pt-6">
-              <div className="flex items-center gap-3">
-                {content.authorId.profileImage ? (
-                  <Image
-                    src={content.authorId.profileImage}
-                    alt={content.authorId.displayName || 'Author'}
-                    width={48}
-                    height={48}
-                    className="rounded-full"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-lg font-medium text-muted-foreground">
-                      {(content.authorId.displayName || content.authorId.twitterUsername || 'U')[0].toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium">
-                    {content.authorId.displayName || content.authorId.twitterUsername || 'Anonymous'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Published {new Date(content.publishedAt || content.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
-              </div>
-
-              {/* Edit Button */}
-              {isAuthor && (
-                <button
-                  onClick={() => router.push(`/hub/content/${id}/edit`)}
-                  className="px-4 py-2 bg-muted text-foreground rounded-md text-sm font-medium hover:bg-muted/80 transition-colors"
-                >
-                  Edit Content
-                </button>
-              )}
-            </div>
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
+            <Link
+              href="/hub"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back
+            </Link>
           </div>
 
-          {/* Content Body */}
-          <div className="bg-card rounded-lg border border-border p-8 mb-6">
-            <div className="prose prose-slate dark:prose-invert max-w-none">
-              <div className="whitespace-pre-wrap">{content.body}</div>
-            </div>
+          {/* Twitter-Style Content */}
+          <TwitterStyleContent
+            content={content}
+            onLike={handleLike}
+            onBookmark={handleBookmark}
+            showFullContent={true}
+          />
 
-            {/* Media */}
-            {content.mediaUrls && content.mediaUrls.length > 0 && (
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {content.mediaUrls.map((media, index) => (
-                  <div key={index} className="rounded-lg overflow-hidden border border-border">
-                    {media.type === 'image' && (
-                      <Image
-                        src={media.url}
-                        alt={`Media ${index + 1}`}
-                        width={600}
-                        height={400}
-                        className="w-full h-auto"
-                      />
-                    )}
-                    {media.type === 'video' && (
-                      <video controls className="w-full h-auto">
-                        <source src={media.url} type="video/mp4" />
-                        Your browser does not support the video tag.
-                      </video>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Tags */}
-          {content.tags && content.tags.length > 0 && (
-            <div className="bg-card rounded-lg border border-border p-6 mb-6">
-              <h3 className="text-sm font-semibold mb-3">Tags</h3>
-              <div className="flex flex-wrap gap-2">
-                {content.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 rounded-full bg-muted text-sm text-muted-foreground hover:bg-muted/80 cursor-pointer transition-colors"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+          {/* Edit Button (if author) */}
+          {isAuthor && (
+            <div className="border-b border-border p-4">
+              <button
+                onClick={() => router.push(`/hub/content/${id}/edit`)}
+                className="w-full px-4 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80 transition-colors"
+              >
+                Edit Content
+              </button>
             </div>
           )}
 
-          {/* Engagement Actions */}
-          <div className="bg-card rounded-lg border border-border p-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2 text-muted-foreground">
+          {/* Comments Section - Twitter Style */}
+          <div className="border-t border-border">
+            {/* Comment Input */}
+            <div className="p-4 border-b border-border">
+              <TwitterReplyInput
+                value={commentText}
+                onChange={setCommentText}
+                onSubmit={handleSubmitComment}
+                isSubmitting={isSubmittingComment}
+                placeholder="Post your reply..."
+                maxLength={500}
+              />
+            </div>
+
+            {/* Comments List */}
+            {commentsLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              </div>
+            ) : commentsData?.data && commentsData.data.length > 0 ? (
+              <div>
+                {commentsData.data.map((comment: any) => {
+                  const isLiked = user && comment.likedBy?.includes(user._id)
+                  return (
+                    <CommentItem
+                      key={comment._id}
+                      comment={comment}
+                      onLike={handleCommentLike}
+                      commentDetailUrl={`/hub/content/${id}/comment/${comment._id}`}
+                      onReplyClick={handleReplyClick}
+                      isLiked={isLiked}
+                      contentAuthorId={content.authorId._id}
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <svg
+                  className="mx-auto h-12 w-12 text-muted-foreground mb-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <p className="text-muted-foreground text-sm">No comments yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Be the first to comment!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Reply Modal */}
+        {replyModalComment && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setReplyModalComment(null)}
+          >
+            <div
+              className="bg-card rounded-xl border border-border max-w-xl w-full max-h-[80vh] overflow-y-auto"
+              onClick={(e) => {
+                e.stopPropagation()
+                // Focus textarea when clicking anywhere in modal
+                const textarea = e.currentTarget.querySelector('textarea')
+                if (textarea && !window.getSelection()?.toString()) {
+                  textarea.focus()
+                }
+              }}
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-card border-b border-border px-4 py-2 flex items-center justify-end">
+                <button
+                  onClick={() => setReplyModalComment(null)}
+                  className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <span className="font-medium">{content.views}</span>
-                  <span className="text-sm">views</span>
+                </button>
+              </div>
+
+              {/* Parent Comment & Reply Input - Twitter Style */}
+              <div className="p-4">
+                {/* Parent Comment Section */}
+                <div className="flex gap-3 mb-2">
+                  {/* Left column - Avatar + Vertical Line */}
+                  <div className="flex flex-col items-center" style={{ width: '40px' }}>
+                    {replyModalComment.userId?.profileImage ? (
+                      <Image
+                        src={replyModalComment.userId.profileImage}
+                        alt={replyModalComment.userId.displayName || 'User'}
+                        width={40}
+                        height={40}
+                        className="rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-semibold text-primary">
+                          {(replyModalComment.userId?.displayName || replyModalComment.userId?.twitterUsername || 'U')[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    {/* Vertical line */}
+                    <div className="w-0.5 bg-border flex-1 my-2" style={{ minHeight: '20px' }}></div>
+                  </div>
+
+                  {/* Right column - Comment content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Parent comment header */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-sm">{replyModalComment.userId?.displayName || 'Anonymous'}</span>
+                      {replyModalComment.userId?.twitterUsername && (
+                        <span className="text-muted-foreground text-xs">@{replyModalComment.userId.twitterUsername}</span>
+                      )}
+                    </div>
+
+                    {/* Parent comment content */}
+                    <p className="text-sm whitespace-pre-wrap mb-3">{replyModalComment.content}</p>
+
+                    {/* Replying to indicator */}
+                    {(() => {
+                      const users = getReplyingToUsers(replyModalComment)
+                      if (users.length === 0) return null
+
+                      return (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          Replying to{' '}
+                          {users.map((userObj, index) => (
+                            <span key={userObj.username}>
+                              <span
+                                className="text-primary hover:underline cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  router.push(`/center/profile/${userObj.userId}`)
+                                }}
+                              >
+                                @{userObj.username}
+                              </span>
+                              {index < users.length - 2 && ', '}
+                              {index === users.length - 2 && ' and '}
+                            </span>
+                          ))}
+                        </div>
+                      )
+                    })()}
+                  </div>
                 </div>
 
-                <button
-                  onClick={handleLike}
-                  disabled={isLiking}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                  <span className="font-medium">{content.likes}</span>
-                  <span className="text-sm">likes</span>
-                </button>
-
-                <button
-                  onClick={handleBookmark}
-                  disabled={isBookmarking}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-blue-500 transition-colors disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                    />
-                  </svg>
-                  <span className="font-medium">{content.bookmarks}</span>
-                  <span className="text-sm">bookmarks</span>
-                </button>
+                {/* Reply Input Section */}
+                <TwitterReplyInput
+                  value={replyModalText}
+                  onChange={setReplyModalText}
+                  onSubmit={handleModalReplySubmit}
+                  isSubmitting={isSubmittingComment}
+                  placeholder="Post your reply..."
+                  maxLength={500}
+                  autoFocus
+                />
               </div>
             </div>
           </div>
-
-          {/* Comments Section (Placeholder) */}
-          <div className="bg-card rounded-lg border border-border p-8">
-            <h2 className="text-2xl font-bold mb-4">Comments</h2>
-            <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
-              <svg
-                className="mx-auto h-12 w-12 text-muted-foreground mb-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <p className="text-muted-foreground">Comments feature coming soon</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                The comment model doesn't exist yet
-              </p>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </AuthenticatedLayout>
   )

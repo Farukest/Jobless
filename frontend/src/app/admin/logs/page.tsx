@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { useAdminLogs } from '@/hooks/use-admin'
 import { AdminLayout } from '@/components/admin/admin-layout'
+import { userHasAnyRole } from '@/lib/utils'
 
 export default function AdminLogsPage() {
   const router = useRouter()
@@ -20,19 +21,29 @@ export default function AdminLogsPage() {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || authLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [authLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, authLoading, isAuthenticated, user, router])
 
   if (!mounted || authLoading) {
     return (
-      <AdminLayout>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     )
+  }
+
+  if (!isAuthenticated || !userHasAnyRole(user, ['admin', 'super_admin'])) {
+    return null
   }
 
   const filteredLogs = logsData?.data?.filter((log: any) => {
@@ -137,7 +148,7 @@ export default function AdminLogsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs ${getActionBadgeColor(log.action)}`}>
+                          <span className={`px-2 py-1 rounded-lg text-xs ${getActionBadgeColor(log.action)}`}>
                             {log.action.replace('_', ' ')}
                           </span>
                         </td>

@@ -4,30 +4,42 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { AdminLayout } from '@/components/admin/admin-layout'
+import { userHasAnyRole } from '@/lib/utils'
 
 export default function AdminPermissionsPage() {
   const router = useRouter()
   const { user, isLoading: authLoading, isAuthenticated } = useAuth()
   const [mounted, setMounted] = useState(false)
+  const [selectedRole, setSelectedRole] = useState('member')
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || authLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [authLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, authLoading, isAuthenticated, user, router])
 
   if (!mounted || authLoading) {
     return (
-      <AdminLayout>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     )
+  }
+
+  if (!isAuthenticated || !userHasAnyRole(user, ['admin', 'super_admin'])) {
+    return null
   }
 
   const permissions = [
@@ -96,8 +108,6 @@ export default function AdminPermissionsPage() {
     super_admin: ['ALL'],
   }
 
-  const [selectedRole, setSelectedRole] = useState('member')
-
   const roles = [
     { value: 'member', label: 'Member' },
     { value: 'content_creator', label: 'Content Creator' },
@@ -129,17 +139,27 @@ export default function AdminPermissionsPage() {
             <label className="block text-sm font-medium mb-3">Select Role to View Permissions:</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {roles.map((role) => (
-                <button
-                  key={role.value}
-                  onClick={() => setSelectedRole(role.value)}
-                  className={`px-4 py-3 rounded-md border-2 transition-colors ${
-                    selectedRole === role.value
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card border-border hover:border-primary'
-                  }`}
-                >
-                  {role.label}
-                </button>
+                <div key={role.value} className="flex flex-col gap-2">
+                  <button
+                    onClick={() => setSelectedRole(role.value)}
+                    className={`px-4 py-3 rounded-md border-2 transition-colors ${
+                      selectedRole === role.value
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card border-border hover:border-primary'
+                    }`}
+                  >
+                    {role.label}
+                  </button>
+                  <a
+                    href={`/admin/users?role=${role.value}`}
+                    className="text-xs text-center text-primary hover:underline flex items-center justify-center gap-1"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    View Members
+                  </a>
+                </div>
               ))}
             </div>
           </div>

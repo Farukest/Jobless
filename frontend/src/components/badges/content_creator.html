@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Jobless Content Creator Badges</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            padding: 40px;
+            margin: 0;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; text-align: center; margin-bottom: 40px; }
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 35px;
+            padding: 20px;
+        }
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge-icon {
+            width: 110px;
+            height: 110px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .badge-item:hover .badge-icon { transform: scale(1.15) rotate(5deg); }
+        .badge-name { color: white; font-size: 14px; font-weight: 600; text-align: center; }
+        .badge-tier { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-rarity { font-size: 11px; font-weight: 500; }
+        .rarity-common { color: #9CA3AF; }
+        .rarity-rare { color: #F59E0B; }
+        .rarity-epic { color: #A855F7; }
+        .rarity-legendary { color: #FDE047; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="indigo-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#A5B4FC"/>
+                <stop offset="100%" stop-color="#6366F1"/>
+            </linearGradient>
+            <linearGradient id="red-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCA5A5"/>
+                <stop offset="100%" stop-color="#EF4444"/>
+            </linearGradient>
+            <linearGradient id="blue-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#93C5FD"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
+            </linearGradient>
+            <linearGradient id="purple-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#C4B5FD"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+            <linearGradient id="orange-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+            <linearGradient id="pink-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#F9A8D4"/>
+                <stop offset="100%" stop-color="#EC4899"/>
+            </linearGradient>
+            <linearGradient id="cyan-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#67E8F9"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+            <linearGradient id="gold-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FDE68A"/>
+                <stop offset="50%" stop-color="#F59E0B"/>
+                <stop offset="100%" stop-color="#D97706"/>
+            </linearGradient>
+        </defs>
+
+        <!-- 1. FIRST POST - Simple Circle -->
+        <symbol id="badge-first-post" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#indigo-g)" stroke="#4F46E5" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#312E81" opacity="0.4"/>
+            <!-- Document icon -->
+            <rect x="38" y="38" width="24" height="28" rx="2" fill="#C7D2FE"/>
+            <line x1="42" y1="44" x2="58" y2="44" stroke="#312E81" stroke-width="1.5"/>
+            <line x1="42" y1="50" x2="58" y2="50" stroke="#312E81" stroke-width="1.5"/>
+            <line x1="42" y1="56" x2="52" y2="56" stroke="#312E81" stroke-width="1.5"/>
+        </symbol>
+
+        <!-- 2. VIDEO STARTER - Play button shape -->
+        <symbol id="badge-video-starter" viewBox="0 0 100 100">
+            <path d="M20 15 L80 15 L90 50 L80 85 L20 85 L10 50 Z"
+                  fill="url(#red-g)" stroke="#DC2626" stroke-width="2.5"/>
+            <path d="M25 22 L75 22 L83 50 L75 78 L25 78 L17 50 Z"
+                  fill="#7F1D1D" opacity="0.4"/>
+            <!-- Play button -->
+            <rect x="35" y="40" width="30" height="20" rx="3" fill="#FEE2E2"/>
+            <path d="M44 45 L56 50 L44 55 Z" fill="#DC2626"/>
+        </symbol>
+
+        <!-- 3. THREAD WEAVER - Hexagon -->
+        <symbol id="badge-thread-weaver" viewBox="0 0 100 100">
+            <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
+                  fill="url(#blue-g)" stroke="#2563EB" stroke-width="2.5"/>
+            <path d="M50 18 L78 34 L78 66 L50 82 L22 66 L22 34 Z"
+                  fill="#1E3A8A" opacity="0.4"/>
+            <!-- Thread/chain icon -->
+            <circle cx="50" cy="38" r="5" fill="#DBEAFE"/>
+            <line x1="50" y1="43" x2="50" y2="50" stroke="#DBEAFE" stroke-width="2.5"/>
+            <circle cx="50" cy="54" r="5" fill="#DBEAFE"/>
+            <line x1="50" y1="59" x2="50" y2="64" stroke="#DBEAFE" stroke-width="1.5"/>
+        </symbol>
+
+        <!-- 4. PODCAST PIONEER - Shield -->
+        <symbol id="badge-podcast-pioneer" viewBox="0 0 100 100">
+            <path d="M50 8 L88 24 L88 56 Q88 72 50 92 Q12 72 12 56 L12 24 Z"
+                  fill="url(#purple-g)" stroke="#7C3AED" stroke-width="2.5"/>
+            <path d="M50 16 L80 30 L80 56 Q80 68 50 84 Q20 68 20 56 L20 30 Z"
+                  fill="#5B21B6" opacity="0.4"/>
+            <!-- Microphone -->
+            <rect x="45" y="38" width="10" height="20" rx="5" fill="#DDD6FE"/>
+            <rect x="43" y="58" width="14" height="5" rx="2" fill="#DDD6FE"/>
+            <line x1="50" y1="63" x2="50" y2="68" stroke="#DDD6FE" stroke-width="2.5"/>
+        </symbol>
+
+        <!-- 5. CONSISTENT CREATOR - Pentagon -->
+        <symbol id="badge-consistent-creator" viewBox="0 0 100 100">
+            <path d="M50 10 L88 38 L74 85 L26 85 L12 38 Z"
+                  fill="url(#orange-g)" stroke="#F97316" stroke-width="2.5"/>
+            <path d="M50 18 L80 42 L68 80 L32 80 L20 42 Z"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Calendar -->
+            <rect x="36" y="38" width="28" height="26" rx="2" fill="#FED7AA"/>
+            <rect x="36" y="38" width="28" height="6" fill="#EA580C"/>
+            <circle cx="42" cy="50" r="2" fill="#92400E"/>
+            <circle cx="50" cy="50" r="2" fill="#92400E"/>
+            <circle cx="58" cy="50" r="2" fill="#92400E"/>
+            <circle cx="42" cy="57" r="2" fill="#92400E"/>
+            <circle cx="50" cy="57" r="2" fill="#92400E"/>
+        </symbol>
+
+        <!-- 6. POPULAR POST - Heart Circle -->
+        <symbol id="badge-popular-post" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#pink-g)" stroke="#DB2777" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#831843" opacity="0.4"/>
+            <!-- Heart -->
+            <path d="M50 58 L40 46 Q36 42 36 38 Q36 32 40 32 Q44 32 50 38 Q56 32 60 32 Q64 32 64 38 Q64 42 60 46 Z"
+                  fill="#FCE7F3"/>
+            <text x="50" y="72" font-size="9" font-weight="bold" text-anchor="middle" fill="#FCE7F3">50+</text>
+        </symbol>
+
+        <!-- 7. MULTI-FORMAT - Octagon -->
+        <symbol id="badge-multi-format" viewBox="0 0 100 100">
+            <path d="M30 12 L70 12 L88 30 L88 70 L70 88 L30 88 L12 70 L12 30 Z"
+                  fill="url(#purple-g)" stroke="#A855F7" stroke-width="2.5"/>
+            <path d="M32 16 L68 16 L84 32 L84 68 L68 84 L32 84 L16 68 L16 32 Z"
+                  fill="#6D28D9" opacity="0.4"/>
+            <!-- Multiple format icons -->
+            <rect x="34" y="36" width="12" height="12" rx="1" fill="#DDD6FE"/>
+            <circle cx="56" cy="42" r="6" fill="#DDD6FE"/>
+            <path d="M62 52 L68 57 L62 62 Z" fill="#DDD6FE"/>
+        </symbol>
+
+        <!-- 8. PROLIFIC - Rounded Square -->
+        <symbol id="badge-prolific" viewBox="0 0 100 100">
+            <rect x="12" y="12" width="76" height="76" rx="15"
+                  fill="url(#orange-g)" stroke="#EA580C" stroke-width="2.5"/>
+            <rect x="18" y="18" width="64" height="64" rx="12"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- Stack of papers -->
+            <rect x="36" y="46" width="28" height="22" rx="2" fill="#FED7AA" opacity="0.4"/>
+            <rect x="38" y="42" width="28" height="22" rx="2" fill="#FED7AA" opacity="0.6"/>
+            <rect x="40" y="38" width="28" height="22" rx="2" fill="#FED7AA"/>
+            <text x="54" y="52" font-size="14" font-weight="bold" text-anchor="middle" fill="#92400E">20</text>
+        </symbol>
+
+        <!-- 9. VIRAL HIT - Star burst -->
+        <symbol id="badge-viral-hit" viewBox="0 0 100 100">
+            <path d="M50 5 L54 28 L60 8 L58 30 L67 13 L63 32 L74 19 L66 34 L80 27 L69 36 L85 36 L72 40 L88 46 L73 44 L89 55 L74 50 L87 64 L75 56 L82 72 L72 62 L76 80 L68 67 L70 86 L64 72 L64 92 L60 76 L58 96 L56 78 L50 98 L50 78 L42 96 L44 76 L36 92 L40 72 L30 86 L36 67 L24 80 L32 62 L18 72 L28 56 L13 64 L26 50 L11 55 L27 44 L12 46 L28 40 L15 36 L31 36 L20 27 L34 34 L26 19 L37 32 L33 13 L42 30 L40 8 L46 28 Z"
+                  fill="url(#red-g)" stroke="#DC2626" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="22" fill="#7F1D1D" opacity="0.4"/>
+            <!-- Explosion -->
+            <path d="M50 38 L52 46 L59 46 L54 50 L56 58 L50 54 L44 58 L46 50 L41 46 L48 46 Z" fill="#FEE2E2"/>
+            <text x="50" y="72" font-size="8" font-weight="bold" text-anchor="middle" fill="#FEE2E2">100+</text>
+        </symbol>
+
+        <!-- 10. CONTENT MASTER - Diamond with notches -->
+        <symbol id="badge-content-master" viewBox="0 0 100 100">
+            <path d="M50 8 L88 50 L50 92 L12 50 Z"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="3"/>
+            <!-- Notches -->
+            <path d="M50 5 L52 8 L48 8 Z" fill="#C4B5FD"/>
+            <path d="M90 50 L88 53 L88 47 Z" fill="#C4B5FD"/>
+            <path d="M50 95 L48 92 L52 92 Z" fill="#C4B5FD"/>
+            <path d="M10 50 L12 47 L12 53 Z" fill="#C4B5FD"/>
+            <path d="M50 18 L78 50 L50 82 L22 50 Z" fill="#6D28D9" opacity="0.4"/>
+            <!-- Crown with orb -->
+            <path d="M38 42 L42 36 L46 42 L50 34 L54 42 L58 36 L62 42 L60 50 L40 50 Z" fill="#DDD6FE"/>
+            <circle cx="50" cy="58" r="8" fill="#DDD6FE"/>
+            <text x="50" y="62" font-size="10" font-weight="bold" text-anchor="middle" fill="#6D28D9">50</text>
+        </symbol>
+
+        <!-- 11. CONTENT TITAN - Hexagon with wings -->
+        <symbol id="badge-content-titan" viewBox="0 0 100 100">
+            <path d="M50 8 L88 28 L88 72 L50 92 L12 72 L12 28 Z"
+                  fill="url(#cyan-g)" stroke="#0891B2" stroke-width="3"/>
+            <!-- Wings -->
+            <path d="M10 42 Q4 45 2 52 Q7 49 12 46" fill="#67E8F9" opacity="0.8"/>
+            <path d="M90 42 Q96 45 98 52 Q93 49 88 46" fill="#67E8F9" opacity="0.8"/>
+            <path d="M10 58 Q4 55 2 48 Q7 51 12 54" fill="#67E8F9" opacity="0.8"/>
+            <path d="M90 58 Q96 55 98 48 Q93 51 88 54" fill="#67E8F9" opacity="0.8"/>
+            <path d="M50 16 L80 32 L80 68 L50 84 L20 68 L20 32 Z" fill="#164E63" opacity="0.4"/>
+            <!-- Mountain peaks -->
+            <path d="M32 58 L40 44 L46 52 L54 40 L62 50 L70 58 Z" fill="#CFFAFE"/>
+            <text x="50" y="74" font-size="8" font-weight="bold" text-anchor="middle" fill="#CFFAFE">100</text>
+        </symbol>
+
+        <!-- 12. MEGA VIRAL - Complex star -->
+        <symbol id="badge-mega-viral" viewBox="0 0 100 100">
+            <path d="M50 3 L52 30 L58 6 L56 32 L65 10 L61 34 L72 16 L65 36 L80 24 L68 38 L86 34 L71 40 L90 45 L73 44 L93 56 L75 50 L92 67 L76 58 L88 77 L74 64 L82 86 L70 70 L74 92 L66 74 L66 96 L62 76 L58 98 L58 78 L50 100 L50 78 L42 98 L42 76 L34 96 L38 74 L26 92 L32 70 L18 86 L28 64 L12 77 L24 58 L8 67 L25 50 L7 56 L27 44 L10 45 L29 40 L14 34 L32 38 L20 24 L35 36 L28 16 L39 34 L35 10 L44 32 L42 6 L48 30 Z"
+                  fill="url(#orange-g)" stroke="#EA580C" stroke-width="3"/>
+            <circle cx="50" cy="50" r="18" fill="#92400E" opacity="0.5"/>
+            <!-- Burst center -->
+            <path d="M50 38 L52 46 L60 46 L54 51 L56 59 L50 55 L44 59 L46 51 L40 46 L48 46 Z" fill="#FEF3C7"/>
+            <circle cx="50" cy="51" r="4" fill="#FDE047"/>
+            <text x="50" y="78" font-size="8" font-weight="bold" text-anchor="middle" fill="#FEF3C7">500+</text>
+        </symbol>
+
+        <!-- 13. HUB IMMORTAL - Ornate shield -->
+        <symbol id="badge-hub-immortal" viewBox="0 0 100 100">
+            <path d="M50 3 L92 20 L92 58 Q92 78 50 97 Q8 78 8 58 L8 20 Z"
+                  fill="url(#gold-g)" stroke="#B45309" stroke-width="3.5"/>
+            <!-- Large wings -->
+            <path d="M6 32 Q0 37 -2 48 Q4 44 10 38 L12 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M94 32 Q100 37 102 48 Q96 44 90 38 L88 40" fill="#FDE68A" opacity="0.9"/>
+            <path d="M6 52 Q0 47 -2 42 Q4 46 10 50 L12 48" fill="#FDE68A" opacity="0.9"/>
+            <path d="M94 52 Q100 47 102 42 Q96 46 90 50 L88 48" fill="#FDE68A" opacity="0.9"/>
+            <path d="M50 12 L84 26 L84 58 Q84 74 50 88 Q16 74 16 58 L16 26 Z" fill="#92400E" opacity="0.5"/>
+            <path d="M50 20 L76 31 L76 58 Q76 69 50 80 Q24 69 24 58 L24 31 Z" fill="#B45309" opacity="0.4"/>
+            <!-- Infinity symbol -->
+            <path d="M35 48 Q31 44 31 40 Q31 36 35 36 Q39 36 43 40 L50 47 L57 40 Q61 36 65 36 Q69 36 69 40 Q69 44 65 48 Q61 52 57 50 L50 43 L43 50 Q39 52 35 48 Z"
+                  fill="#FEF3C7"/>
+            <text x="50" y="72" font-size="7" font-weight="bold" text-anchor="middle" fill="#FEF3C7">∞</text>
+        </symbol>
+
+        <!-- 14. QUICK PUBLISHER - Arrow/Speed -->
+        <symbol id="badge-quick-publisher" viewBox="0 0 100 100">
+            <path d="M15 50 L50 10 L50 35 L85 35 L85 65 L50 65 L50 90 Z"
+                  fill="url(#cyan-g)" stroke="#0891B2" stroke-width="2.5"/>
+            <path d="M23 50 L50 20 L50 40 L77 40 L77 60 L50 60 L50 80 Z"
+                  fill="#164E63" opacity="0.4"/>
+            <!-- Fast forward -->
+            <path d="M40 45 L48 50 L40 55 Z" fill="#CFFAFE"/>
+            <path d="M48 45 L56 50 L48 55 Z" fill="#CFFAFE"/>
+        </symbol>
+
+        <!-- 15. ENGAGEMENT MASTER - Chat bubbles circle -->
+        <symbol id="badge-engagement-master" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#indigo-g)" stroke="#6366F1" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#312E81" opacity="0.4"/>
+            <!-- Chat bubbles -->
+            <rect x="32" y="38" width="22" height="16" rx="3" fill="#C7D2FE"/>
+            <path d="M40 54 L38 58 L42 54 Z" fill="#C7D2FE"/>
+            <rect x="46" y="46" width="22" height="16" rx="3" fill="#A5B4FC"/>
+            <path d="M60 62 L62 66 L58 62 Z" fill="#A5B4FC"/>
+            <circle cx="38" cy="46" r="1.5" fill="#312E81"/>
+            <circle cx="42" cy="46" r="1.5" fill="#312E81"/>
+            <circle cx="46" cy="46" r="1.5" fill="#312E81"/>
+        </symbol>
+
+        <!-- 16. TRENDING CREATOR - Up arrow with flame -->
+        <symbol id="badge-trending-creator" viewBox="0 0 100 100">
+            <path d="M50 8 L75 33 L62 33 L62 70 L38 70 L38 33 L25 33 Z"
+                  fill="url(#red-g)" stroke="#EF4444" stroke-width="2.5"/>
+            <path d="M50 18 L68 38 L58 38 L58 65 L42 65 L42 38 L32 38 Z"
+                  fill="#7F1D1D" opacity="0.4"/>
+            <!-- Flame -->
+            <path d="M50 35 Q46 40 46 45 Q46 50 50 54 Q54 50 54 45 Q54 40 50 35 Z" fill="#FEE2E2"/>
+            <path d="M50 38 Q48 41 48 44 Q48 47 50 49 Q52 47 52 44 Q52 41 50 38 Z" fill="#FCA5A5"/>
+        </symbol>
+
+        <!-- 17. WEEKLY STREAK - Seven stars -->
+        <symbol id="badge-weekly-streak" viewBox="0 0 100 100">
+            <rect x="10" y="10" width="80" height="80" rx="12"
+                  fill="url(#orange-g)" stroke="#F97316" stroke-width="2.5"/>
+            <rect x="16" y="16" width="68" height="68" rx="10"
+                  fill="#92400E" opacity="0.4"/>
+            <!-- 7 stars for week -->
+            <path d="M25 35 L26 38 L29 38 L27 40 L28 43 L25 41 L22 43 L23 40 L21 38 L24 38 Z" fill="#FED7AA"/>
+            <path d="M35 35 L36 38 L39 38 L37 40 L38 43 L35 41 L32 43 L33 40 L31 38 L34 38 Z" fill="#FED7AA"/>
+            <path d="M45 35 L46 38 L49 38 L47 40 L48 43 L45 41 L42 43 L43 40 L41 38 L44 38 Z" fill="#FED7AA"/>
+            <path d="M55 35 L56 38 L59 38 L57 40 L58 43 L55 41 L52 43 L53 40 L51 38 L54 38 Z" fill="#FED7AA"/>
+            <path d="M65 35 L66 38 L69 38 L67 40 L68 43 L65 41 L62 43 L63 40 L61 38 L64 38 Z" fill="#FED7AA"/>
+            <path d="M75 35 L76 38 L79 38 L77 40 L78 43 L75 41 L72 43 L73 40 L71 38 L74 38 Z" fill="#FED7AA"/>
+            <path d="M50 50 L52 56 L58 56 L54 60 L56 66 L50 62 L44 66 L46 60 L42 56 L48 56 Z" fill="#FEF3C7"/>
+        </symbol>
+
+        <!-- 18. QUALITY CONTENT - Diamond with sparkles -->
+        <symbol id="badge-quality-content" viewBox="0 0 100 100">
+            <path d="M50 5 L85 30 L85 70 L50 95 L15 70 L15 30 Z"
+                  fill="url(#purple-g)" stroke="#8B5CF6" stroke-width="3"/>
+            <path d="M50 15 L78 35 L78 65 L50 85 L22 65 L22 35 Z"
+                  fill="#6D28D9" opacity="0.4"/>
+            <!-- Diamond -->
+            <path d="M50 35 L62 47 L50 59 L38 47 Z" fill="#DDD6FE"/>
+            <path d="M50 39 L58 47 L50 55 L42 47 Z" fill="#C4B5FD"/>
+            <!-- Sparkles -->
+            <circle cx="32" cy="38" r="2" fill="#DDD6FE"/>
+            <circle cx="68" cy="38" r="2" fill="#DDD6FE"/>
+            <circle cx="32" cy="62" r="2" fill="#DDD6FE"/>
+            <circle cx="68" cy="62" r="2" fill="#DDD6FE"/>
+        </symbol>
+
+        <!-- 19. COLLABORATION CHAMPION - Connected people -->
+        <symbol id="badge-collaboration-champion" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="url(#blue-g)" stroke="#3B82F6" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="36" fill="#1E3A8A" opacity="0.4"/>
+            <!-- Three connected people -->
+            <circle cx="38" cy="44" r="6" fill="#DBEAFE"/>
+            <circle cx="50" cy="44" r="6" fill="#DBEAFE"/>
+            <circle cx="62" cy="44" r="6" fill="#DBEAFE"/>
+            <path d="M38 50 L38 58" stroke="#DBEAFE" stroke-width="2.5"/>
+            <path d="M50 50 L50 58" stroke="#DBEAFE" stroke-width="2.5"/>
+            <path d="M62 50 L62 58" stroke="#DBEAFE" stroke-width="2.5"/>
+            <line x1="38" y1="56" x2="62" y2="56" stroke="#DBEAFE" stroke-width="2.5"/>
+        </symbol>
+
+        <!-- 20. CONTENT INNOVATOR - Lightbulb star -->
+        <symbol id="badge-content-innovator" viewBox="0 0 100 100">
+            <path d="M50 5 L56 35 L62 8 L60 36 L70 14 L65 38 L77 22 L68 40 L83 32 L71 42 L87 44 L73 46 L90 56 L74 50 L88 68 L75 58 L82 79 L72 64 L74 88 L67 69 L66 94 L62 72 L58 96 L56 74 L50 97 L50 74 L42 96 L44 72 L34 94 L38 69 L26 88 L33 64 L18 79 L28 58 L12 68 L26 50 L10 56 L27 46 L13 44 L29 42 L17 32 L32 40 L23 22 L35 38 L30 14 L40 36 L38 8 L44 35 Z"
+                  fill="url(#orange-g)" stroke="#F59E0B" stroke-width="2.5"/>
+            <circle cx="50" cy="50" r="20" fill="#92400E" opacity="0.4"/>
+            <!-- Lightbulb -->
+            <circle cx="50" cy="48" r="10" fill="#FEF3C7"/>
+            <rect x="46" y="58" width="8" height="8" rx="1" fill="#FEF3C7"/>
+            <!-- Light rays -->
+            <line x1="35" y1="42" x2="30" y2="37" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="65" y1="42" x2="70" y2="37" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="35" y1="54" x2="30" y2="54" stroke="#FEF3C7" stroke-width="2"/>
+            <line x1="65" y1="54" x2="70" y2="54" stroke="#FEF3C7" stroke-width="2"/>
+        </symbol>
+
+    </svg>
+</div>
+
+<div class="container">
+    <h1>✨ Content Creator Badges</h1>
+    <p class="subtitle">Category 2 of 6 • 20 Badges • J Hub</p>
+
+    <div class="badge-grid">
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-first-post"/></svg>
+            <div class="badge-name">First Post</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-video-starter"/></svg>
+            <div class="badge-name">Video Starter</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-thread-weaver"/></svg>
+            <div class="badge-name">Thread Weaver</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-podcast-pioneer"/></svg>
+            <div class="badge-name">Podcast Pioneer</div>
+            <div class="badge-tier">Shield</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-consistent-creator"/></svg>
+            <div class="badge-name">Consistent Creator</div>
+            <div class="badge-tier">Pentagon</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-popular-post"/></svg>
+            <div class="badge-name">Popular Post</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-multi-format"/></svg>
+            <div class="badge-name">Multi-Format</div>
+            <div class="badge-tier">Octagon</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-prolific"/></svg>
+            <div class="badge-name">Prolific</div>
+            <div class="badge-tier">Square</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-viral-hit"/></svg>
+            <div class="badge-name">Viral Hit</div>
+            <div class="badge-tier">Starburst</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-content-master"/></svg>
+            <div class="badge-name">Content Master</div>
+            <div class="badge-tier">Diamond</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-content-titan"/></svg>
+            <div class="badge-name">Content Titan</div>
+            <div class="badge-tier">Hex+Wings</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-mega-viral"/></svg>
+            <div class="badge-name">Mega Viral</div>
+            <div class="badge-tier">Star</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-hub-immortal"/></svg>
+            <div class="badge-name">Hub Immortal</div>
+            <div class="badge-tier">Shield+Wings</div>
+            <div class="badge-rarity rarity-legendary">Legendary</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-quick-publisher"/></svg>
+            <div class="badge-name">Quick Publisher</div>
+            <div class="badge-tier">Arrow</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-engagement-master"/></svg>
+            <div class="badge-name">Engagement Master</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-trending-creator"/></svg>
+            <div class="badge-name">Trending Creator</div>
+            <div class="badge-tier">Arrow</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-weekly-streak"/></svg>
+            <div class="badge-name">Weekly Streak</div>
+            <div class="badge-tier">Square</div>
+            <div class="badge-rarity rarity-common">Common</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-quality-content"/></svg>
+            <div class="badge-name">Quality Content</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-collaboration-champion"/></svg>
+            <div class="badge-name">Collaboration Champion</div>
+            <div class="badge-tier">Circle</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-content-innovator"/></svg>
+            <div class="badge-name">Content Innovator</div>
+            <div class="badge-tier">Star</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

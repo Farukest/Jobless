@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><!DOCTYPE html>
+        <html lang="tr">
+        <head>
+        <meta charset="UTF-8">
+        <title>Jobless Admin Badges</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            padding: 40px;
+            margin: 0;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #94a3b8; text-align: center; margin-bottom: 40px; }
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 40px;
+            padding: 20px;
+            justify-content: center;
+        }
+        .badge-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .badge-icon {
+            width: 120px;
+            height: 120px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+        .badge-item:hover .badge-icon { transform: scale(1.15) rotate(5deg); }
+        .badge-name { color: white; font-size: 15px; font-weight: 600; text-align: center; }
+        .badge-tier { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-rarity { font-size: 12px; font-weight: 500; }
+        .rarity-rare { color: #F59E0B; }
+        .rarity-epic { color: #A855F7; }
+    </style>
+</head>
+<body>
+<div style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="purple-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#C4B5FD"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+            <linearGradient id="cyan-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#67E8F9"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+            <linearGradient id="purple2-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#D8B4FE"/>
+                <stop offset="100%" stop-color="#A855F7"/>
+            </linearGradient>
+            <linearGradient id="orange-g" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#F97316"/>
+            </linearGradient>
+        </defs>
+
+        <!-- 1. ADMIN - Shield with badge -->
+        <symbol id="badge-admin" viewBox="0 0 100 100">
+            <path d="M50 8 L88 24 L88 56 Q88 72 50 92 Q12 72 12 56 L12 24 Z"
+                  fill="url(#purple-g)" stroke="#7C3AED" stroke-width="3"/>
+            <path d="M50 16 L80 30 L80 56 Q80 68 50 84 Q20 68 20 56 L20 30 Z"
+                  fill="#5B21B6" opacity="0.4"/>
+            <!-- Admin badge/star -->
+            <circle cx="50" cy="48" r="16" fill="none" stroke="#EDE9FE" stroke-width="2.5"/>
+            <path d="M50 36 L53 44 L62 44 L55 50 L57 58 L50 54 L43 58 L45 50 L38 44 L47 44 Z"
+                  fill="#EDE9FE"/>
+            <!-- Shield checkmark -->
+            <path d="M42 48 L47 53 L58 42" stroke="#DDD6FE" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+        </symbol>
+
+        <!-- 2. ACTIVE MODERATOR - Hexagon with action symbol -->
+        <symbol id="badge-active-moderator" viewBox="0 0 100 100">
+            <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z"
+                  fill="url(#cyan-g)" stroke="#0891B2" stroke-width="2.5"/>
+            <path d="M50 18 L78 34 L78 66 L50 82 L22 66 L22 34 Z"
+                  fill="#164E63" opacity="0.4"/>
+            <!-- Hammer/gavel icon -->
+            <rect x="42" y="48" width="16" height="6" rx="2" fill="#CFFAFE"/>
+            <rect x="47" y="54" width="6" height="20" rx="1" fill="#CFFAFE"/>
+            <circle cx="50" cy="42" r="6" fill="#CFFAFE"/>
+            <!-- Action lines -->
+            <line x1="35" y1="45" x2="40" y2="50" stroke="#A5F3FC" stroke-width="2"/>
+            <line x1="65" y1="45" x2="60" y2="50" stroke="#A5F3FC" stroke-width="2"/>
+            <text x="50" y="87" font-size="8" font-weight="bold" text-anchor="middle" fill="#CFFAFE">50</text>
+        </symbol>
+
+        <!-- 3. VETERAN ADMIN - Octagon with crown -->
+        <symbol id="badge-veteran-admin" viewBox="0 0 100 100">
+            <path d="M30 12 L70 12 L88 30 L88 70 L70 88 L30 88 L12 70 L12 30 Z"
+                  fill="url(#purple2-g)" stroke="#9333EA" stroke-width="3"/>
+            <path d="M33 16 L67 16 L84 33 L84 67 L67 84 L33 84 L16 67 L16 33 Z"
+                  fill="#6B21A8" opacity="0.4"/>
+            <!-- Shield within -->
+            <path d="M50 28 L70 38 L70 58 Q70 66 50 74 Q30 66 30 58 L30 38 Z"
+                  fill="none" stroke="#F3E8FF" stroke-width="2"/>
+            <!-- Crown -->
+            <path d="M38 32 L42 26 L46 32 L50 24 L54 32 L58 26 L62 32 L60 42 L40 42 Z"
+                  fill="#F3E8FF"/>
+            <circle cx="42" cy="28" r="2" fill="#FCD34D"/>
+            <circle cx="50" cy="26" r="2" fill="#FCD34D"/>
+            <circle cx="58" cy="28" r="2" fill="#FCD34D"/>
+            <!-- Stars -->
+            <path d="M50 50 L52 55 L57 55 L53 58 L54 63 L50 60 L46 63 L47 58 L43 55 L48 55 Z"
+                  fill="#F3E8FF"/>
+            <text x="50" y="82" font-size="8" font-weight="bold" text-anchor="middle" fill="#F3E8FF">250</text>
+        </symbol>
+
+        <!-- 4. PLATFORM GUARDIAN - Complex shield with wings -->
+        <symbol id="badge-platform-guardian" viewBox="0 0 100 100">
+            <path d="M50 5 L92 22 L92 58 Q92 78 50 97 Q8 78 8 58 L8 22 Z"
+                  fill="url(#orange-g)" stroke="#EA580C" stroke-width="3.5"/>
+            <!-- Large wings -->
+            <path d="M6 32 Q0 37 -2 48 Q4 44 10 38 L12 40" fill="#FCD34D" opacity="0.9"/>
+            <path d="M94 32 Q100 37 102 48 Q96 44 90 38 L88 40" fill="#FCD34D" opacity="0.9"/>
+            <path d="M6 52 Q0 47 -2 42 Q4 46 10 50 L12 48" fill="#FCD34D" opacity="0.9"/>
+            <path d="M94 52 Q100 47 102 42 Q96 46 90 50 L88 48" fill="#FCD34D" opacity="0.9"/>
+            <path d="M50 14 L84 28 L84 58 Q84 74 50 88 Q16 74 16 58 L16 28 Z"
+                  fill="#92400E" opacity="0.5"/>
+            <path d="M50 22 L76 33 L76 58 Q76 69 50 80 Q24 69 24 58 L24 33 Z"
+                  fill="#B45309" opacity="0.4"/>
+            <!-- Guardian crown -->
+            <path d="M36 28 L40 22 L44 28 L48 20 L50 18 L52 20 L56 28 L60 22 L64 28 L62 38 L38 38 Z"
+                  fill="#FEF3C7"/>
+            <circle cx="40" cy="25" r="2" fill="#DC2626"/>
+            <circle cx="48" cy="23" r="2" fill="#3B82F6"/>
+            <circle cx="50" cy="21" r="2.5" fill="#10B981"/>
+            <circle cx="52" cy="23" r="2" fill="#3B82F6"/>
+            <circle cx="60" cy="25" r="2" fill="#DC2626"/>
+            <!-- Guardian symbol - Eye -->
+            <ellipse cx="50" cy="54" rx="14" ry="9" fill="#FEF3C7"/>
+            <circle cx="50" cy="54" r="6" fill="#92400E"/>
+            <circle cx="50" cy="54" r="3" fill="#FEF3C7"/>
+            <!-- Laurels -->
+            <path d="M28 48 Q24 52 28 56 M72 48 Q76 52 72 56"
+                  stroke="#FEF3C7" stroke-width="2" fill="none"/>
+            <text x="50" y="85" font-size="8" font-weight="bold" text-anchor="middle" fill="#FEF3C7">500</text>
+        </symbol>
+
+    </svg>
+</div>
+
+<div class="container">
+    <h1>🛡️ Admin Badges</h1>
+    <p class="subtitle">Category 5 of 6 • 4 Badges • Platform Moderators</p>
+
+    <div class="badge-grid">
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-admin"/></svg>
+            <div class="badge-name">Admin</div>
+            <div class="badge-tier">Shield</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-active-moderator"/></svg>
+            <div class="badge-name">Active Moderator</div>
+            <div class="badge-tier">Hexagon</div>
+            <div class="badge-rarity rarity-rare">Rare</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-veteran-admin"/></svg>
+            <div class="badge-name">Veteran Admin</div>
+            <div class="badge-tier">Octagon+Crown</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+
+        <div class="badge-item">
+            <svg class="badge-icon"><use href="#badge-platform-guardian"/></svg>
+            <div class="badge-name">Platform Guardian</div>
+            <div class="badge-tier">Shield+Wings</div>
+            <div class="badge-rarity rarity-epic">Epic</div>
+        </div>
+    </div>
+</div>
+</body>
+</html></title>
+</head>
+<body>
+
+</body>
+</html>

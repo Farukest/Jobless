@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
 import { User } from '../models/User.model'
+import { Role } from '../models/Role.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt'
 import { logger } from '../utils/logger'
+import { BadgeService } from '../services/badge.service'
 import { ethers } from 'ethers'
 
 /**
@@ -19,6 +21,14 @@ export const twitterCallback = asyncHandler(async (req: Request, res: Response) 
 
   const accessToken = generateAccessToken(user._id.toString())
   const refreshToken = generateRefreshToken(user._id.toString())
+
+  // Check for badges on login (non-blocking)
+  BadgeService.checkRoleBadges(user._id).catch(err => {
+    console.error('Role badge check error:', err)
+  })
+  BadgeService.checkActivityBadges(user._id, 'general').catch(err => {
+    console.error('Activity badge check error:', err)
+  })
 
   // Redirect to frontend with tokens
   const frontendURL = process.env.APP_URL || 'http://localhost:3000'
@@ -61,6 +71,14 @@ export const connectWallet = asyncHandler(
       const accessToken = generateAccessToken((existingUser._id as any).toString())
       const refreshToken = generateRefreshToken((existingUser._id as any).toString())
 
+      // Check for badges on login (non-blocking)
+      BadgeService.checkRoleBadges(existingUser._id as any).catch(err => {
+        console.error('Role badge check error:', err)
+      })
+      BadgeService.checkActivityBadges(existingUser._id as any, 'general').catch(err => {
+        console.error('Activity badge check error:', err)
+      })
+
       return res.status(200).json({
         success: true,
         accessToken,
@@ -69,13 +87,19 @@ export const connectWallet = asyncHandler(
       })
     }
 
+    // Get member role ObjectId
+    const memberRole = await Role.findOne({ name: 'member', status: 'active' })
+    if (!memberRole) {
+      throw new AppError('Member role not found. Please run role seeding script.', 500)
+    }
+
     // Create new user with wallet
     const user = await User.create({
       walletAddress: walletAddress.toLowerCase(),
       walletConnectedAt: new Date(),
       isWalletVerified: true,
       status: 'active',
-      roles: ['member'],
+      roles: [memberRole._id], // Use ObjectId instead of string
       permissions: {
         canAccessJHub: true,
         canAccessJStudio: true,
@@ -93,6 +117,11 @@ export const connectWallet = asyncHandler(
 
     const accessToken = generateAccessToken((user._id as any).toString())
     const refreshToken = generateRefreshToken((user._id as any).toString())
+
+    // Check for badges on new user creation (non-blocking)
+    BadgeService.checkRoleBadges(user._id as any).catch(err => {
+      console.error('Role badge check error:', err)
+    })
 
     res.status(201).json({
       success: true,
@@ -217,3 +246,4 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     message: 'Logged out successfully',
   })
 })
+// Force restart

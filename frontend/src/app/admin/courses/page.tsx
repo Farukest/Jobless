@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { userHasAnyRole } from '@/lib/utils'
 
 interface Course {
   _id: string
@@ -80,13 +81,21 @@ export default function AdminCoursesPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (!user?.roles?.includes('admin') && !user?.roles?.includes('super_admin')))) {
+    if (!mounted || isLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
+      return
     }
-  }, [isLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, isLoading, isAuthenticated, user, router])
 
   useEffect(() => {
-    if (isAuthenticated && user && (user.roles?.includes('admin') || user.roles?.includes('super_admin'))) {
+    if (isAuthenticated && user && userHasAnyRole(user, ['admin', 'super_admin'])) {
       if (activeTab === 'courses') {
         fetchCourses()
       } else {
@@ -234,7 +243,7 @@ export default function AdminCoursesPage() {
     )
   }
 
-  if (!isAuthenticated || !user || (!user.roles?.includes('admin') && !user.roles?.includes('super_admin'))) {
+  if (!isAuthenticated || !user || !userHasAnyRole(user, ['admin', 'super_admin'])) {
     return null
   }
 
@@ -423,7 +432,7 @@ export default function AdminCoursesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
+                            <span className={`text-xs px-2 py-1 rounded-lg ${
                               course.difficulty === 'beginner'
                                 ? 'bg-green-500/10 text-green-500'
                                 : course.difficulty === 'intermediate'
@@ -434,7 +443,7 @@ export default function AdminCoursesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
+                            <span className={`text-xs px-2 py-1 rounded-lg ${
                               course.status === 'published'
                                 ? 'bg-green-500/10 text-green-500'
                                 : course.status === 'draft'
@@ -620,7 +629,7 @@ export default function AdminCoursesPage() {
                             <span className="text-sm">👍 {request.votes}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
+                            <span className={`text-xs px-2 py-1 rounded-lg ${
                               request.status === 'pending'
                                 ? 'bg-yellow-500/10 text-yellow-500'
                                 : request.status === 'approved'

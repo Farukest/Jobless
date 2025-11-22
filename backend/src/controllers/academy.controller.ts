@@ -3,6 +3,8 @@ import { Course, CourseEnrollment, CourseRequest } from '../models/Course.model'
 import { User } from '../models/User.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
+import { engagementService } from '../services/engagement.service'
+import mongoose from 'mongoose'
 
 /**
  * @desc    Get all courses with filtering
@@ -65,9 +67,40 @@ export const getCourse = asyncHandler(
       return next(new AppError('Course not found', 404))
     }
 
+    // Track view with engagement service
+    const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown'
+    const userAgent = req.headers['user-agent']
+    const authReq = req as AuthRequest
+    const userId = authReq.user?._id || null
+
+    await engagementService.trackView(
+      userId,
+      course._id as mongoose.Types.ObjectId,
+      'course',
+      ipAddress,
+      userAgent
+    )
+
+    // Get engagement status for authenticated users
+    let isLiked = false
+    let isBookmarked = false
+
+    if (authReq.user) {
+      const [likeStatus, bookmarkStatus] = await Promise.all([
+        engagementService.getLikeStatus(authReq.user._id, course._id as mongoose.Types.ObjectId, 'course'),
+        engagementService.getBookmarkStatus(authReq.user._id, course._id as mongoose.Types.ObjectId, 'course'),
+      ])
+      isLiked = likeStatus
+      isBookmarked = bookmarkStatus
+    }
+
     res.status(200).json({
       success: true,
-      data: course,
+      data: {
+        ...course.toObject(),
+        isLiked,
+        isBookmarked,
+      },
     })
   }
 )
@@ -80,7 +113,8 @@ export const getCourse = asyncHandler(
 export const createCourse = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = req.user._id
-    const canCreateCourse = req.user.permissions.canCreateCourse || req.user.roles.includes('mentor')
+    const userRoleNames = req.user.roles.map((role: any) => role.name)
+    const canCreateCourse = req.user.permissions.canCreateCourse || userRoleNames.includes('mentor') || userRoleNames.includes('admin') || userRoleNames.includes('super_admin')
 
     if (!canCreateCourse) {
       return next(new AppError('Only mentors can create courses', 403))
@@ -450,5 +484,65 @@ export const getMyCourses = asyncHandler(
         data: enrollments,
       })
     }
+  }
+)
+
+/**
+ * @desc    Toggle course like
+ * @route   POST /api/academy/courses/:id/like
+ * @access  Private
+ */
+export const toggleCourseLike = asyncHandler(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { id } = req.params
+    const userId = req.user._id
+
+    // Verify course exists
+    const course = await Course.findById(id)
+    if (!course) {
+      return next(new AppError('Course not found', 404))
+    }
+
+    // Toggle like using engagement service
+    const result = await engagementService.toggleLike(
+      userId,
+      new mongoose.Types.ObjectId(id),
+      'course'
+    )
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    })
+  }
+)
+
+/**
+ * @desc    Toggle course bookmark
+ * @route   POST /api/academy/courses/:id/bookmark
+ * @access  Private
+ */
+export const toggleCourseBookmark = asyncHandler(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const { id } = req.params
+    const userId = req.user._id
+
+    // Verify course exists
+    const course = await Course.findById(id)
+    if (!course) {
+      return next(new AppError('Course not found', 404))
+    }
+
+    // Toggle bookmark using engagement service
+    const result = await engagementService.toggleBookmark(
+      userId,
+      new mongoose.Types.ObjectId(id),
+      'course'
+    )
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    })
   }
 )

@@ -64,3 +64,16 @@ export function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(later, wait)
   }
 }
+
+// Helper function to check if user has a role (works with both string array and object array)
+export function userHasRole(user: any, roleName: string): boolean {
+  if (!user?.roles) return false
+  return user.roles.some((r: any) =>
+    typeof r === 'string' ? r === roleName : r.name === roleName
+  )
+}
+
+// Helper function to check if user has any of multiple roles
+export function userHasAnyRole(user: any, roleNames: string[]): boolean {
+  return roleNames.some(role => userHasRole(user, role))
+}

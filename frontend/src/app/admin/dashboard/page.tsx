@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import { api } from '@/lib/api'
+import { userHasAnyRole } from '@/lib/utils'
 
 interface DashboardStats {
   totalUsers: number
@@ -39,15 +40,21 @@ export default function AdminDashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!mounted || isLoading) return
+
+    if (!isAuthenticated) {
       router.push('/login')
-    } else if (!isLoading && user && !user.roles?.includes('admin') && !user.roles?.includes('super_admin')) {
-      router.push('/')
+      return
     }
-  }, [isLoading, isAuthenticated, user, router])
+
+    if (!userHasAnyRole(user, ['admin', 'super_admin'])) {
+      router.push('/')
+      return
+    }
+  }, [mounted, isLoading, isAuthenticated, user, router])
 
   useEffect(() => {
-    if (isAuthenticated && user && (user.roles?.includes('admin') || user.roles?.includes('super_admin'))) {
+    if (isAuthenticated && user && userHasAnyRole(user, ['admin', 'super_admin'])) {
       fetchDashboardData()
     }
   }, [isAuthenticated, user])
@@ -120,7 +127,7 @@ export default function AdminDashboardPage() {
     )
   }
 
-  if (!isAuthenticated || !user || (!user.roles?.includes('admin') && !user.roles?.includes('super_admin'))) {
+  if (!isAuthenticated || !user || !userHasAnyRole(user, ['admin', 'super_admin'])) {
     return null
   }
 
@@ -166,7 +173,7 @@ export default function AdminDashboardPage() {
                   </p>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
@@ -190,7 +197,7 @@ export default function AdminDashboardPage() {
                   </p>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-lg bg-green-500/10 flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -214,7 +221,7 @@ export default function AdminDashboardPage() {
                   </p>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
@@ -236,7 +243,7 @@ export default function AdminDashboardPage() {
                   Across all modules
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-lg bg-yellow-500/10 flex items-center justify-center">
                 <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -269,7 +276,7 @@ export default function AdminDashboardPage() {
               <div className="space-y-4">
                 {recentActivity.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b border-border last:border-0">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-primary">
                         {activity.adminName.charAt(0).toUpperCase()}
                       </span>

@@ -11,6 +11,7 @@ import {
   toggleBookmark,
   moderateContent,
   getFeaturedContents,
+  getAllowedContentTypes,
 } from '../controllers/hub.controller'
 
 const router = Router()
@@ -21,6 +22,7 @@ router.get('/featured', getFeaturedContents)
 // Protected routes
 router.get('/content', protect, getAllContents)
 router.get('/my-content', protect, getMyContents)
+router.get('/allowed-content-types', protect, getAllowedContentTypes)
 router.get('/content/:id', protect, getContent)
 router.post('/content', protect, checkPermission('canCreateContent'), createContent)
 router.put('/content/:id', protect, updateContent)

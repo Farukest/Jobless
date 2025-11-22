@@ -485,12 +485,12 @@ export default function SettingsPage() {
                   <div>
                     <p className="text-sm font-medium mb-2">Roles</p>
                     <div className="flex flex-wrap gap-2">
-                      {user.roles.map((role) => (
+                      {user.roles.map((role: any) => (
                         <span
-                          key={role}
+                          key={role._id || role.name}
                           className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
                         >
-                          {role}
+                          {role.displayName || role.name || role}
                         </span>
                       ))}
                     </div>

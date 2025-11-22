@@ -45,7 +45,22 @@
       "Bash(git commit:*)",
       "Bash(gh --version:*)",
       "Bash(git remote add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(node test-apis.js:*)",
+      "Bash(npm run seed:dynamic:*)",
+      "Bash(node verify-dynamic-content.js:*)",
+      "Bash(timeout 5 node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e:*)",
+      "Bash(timeout 10 node:*)",
+      "Bash(node assign-test-roles.js:*)",
+      "Bash(node src/scripts/seed-roles.js:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(src/controllers/auth.controller.ts)",
+      "Bash(node verify-new-user.js:*)",
+      "Bash(node:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

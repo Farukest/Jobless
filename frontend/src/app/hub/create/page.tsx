@@ -15,6 +15,8 @@ export default function CreateContentPage() {
   const { data: configs, isLoading: configsLoading } = usePublicConfigs()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [tags, setTags] = useState('')
+  const [allowedContentTypes, setAllowedContentTypes] = useState<string[]>([])
+  const [loadingAllowedTypes, setLoadingAllowedTypes] = useState(true)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -25,33 +27,57 @@ export default function CreateContentPage() {
     status: 'draft' as 'draft' | 'published',
   })
 
-  // Dynamic config options
-  const contentTypes = formatAsOptions(configs?.content_types)
+  // Fetch allowed content types for current user
+  useEffect(() => {
+    const fetchAllowedTypes = async () => {
+      try {
+        const response = await api.get('/hub/allowed-content-types')
+        setAllowedContentTypes(response.data?.data || [])
+      } catch (error) {
+        console.error('Failed to fetch allowed content types:', error)
+        toast.error('Failed to load content type permissions')
+      } finally {
+        setLoadingAllowedTypes(false)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchAllowedTypes()
+    }
+  }, [isAuthenticated])
+
+  // Dynamic config options - filter by allowed content types
+  const contentTypes = formatAsOptions(
+    allowedContentTypes.length > 0 ? allowedContentTypes : []
+  )
   const categories = formatAsOptions(configs?.content_categories)
   const difficulties = formatAsOptions(configs?.difficulty_levels)
 
-  // Set default values when configs load
+  // Set default values when allowed types and configs load
   useEffect(() => {
-    if (configs && !formData.contentType) {
+    if (allowedContentTypes.length > 0 && configs && !formData.contentType) {
       setFormData((prev) => ({
         ...prev,
-        contentType: configs.content_types?.[0] || '',
+        contentType: allowedContentTypes[0] || '',
         category: configs.content_categories?.[0] || '',
       }))
     }
-  }, [configs, formData.contentType])
+  }, [allowedContentTypes, configs, formData.contentType])
 
-  // Permission check: must have canCreateContent permission
+  // Permission check: must have canCreateContent permission and allowed content types
   useEffect(() => {
-    if (!authLoading && !configsLoading) {
+    if (!authLoading && !configsLoading && !loadingAllowedTypes) {
       if (!isAuthenticated) {
         router.push('/login')
       } else if (!hasPermission('canCreateContent')) {
         toast.error('You need content creator permission to create content')
         router.push('/hub')
+      } else if (allowedContentTypes.length === 0) {
+        toast.error('You don\'t have permission to create any content types. Contact admin.')
+        router.push('/hub')
       }
     }
-  }, [authLoading, configsLoading, isAuthenticated, hasPermission, router])
+  }, [authLoading, configsLoading, loadingAllowedTypes, isAuthenticated, hasPermission, allowedContentTypes, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -100,7 +126,7 @@ export default function CreateContentPage() {
     }
   }
 
-  if (authLoading || configsLoading) {
+  if (authLoading || configsLoading || loadingAllowedTypes) {
     return (
       <AuthenticatedLayout>
         <div className="min-h-screen bg-background">
@@ -170,12 +196,21 @@ export default function CreateContentPage() {
                   className="w-full px-4 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 >
-                  {contentTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
+                  {contentTypes.length === 0 ? (
+                    <option value="">No content types allowed</option>
+                  ) : (
+                    contentTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))
+                  )}
                 </select>
+                {allowedContentTypes.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You can create: {allowedContentTypes.join(', ')}
+                  </p>
+                )}
               </div>
 
               <div>

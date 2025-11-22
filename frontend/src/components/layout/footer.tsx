@@ -32,9 +32,6 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-4">
             <Logo />
-            <p className="text-sm text-muted-foreground">
-              Comprehensive Web3 Ecosystem Platform
-            </p>
           </div>
 
           <div>

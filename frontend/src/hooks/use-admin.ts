@@ -11,11 +11,20 @@ export const useAdminLogs = (page = 1, limit = 50) => {
   })
 }
 
-export const useAllUsers = (page = 1, limit = 20) => {
+export const useAllUsers = (page = 1, limit = 20, search = '', status = '', role = '') => {
   return useQuery({
-    queryKey: ['admin-users', page],
+    queryKey: ['admin-users', page, search, status, role],
     queryFn: async () => {
-      const response = await api.get(`/admin/users?page=${page}&limit=${limit}`)
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      })
+
+      if (search) params.append('search', search)
+      if (status) params.append('status', status)
+      if (role) params.append('role', role)
+
+      const response = await api.get(`/admin/users?${params.toString()}`)
       return response.data
     },
   })

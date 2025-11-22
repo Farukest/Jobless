@@ -21,7 +21,8 @@ export interface IAlphaPost extends Document {
     url: string
   }>
 
-  views: number
+  viewsCount: number
+  likesCount: number
 
   bullishVotes: number
   bearishVotes: number
@@ -96,7 +97,11 @@ const AlphaPostSchema = new Schema<IAlphaPost>(
         url: String,
       },
     ],
-    views: {
+    viewsCount: {
+      type: Number,
+      default: 0,
+    },
+    likesCount: {
       type: Number,
       default: 0,
     },

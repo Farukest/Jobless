@@ -4,6 +4,11 @@ import { User } from '../models/User.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
 import { configHelper } from '../utils/config-helper'
+import { engagementService } from '../services/engagement.service'
+import { emitLikeUpdate, emitBookmarkUpdate, emitViewUpdate } from '../socket'
+import { canUserCreateContentType } from '../utils/content-permissions'
+import { BadgeService } from '../services/badge.service'
+import mongoose from 'mongoose'
 
 /**
  * @desc    Get all contents with filtering and pagination
@@ -17,7 +22,21 @@ export const getAllContents = asyncHandler(
     const skip = (page - 1) * limit
 
     // Filters
-    const filters: any = { status: 'published' }
+    const filters: any = {}
+
+    // Status filter
+    // If status query param exists, use it (including if it's empty string for "all")
+    // If no status param provided, default to published (for regular users browsing)
+    if (req.query.hasOwnProperty('status')) {
+      // If status is provided and not empty, filter by it
+      if (req.query.status && req.query.status !== 'all') {
+        filters.status = req.query.status
+      }
+      // If status is empty or 'all', don't filter by status (show all)
+    } else {
+      // No status parameter means regular user browsing - show only published
+      filters.status = 'published'
+    }
 
     if (req.query.category) filters.category = req.query.category
     if (req.query.contentType) filters.contentType = req.query.contentType
@@ -27,13 +46,22 @@ export const getAllContents = asyncHandler(
       filters.tags = { $in: (req.query.tags as string).split(',') }
     }
 
-    // Sorting
+    // Search by title
+    if (req.query.search) {
+      filters.title = { $regex: req.query.search, $options: 'i' }
+    }
+
+    // Sorting - Admin pinned items always first, then user pinned, then by requested sort
     const sortBy = (req.query.sortBy as string) || 'createdAt'
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1
 
     const contents = await Content.find(filters)
-      .populate('authorId', 'displayName twitterUsername profileImage')
-      .sort({ [sortBy]: sortOrder })
+      .populate('authorId', 'displayName twitterUsername profileImage walletAddress')
+      .sort({
+        isAdminPinned: -1,  // Admin pinned first
+        isPinned: -1,        // Then user pinned
+        [sortBy]: sortOrder  // Then by requested sort
+      })
       .skip(skip)
       .limit(limit)
 
@@ -59,23 +87,74 @@ export const getContent = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params
 
-    const content = await Content.findById(id).populate(
-      'authorId',
-      'displayName twitterUsername profileImage'
-    )
+    try {
+      const content = await Content.findById(id).populate(
+        'authorId',
+        'displayName twitterUsername profileImage walletAddress'
+      )
 
-    if (!content) {
-      return next(new AppError('Content not found', 404))
+      if (!content) {
+        return next(new AppError('Content not found', 404))
+      }
+
+      // Track view with engagement service (non-blocking, catch errors silently)
+      const authReq = req as AuthRequest
+      const userId = authReq.user?._id || null
+
+      try {
+        const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown'
+        const userAgent = req.headers['user-agent']
+
+        const viewResult = await engagementService.trackView(
+          userId,
+          content._id as mongoose.Types.ObjectId,
+          'hub_content',
+          ipAddress,
+          userAgent
+        )
+
+        // Emit WebSocket event if view was counted
+        if (viewResult.counted) {
+          emitViewUpdate(id, 'content', {
+            contentId: id,
+            viewsCount: content.viewsCount + 1,
+          })
+        }
+      } catch (viewError) {
+        // Log but don't fail the request
+        console.error('View tracking error:', viewError)
+      }
+
+      // Get engagement status for authenticated users
+      let isLiked = false
+      let isBookmarked = false
+
+      if (authReq.user) {
+        try {
+          const [likeStatus, bookmarkStatus] = await Promise.all([
+            engagementService.getLikeStatus(authReq.user._id, content._id as mongoose.Types.ObjectId, 'hub_content'),
+            engagementService.getBookmarkStatus(authReq.user._id, content._id as mongoose.Types.ObjectId, 'hub_content'),
+          ])
+          isLiked = likeStatus
+          isBookmarked = bookmarkStatus
+        } catch (engagementError) {
+          // Log but don't fail the request
+          console.error('Engagement status error:', engagementError)
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          ...content.toObject(),
+          isLiked,
+          isBookmarked,
+        },
+      })
+    } catch (error: any) {
+      console.error('GetContent error:', error)
+      return next(new AppError(error.message || 'Failed to fetch content', 500))
     }
-
-    // Increment view count
-    content.views += 1
-    await content.save()
-
-    res.status(200).json({
-      success: true,
-      data: content,
-    })
   }
 )
 
@@ -110,6 +189,17 @@ export const createContent = asyncHandler(
       return next(new AppError('Invalid content type', 400))
     }
 
+    // Check if user has permission to create this content type
+    const canCreate = await canUserCreateContentType(req.user, contentType)
+    if (!canCreate) {
+      return next(
+        new AppError(
+          `You don't have permission to create ${contentType} content. Contact admin to update your allowed content types.`,
+          403
+        )
+      )
+    }
+
     if (difficulty) {
       const validDifficulties = await configHelper.get('difficulty_levels')
       if (!validDifficulties.includes(difficulty)) {
@@ -133,6 +223,11 @@ export const createContent = asyncHandler(
     // Update user stats
     await User.findByIdAndUpdate(userId, {
       $inc: { contentCreated: 1 },
+    })
+
+    // Check for badge awards (non-blocking)
+    BadgeService.checkActivityBadges(userId, 'hub').catch(err => {
+      console.error('Badge check error:', err)
     })
 
     res.status(201).json({
@@ -277,23 +372,31 @@ export const getMyContents = asyncHandler(
 export const toggleLike = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
+    const userId = req.user._id
 
+    // Verify content exists
     const content = await Content.findById(id)
-
     if (!content) {
       return next(new AppError('Content not found', 404))
     }
 
-    // Note: In a production app, you'd track who liked what in a separate collection
-    // For simplicity, we're just incrementing the count here
-    content.likes += 1
-    await content.save()
+    // Toggle like using engagement service
+    const result = await engagementService.toggleLike(
+      userId,
+      new mongoose.Types.ObjectId(id),
+      'hub_content'
+    )
+
+    // Emit WebSocket event for real-time update
+    emitLikeUpdate(id, 'content', {
+      contentId: id,
+      likesCount: result.likesCount,
+      isLiked: result.isLiked,
+    })
 
     res.status(200).json({
       success: true,
-      data: {
-        likes: content.likes,
-      },
+      data: result,
     })
   }
 )
@@ -306,21 +409,31 @@ export const toggleLike = asyncHandler(
 export const toggleBookmark = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
+    const userId = req.user._id
 
+    // Verify content exists
     const content = await Content.findById(id)
-
     if (!content) {
       return next(new AppError('Content not found', 404))
     }
 
-    content.bookmarks += 1
-    await content.save()
+    // Toggle bookmark using engagement service
+    const result = await engagementService.toggleBookmark(
+      userId,
+      new mongoose.Types.ObjectId(id),
+      'hub_content'
+    )
+
+    // Emit WebSocket event for real-time update
+    emitBookmarkUpdate(id, 'content', {
+      contentId: id,
+      bookmarksCount: result.bookmarksCount,
+      isBookmarked: result.isBookmarked,
+    })
 
     res.status(200).json({
       success: true,
-      data: {
-        bookmarks: content.bookmarks,
-      },
+      data: result,
     })
   }
 )
@@ -333,7 +446,7 @@ export const toggleBookmark = asyncHandler(
 export const moderateContent = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
-    const { status, moderationNotes } = req.body
+    const { status, moderationNotes, isFeatured, isPinned } = req.body
     const userId = req.user._id
 
     const content = await Content.findById(id)
@@ -342,10 +455,43 @@ export const moderateContent = asyncHandler(
       return next(new AppError('Content not found', 404))
     }
 
-    content.status = status
-    content.moderatedBy = userId as any
-    content.moderatedAt = new Date()
-    if (moderationNotes) content.moderationNotes = moderationNotes
+    // Validate archive logic - only published content can be archived
+    if (status === 'archived') {
+      if (content.status !== 'published') {
+        return next(new AppError('Only published content can be archived. Draft or rejected content should be deleted instead.', 400))
+      }
+    }
+
+    // Validate status if provided
+    if (status !== undefined) {
+      const validStatuses = ['draft', 'published', 'archived', 'rejected']
+      if (!validStatuses.includes(status)) {
+        return next(new AppError('Invalid status value', 400))
+      }
+      content.status = status
+      content.moderatedBy = userId as any
+      content.moderatedAt = new Date()
+    }
+
+    // Update moderation notes if provided
+    if (moderationNotes !== undefined) {
+      content.moderationNotes = moderationNotes
+    }
+
+    // Update featured status if provided
+    if (isFeatured !== undefined) {
+      content.isFeatured = isFeatured
+    }
+
+    // Update pinned status if provided
+    if (isPinned !== undefined) {
+      content.isPinned = isPinned
+    }
+
+    // Update admin pinned status if provided
+    if (req.body.isAdminPinned !== undefined) {
+      content.isAdminPinned = req.body.isAdminPinned
+    }
 
     await content.save()
 
@@ -377,6 +523,23 @@ export const getFeaturedContents = asyncHandler(
       success: true,
       count: contents.length,
       data: contents,
+    })
+  }
+)
+
+/**
+ * @desc    Get user's allowed content types
+ * @route   GET /api/hub/allowed-content-types
+ * @access  Private
+ */
+export const getAllowedContentTypes = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { getUserAllowedContentTypes } = await import('../utils/content-permissions')
+    const allowedTypes = await getUserAllowedContentTypes(req.user)
+
+    res.status(200).json({
+      success: true,
+      data: allowedTypes,
     })
   }
 )

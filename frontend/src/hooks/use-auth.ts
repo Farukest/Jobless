@@ -78,7 +78,7 @@ export function useAuth() {
     isAuthenticated: !!user,
     logout: logoutMutation.mutate,
     refreshUser,
-    hasRole: (role: string) => user?.roles?.includes(role) ?? false,
+    hasRole: (role: string) => user?.roles?.some((r: any) => r.name === role || r === role) ?? false,
     hasPermission: (permission: keyof User['permissions']) => user?.permissions?.[permission] ?? false,
   }
 }

@@ -2,8 +2,11 @@
 
 import { useAuth } from '@/hooks/use-auth'
 import { useUserStats, useUserActivity } from '@/hooks/use-user'
+import { useMyBadges, useMyPinnedBadges, usePinBadge, useUnpinBadge } from '@/hooks/use-badges'
 import { Skeleton, ProfileSkeleton, CardSkeleton } from '@/components/ui/skeleton'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { BadgeDisplay, PinnedBadges, BadgeGrid } from '@/components/badges/badge-display'
+import { getBadgeShape } from '@/components/badges/badge-shapes'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
@@ -16,6 +19,14 @@ export default function ProfilePage() {
   const { data: stats, isLoading: statsLoading } = useUserStats()
   const [activityPage, setActivityPage] = useState(1)
   const { data: activity, isLoading: activityLoading } = useUserActivity(activityPage, 10)
+
+  // Badge hooks
+  const { data: badges } = useMyBadges()
+  const { data: pinnedBadges } = useMyPinnedBadges()
+  const { mutate: pinBadge } = usePinBadge()
+  const { mutate: unpinBadge } = useUnpinBadge()
+  const [showAllBadges, setShowAllBadges] = useState(false)
+  const [badgeRarityFilter, setBadgeRarityFilter] = useState<string | null>(null)
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false)
@@ -264,22 +275,22 @@ export default function ProfilePage() {
                       alt={user.displayName || 'Profile'}
                       width={128}
                       height={128}
-                      className="rounded-full border-2 border-border group-hover:opacity-75 transition-opacity"
+                      className="rounded-lg border-2 border-border group-hover:opacity-75 transition-opacity object-cover"
                     />
                   ) : (
-                    <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-2 border-border group-hover:opacity-75 transition-opacity">
+                    <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center border-2 border-border group-hover:opacity-75 transition-opacity">
                       <span className="text-4xl text-muted-foreground">
                         {(user.displayName || user.twitterUsername || 'U')[0].toUpperCase()}
                       </span>
                     </div>
                   )}
                   {isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
                       <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                   {!isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                       <svg
                         className="w-8 h-8 text-white"
                         fill="none"
@@ -389,15 +400,23 @@ export default function ProfilePage() {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  {user.roles?.map((role) => (
+                  {user.roles?.map((role: any) => (
                     <span
-                      key={role}
-                      className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                      key={role._id || role.name}
+                      className="px-3 py-1 rounded-lg bg-primary/10 text-primary text-sm font-medium"
                     >
-                      {role}
+                      {role.displayName || role.name || role}
                     </span>
                   ))}
                 </div>
+
+                {/* Pinned Badges */}
+                {pinnedBadges?.data && pinnedBadges.data.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs text-muted-foreground mb-2">Pinned Badges</p>
+                    <PinnedBadges badges={pinnedBadges.data} />
+                  </div>
+                )}
 
 
                 {/* Social Links */}
@@ -426,7 +445,7 @@ export default function ProfilePage() {
                         }
                       }}
                       disabled={unlinkingPlatform === 'twitter'}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center transition-opacity disabled:opacity-50 ${
                         user.socialLinks?.twitter
                           ? 'bg-[#1DA1F2] hover:opacity-80'
                           : 'bg-muted hover:bg-accent'
@@ -457,7 +476,7 @@ export default function ProfilePage() {
                         }
                       }}
                       disabled={unlinkingPlatform === 'linkedin'}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center transition-opacity disabled:opacity-50 ${
                         user.socialLinks?.linkedin
                           ? 'bg-[#0A66C2] hover:opacity-80'
                           : 'bg-muted hover:bg-accent'
@@ -488,7 +507,7 @@ export default function ProfilePage() {
                         }
                       }}
                       disabled={unlinkingPlatform === 'github'}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-opacity disabled:opacity-50 ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center transition-opacity disabled:opacity-50 ${
                         user.socialLinks?.github
                           ? 'bg-foreground hover:opacity-80'
                           : 'bg-muted hover:bg-accent'
@@ -529,6 +548,119 @@ export default function ProfilePage() {
           </div>
 
 
+          {/* Badge Gallery */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Badge Collection</h2>
+              {badges?.data && badges.data.length > 8 && (
+                <button
+                  onClick={() => setShowAllBadges(!showAllBadges)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {showAllBadges ? 'Show Less' : `View All (${badges?.data.length || 0})`}
+                </button>
+              )}
+            </div>
+
+            <div className="bg-card rounded-lg border border-border p-6">
+              {badges && badges.data && badges.data.length > 0 ? (() => {
+                // Filter badges by rarity if filter is active
+                const filteredBadges = badgeRarityFilter
+                  ? badges.data.filter((b: any) => b.badgeId && b.badgeId.rarity === badgeRarityFilter)
+                  : badges.data
+
+                const displayBadges = showAllBadges ? filteredBadges : filteredBadges.slice(0, 8)
+
+                return (
+                  <BadgeGrid
+                    badges={displayBadges}
+                    size="md"
+                    onBadgeClick={(badge) => {
+                      // TODO: Show badge detail modal
+                      console.log('Badge clicked:', badge)
+                    }}
+                  />
+                )
+              })() : (() => {
+                const ShieldShape = getBadgeShape('Rookie')
+                return (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-30">
+                      <ShieldShape
+                        className="w-full h-full"
+                        gradientId="profile-empty-badge"
+                        gradientStart="#6b7280"
+                        gradientEnd="#9ca3af"
+                      />
+                    </div>
+                    <p className="text-muted-foreground">No badges earned yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Complete activities to earn your first badge!
+                    </p>
+                  </div>
+                )
+              })()}
+            </div>
+
+            {badges?.data && badges.data.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                <div
+                  onClick={() => setBadgeRarityFilter(badgeRarityFilter === null ? null : null)}
+                  className={`bg-card rounded-lg border p-4 cursor-pointer transition-all hover:border-primary ${
+                    badgeRarityFilter === null ? 'border-primary ring-2 ring-primary/20' : 'border-border'
+                  }`}
+                >
+                  <p className="text-sm text-muted-foreground">Total Badges</p>
+                  <p className="text-2xl font-bold">{badges.data.length}</p>
+                </div>
+                <div
+                  onClick={() => setBadgeRarityFilter(badgeRarityFilter === 'common' ? null : 'common')}
+                  className={`bg-card rounded-lg border p-4 cursor-pointer transition-all hover:border-gray-500 ${
+                    badgeRarityFilter === 'common' ? 'border-gray-500 ring-2 ring-gray-500/20' : 'border-border'
+                  }`}
+                >
+                  <p className="text-sm text-muted-foreground">Common</p>
+                  <p className="text-2xl font-bold text-gray-500">
+                    {badges.data.filter((b: any) => b.badgeId && b.badgeId.rarity === 'common').length}
+                  </p>
+                </div>
+                <div
+                  onClick={() => setBadgeRarityFilter(badgeRarityFilter === 'rare' ? null : 'rare')}
+                  className={`bg-card rounded-lg border p-4 cursor-pointer transition-all hover:border-blue-500 ${
+                    badgeRarityFilter === 'rare' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-border'
+                  }`}
+                >
+                  <p className="text-sm text-muted-foreground">Rare</p>
+                  <p className="text-2xl font-bold text-blue-500">
+                    {badges.data.filter((b: any) => b.badgeId && b.badgeId.rarity === 'rare').length}
+                  </p>
+                </div>
+                <div
+                  onClick={() => setBadgeRarityFilter(badgeRarityFilter === 'epic' ? null : 'epic')}
+                  className={`bg-card rounded-lg border p-4 cursor-pointer transition-all hover:border-purple-500 ${
+                    badgeRarityFilter === 'epic' ? 'border-purple-500 ring-2 ring-purple-500/20' : 'border-border'
+                  }`}
+                >
+                  <p className="text-sm text-muted-foreground">Epic</p>
+                  <p className="text-2xl font-bold text-purple-500">
+                    {badges.data.filter((b: any) => b.badgeId && b.badgeId.rarity === 'epic').length}
+                  </p>
+                </div>
+                <div
+                  onClick={() => setBadgeRarityFilter(badgeRarityFilter === 'legendary' ? null : 'legendary')}
+                  className={`bg-card rounded-lg border p-4 cursor-pointer transition-all hover:border-yellow-500 ${
+                    badgeRarityFilter === 'legendary' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-border'
+                  }`}
+                >
+                  <p className="text-sm text-muted-foreground">Legendary</p>
+                  <p className="text-2xl font-bold text-yellow-500">
+                    {badges.data.filter((b: any) => b.badgeId && b.badgeId.rarity === 'legendary').length}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Overall Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-card rounded-lg border border-border p-6">
@@ -543,7 +675,7 @@ export default function ProfilePage() {
                     )}
                   </p>
                 </div>
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
                   <svg
                     className="w-8 h-8 text-primary"
                     fill="none"
@@ -573,7 +705,7 @@ export default function ProfilePage() {
                     )}
                   </p>
                 </div>
-                <div className="h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center">
+                <div className="h-16 w-16 rounded-lg bg-green-500/10 flex items-center justify-center">
                   <svg
                     className="w-8 h-8 text-green-500"
                     fill="none"
@@ -627,7 +759,7 @@ export default function ProfilePage() {
                 <div className="space-y-6">
                   {/* J Hub Progress */}
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
                       <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                       </svg>
@@ -637,9 +769,9 @@ export default function ProfilePage() {
                         <h3 className="font-semibold text-blue-500">J Hub</h3>
                         <span className="text-sm text-muted-foreground">{stats?.jHub.contentsCreated || 0} contents</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-muted rounded-lg h-2">
                         <div
-                          className="bg-blue-500 h-2 rounded-full transition-all"
+                          className="bg-blue-500 h-2 rounded-lg transition-all"
                           style={{ width: `${Math.min(100, ((stats?.jHub.contentsCreated || 0) / 10) * 100)}%` }}
                         />
                       </div>
@@ -651,7 +783,7 @@ export default function ProfilePage() {
 
                   {/* J Studio Progress */}
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
                       <svg className="w-6 h-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
@@ -661,9 +793,9 @@ export default function ProfilePage() {
                         <h3 className="font-semibold text-purple-500">J Studio</h3>
                         <span className="text-sm text-muted-foreground">{stats?.jStudio.requestsSubmitted || 0} requests</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-muted rounded-lg h-2">
                         <div
-                          className="bg-purple-500 h-2 rounded-full transition-all"
+                          className="bg-purple-500 h-2 rounded-lg transition-all"
                           style={{ width: `${Math.min(100, ((stats?.jStudio.requestsSubmitted || 0) / 5) * 100)}%` }}
                         />
                       </div>
@@ -675,7 +807,7 @@ export default function ProfilePage() {
 
                   {/* J Academy Progress */}
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
                       <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
@@ -685,9 +817,9 @@ export default function ProfilePage() {
                         <h3 className="font-semibold text-green-500">J Academy</h3>
                         <span className="text-sm text-muted-foreground">{stats?.jAcademy.coursesCreated || 0} courses</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-muted rounded-lg h-2">
                         <div
-                          className="bg-green-500 h-2 rounded-full transition-all"
+                          className="bg-green-500 h-2 rounded-lg transition-all"
                           style={{ width: `${Math.min(100, ((stats?.jAcademy.coursesCreated || 0) / 3) * 100)}%` }}
                         />
                       </div>
@@ -699,7 +831,7 @@ export default function ProfilePage() {
 
                   {/* J Alpha Progress */}
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center">
                       <svg className="w-6 h-6 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
@@ -709,9 +841,9 @@ export default function ProfilePage() {
                         <h3 className="font-semibold text-orange-500">J Alpha</h3>
                         <span className="text-sm text-muted-foreground">{stats?.jAlpha.alphasSubmitted || 0} alphas</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-muted rounded-lg h-2">
                         <div
-                          className="bg-orange-500 h-2 rounded-full transition-all"
+                          className="bg-orange-500 h-2 rounded-lg transition-all"
                           style={{ width: `${Math.min(100, ((stats?.jAlpha.alphasSubmitted || 0) / 10) * 100)}%` }}
                         />
                       </div>
@@ -723,7 +855,7 @@ export default function ProfilePage() {
 
                   {/* J Info Progress */}
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-pink-500/10 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-pink-500/10 flex items-center justify-center">
                       <svg className="w-6 h-6 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                       </svg>
@@ -733,9 +865,9 @@ export default function ProfilePage() {
                         <h3 className="font-semibold text-pink-500">J Info</h3>
                         <span className="text-sm text-muted-foreground">{stats?.jInfo.engagementsGiven || 0} engagements</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-muted rounded-lg h-2">
                         <div
-                          className="bg-pink-500 h-2 rounded-full transition-all"
+                          className="bg-pink-500 h-2 rounded-lg transition-all"
                           style={{ width: `${Math.min(100, ((stats?.jInfo.engagementsGiven || 0) / 20) * 100)}%` }}
                         />
                       </div>
@@ -792,7 +924,7 @@ export default function ProfilePage() {
                               {item.module.replace('_', ' ')}
                             </span>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-xs ${
+                              className={`px-2 py-0.5 rounded-lg text-xs ${
                                 item.status === 'approved'
                                   ? 'bg-green-500/10 text-green-500'
                                   : item.status === 'pending'
