@@ -19,6 +19,7 @@ export const getComments = asyncHandler(
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
     const skip = (page - 1) * limit
+    const userId = req.user._id
 
     const comments = await Comment.find({
       contentType,
@@ -36,13 +37,43 @@ export const getComments = asyncHandler(
       parentCommentId: { $exists: false },
     })
 
+    // For each comment, find the current user's reply (if any)
+    // This enables Twitter-style "show my reply" feature
+    const commentIds = comments.map((c) => c._id)
+    const userReplies = await Comment.find({
+      parentCommentId: { $in: commentIds },
+      userId: userId,
+    })
+      .populate('userId', 'displayName twitterUsername profileImage walletAddress')
+      .sort({ createdAt: -1 }) // Get the latest reply if multiple
+
+    // Create a map of parentCommentId -> user's reply
+    const userReplyMap: Record<string, any> = {}
+    userReplies.forEach((reply) => {
+      const parentId = reply.parentCommentId?.toString()
+      if (parentId && !userReplyMap[parentId]) {
+        // Only keep the first (most recent) reply per parent
+        userReplyMap[parentId] = reply
+      }
+    })
+
+    // Attach myReply to each comment
+    const commentsWithMyReply = comments.map((comment) => {
+      const commentObj = comment.toObject()
+      const myReply = userReplyMap[comment._id.toString()] || null
+      return {
+        ...commentObj,
+        myReply: myReply ? myReply.toObject() : null,
+      }
+    })
+
     res.status(200).json({
       success: true,
       count: comments.length,
       total,
       page,
       pages: Math.ceil(total / limit),
-      data: comments,
+      data: commentsWithMyReply,
     })
   }
 )
@@ -78,15 +109,44 @@ export const getCommentById = asyncHandler(
 export const getReplies = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { commentId } = req.params
+    const userId = req.user._id
 
     const replies = await Comment.find({ parentCommentId: commentId })
       .populate('userId', 'displayName twitterUsername profileImage walletAddress')
+      .sort({ createdAt: 1 }) // Oldest first (chronological, like Twitter)
+
+    // For each reply, find the current user's reply (if any) - for nested threads
+    const replyIds = replies.map((r) => r._id)
+    const userNestedReplies = await Comment.find({
+      parentCommentId: { $in: replyIds },
+      userId: userId,
+    })
+      .populate('userId', 'displayName twitterUsername profileImage walletAddress')
       .sort({ createdAt: -1 }) // Most recent first
+
+    // Create a map of parentCommentId -> user's reply
+    const userReplyMap: Record<string, any> = {}
+    userNestedReplies.forEach((reply) => {
+      const parentId = reply.parentCommentId?.toString()
+      if (parentId && !userReplyMap[parentId]) {
+        userReplyMap[parentId] = reply
+      }
+    })
+
+    // Attach myReply to each reply
+    const repliesWithMyReply = replies.map((reply) => {
+      const replyObj = reply.toObject()
+      const myReply = userReplyMap[reply._id.toString()] || null
+      return {
+        ...replyObj,
+        myReply: myReply ? myReply.toObject() : null,
+      }
+    })
 
     res.status(200).json({
       success: true,
       count: replies.length,
-      data: replies,
+      data: repliesWithMyReply,
     })
   }
 )

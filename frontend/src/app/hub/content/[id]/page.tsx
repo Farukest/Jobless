@@ -29,6 +29,8 @@ export default function ContentDetailPage() {
   const [replyModalText, setReplyModalText] = useState('')
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
   const queryClient = useQueryClient()
+  // Track user's own replies per parent comment (for immediate display)
+  const [myReplies, setMyReplies] = useState<Record<string, any>>({})
 
   // Auth check
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function ContentDetailPage() {
     const handleNewReply = (reply: any) => {
       console.log('[Socket] New reply received:', reply)
       if (reply.parentCommentId) {
-        // Increment parent comment's repliesCount
+        // 1. Try to update top-level comment's repliesCount
         queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
           if (!old) return old
           return {
@@ -131,6 +133,25 @@ export default function ContentDetailPage() {
             )
           }
         })
+
+        // 2. Also update nested reply's repliesCount (reply-to-reply case)
+        // This handles when someone replies to a reply
+        queryClient.setQueriesData(
+          { queryKey: ['replies'] },
+          (old: any) => {
+            if (!old?.data) return old
+            const hasParent = old.data.some((r: any) => r._id === reply.parentCommentId)
+            if (!hasParent) return old
+            return {
+              ...old,
+              data: old.data.map((r: any) =>
+                r._id === reply.parentCommentId
+                  ? { ...r, repliesCount: (r.repliesCount || 0) + 1 }
+                  : r
+              )
+            }
+          }
+        )
       }
     }
 
@@ -142,9 +163,20 @@ export default function ContentDetailPage() {
       queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
         if (!old) return old
 
-        // Remove the deleted comment and all its replies from cache
-        const allDeletedIds = [commentId, ...deletedReplies]
+        // If this is a reply deletion, decrement parent comment's repliesCount
+        if (parentCommentId) {
+          return {
+            ...old,
+            data: old.data.map((comment: any) =>
+              comment._id === parentCommentId
+                ? { ...comment, repliesCount: Math.max(0, (comment.repliesCount || 0) - 1) }
+                : comment
+            )
+          }
+        }
 
+        // If this is a top-level comment deletion, remove it and its replies
+        const allDeletedIds = [commentId, ...deletedReplies]
         return {
           ...old,
           count: Math.max(0, old.count - allDeletedIds.length),
@@ -153,17 +185,37 @@ export default function ContentDetailPage() {
         }
       })
 
-      // Update content's comment count
-      queryClient.setQueryData(['hub', 'content', id], (old: any) => {
-        if (!old?.data) return old
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            commentsCount: Math.max(0, old.data.commentsCount - 1)
+      // Update content's comment count only for top-level comment deletions
+      if (!parentCommentId) {
+        queryClient.setQueryData(['hub', 'content', id], (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              commentsCount: Math.max(0, old.data.commentsCount - 1)
+            }
           }
-        }
-      })
+        })
+      } else {
+        // Also update nested reply's repliesCount (reply-to-reply deletion case)
+        queryClient.setQueriesData(
+          { queryKey: ['replies'] },
+          (old: any) => {
+            if (!old?.data) return old
+            const hasParent = old.data.some((r: any) => r._id === parentCommentId)
+            if (!hasParent) return old
+            return {
+              ...old,
+              data: old.data.map((r: any) =>
+                r._id === parentCommentId
+                  ? { ...r, repliesCount: Math.max(0, (r.repliesCount || 0) - 1) }
+                  : r
+              )
+            }
+          }
+        )
+      }
     }
 
     socket.on('newComment', handleNewComment)
@@ -276,13 +328,23 @@ export default function ContentDetailPage() {
   const handleModalReplySubmit = () => {
     if (!replyModalText.trim() || !replyModalComment) return
 
+    const parentId = replyModalComment._id
+    const replyContent = replyModalText.trim()
+
     createComment({
       contentType: 'hub_content',
       contentId: id,
-      content: replyModalText.trim(),
-      parentCommentId: replyModalComment._id
+      content: replyContent,
+      parentCommentId: parentId
     }, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        // Store the newly created reply for immediate display
+        if (data?.data) {
+          setMyReplies(prev => ({
+            ...prev,
+            [parentId]: data.data
+          }))
+        }
         setReplyModalText('')
         setReplyModalComment(null)
       }
@@ -398,8 +460,9 @@ export default function ContentDetailPage() {
               </div>
             ) : commentsData?.data && commentsData.data.length > 0 ? (
               <div>
-                {commentsData.data.map((comment: any) => {
+                {commentsData.data.map((comment: any, index: number) => {
                   const isLiked = user && comment.likedBy?.includes(user._id)
+                  const isLastComment = index === commentsData.data.length - 1
                   return (
                     <CommentItem
                       key={comment._id}
@@ -408,7 +471,22 @@ export default function ContentDetailPage() {
                       commentDetailUrl={`/hub/content/${id}/comment/${comment._id}`}
                       onReplyClick={handleReplyClick}
                       isLiked={isLiked}
-                      contentAuthorId={content.authorId._id}
+                      contentAuthorId={content.authorId?._id}
+                      showVerticalLine={false}
+                      myReply={myReplies[comment._id] || null}
+                      myRepliesMap={myReplies}
+                      onMyReplyCleared={() => {
+                        setMyReplies(prev => {
+                          const { [comment._id]: _, ...rest } = prev
+                          return rest
+                        })
+                      }}
+                      onMyReplyClearedForId={(parentId: string) => {
+                        setMyReplies(prev => {
+                          const { [parentId]: _, ...rest } = prev
+                          return rest
+                        })
+                      }}
                     />
                   )
                 })}
