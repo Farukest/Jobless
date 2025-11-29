@@ -2,6 +2,7 @@ import { Response } from 'express'
 import { ContentComment } from '../models/ContentComment.model'
 import { AppError, asyncHandler } from '../middleware/error-handler'
 import { AuthRequest } from '../middleware/auth.middleware'
+import { emitCommentDeleted } from '../socket'
 
 export const createComment = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { contentId } = req.params
@@ -14,6 +15,13 @@ export const createComment = asyncHandler(async (req: AuthRequest, res: Response
     comment,
     parentCommentId,
   })
+
+  // If this is a reply, increment parent's repliesCount
+  if (parentCommentId) {
+    await ContentComment.findByIdAndUpdate(parentCommentId, {
+      $inc: { repliesCount: 1 }
+    })
+  }
 
   const populatedComment = await ContentComment.findById(newComment._id).populate(
     'userId',
@@ -68,6 +76,22 @@ export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response
 
   comment.status = 'deleted'
   await comment.save()
+
+  // If this was a reply, decrement parent's repliesCount
+  if (comment.parentCommentId) {
+    await ContentComment.findByIdAndUpdate(comment.parentCommentId, {
+      $inc: { repliesCount: -1 }
+    })
+  }
+
+  // Emit WebSocket event for real-time update
+  emitCommentDeleted(
+    id,
+    comment.contentId.toString(),
+    'hub_content',
+    comment.parentCommentId?.toString(),
+    []
+  )
 
   res.status(200).json({
     success: true,
