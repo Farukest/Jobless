@@ -75,6 +75,19 @@ export const createReport = asyncHandler(
  */
 export const getAllReports = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    // Check permission: Admin with global moderation rights OR any module moderator
+    const canViewReports =
+      req.user.permissions?.admin?.canModerateAllContent ||
+      req.user.permissions?.hub?.canModerate ||
+      req.user.permissions?.alpha?.canModerate ||
+      req.user.permissions?.studio?.canModerate ||
+      req.user.permissions?.academy?.canModerate ||
+      req.user.permissions?.info?.canModerate
+
+    if (!canViewReports) {
+      throw new AppError('You do not have permission to view reports', 403)
+    }
+
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
     const skip = (page - 1) * limit
@@ -112,6 +125,19 @@ export const getAllReports = asyncHandler(
  */
 export const getReport = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    // Check permission: Admin with global moderation rights OR any module moderator
+    const canViewReports =
+      req.user.permissions?.admin?.canModerateAllContent ||
+      req.user.permissions?.hub?.canModerate ||
+      req.user.permissions?.alpha?.canModerate ||
+      req.user.permissions?.studio?.canModerate ||
+      req.user.permissions?.academy?.canModerate ||
+      req.user.permissions?.info?.canModerate
+
+    if (!canViewReports) {
+      throw new AppError('You do not have permission to view reports', 403)
+    }
+
     const { id } = req.params
 
     const report = await Report.findById(id)
@@ -136,6 +162,19 @@ export const getReport = asyncHandler(
  */
 export const reviewReport = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    // Check permission: Admin with global moderation rights OR any module moderator
+    const canReviewReports =
+      req.user.permissions?.admin?.canModerateAllContent ||
+      req.user.permissions?.hub?.canModerate ||
+      req.user.permissions?.alpha?.canModerate ||
+      req.user.permissions?.studio?.canModerate ||
+      req.user.permissions?.academy?.canModerate ||
+      req.user.permissions?.info?.canModerate
+
+    if (!canReviewReports) {
+      throw new AppError('You do not have permission to review reports', 403)
+    }
+
     const { id } = req.params
     const { status, action, reviewNotes } = req.body
     const reviewerId = req.user._id
@@ -192,10 +231,15 @@ export const reviewReport = asyncHandler(
 /**
  * @desc    Delete report
  * @route   DELETE /api/reports/:id
- * @access  Private (admin)
+ * @access  Private (admin only)
  */
 export const deleteReport = asyncHandler(
   async (req: AuthRequest, res: Response) => {
+    // Only admin with global moderation rights can delete reports
+    if (!req.user.permissions?.admin?.canModerateAllContent) {
+      throw new AppError('You do not have permission to delete reports', 403)
+    }
+
     const { id } = req.params
 
     const report = await Report.findById(id)

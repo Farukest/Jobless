@@ -213,22 +213,6 @@ export const DEFAULT_SYSTEM_CONFIGS = [
     },
     description: 'Points awarded for different actions',
   },
-  // Feature Flags
-  {
-    configKey: 'feature_flags',
-    configType: 'object',
-    value: {
-      enable_j_hub: true,
-      enable_j_studio: true,
-      enable_j_academy: true,
-      enable_j_info: true,
-      enable_j_alpha: true,
-      enable_notifications: true,
-      enable_rewards: true,
-      enable_live_sessions: true,
-    },
-    description: 'Feature toggles for modules',
-  },
   // Hub Pagination Limits
   {
     configKey: 'hub_limits',
@@ -236,9 +220,21 @@ export const DEFAULT_SYSTEM_CONFIGS = [
     value: {
       home_page_limit: 24,
       feed_page_limit: 10,
+      profile_feed_limit: 10,
       content_title_max_length: 200,
       content_body_max_length: 20000,
     },
-    description: 'Limits for Hub pagination and content creation (character limits, page sizes)',
+    description: 'Limits for Hub pagination and content creation (character limits, page sizes, profile feed)',
+  },
+  // Comment Pagination Settings
+  {
+    configKey: 'comment_settings',
+    configType: 'object',
+    value: {
+      comments_per_page: 50,
+      max_comment_length: 2000,
+      max_nesting_depth: 10,
+    },
+    description: 'Comment system settings (pagination limit, max length, nesting depth)',
   },
 ]

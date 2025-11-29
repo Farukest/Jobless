@@ -7,7 +7,7 @@ import { configHelper } from '../utils/config-helper'
 import { sanitizeHelper } from '../utils/sanitize-helper'
 import { engagementService } from '../services/engagement.service'
 import { emitLikeUpdate, emitBookmarkUpdate, emitViewUpdate, emitContentCreated } from '../socket'
-import { canUserCreateContentType } from '../utils/content-permissions'
+import { canUserCreateContentType, canUserModerateContent } from '../utils/content-permissions'
 import { BadgeService } from '../services/badge.service'
 import mongoose from 'mongoose'
 
@@ -248,7 +248,7 @@ export const createContent = asyncHandler(
     }
 
     // Check if user has permission to create this content type
-    const canCreate = await canUserCreateContentType(req.user, contentType)
+    const canCreate = canUserCreateContentType(req.user, contentType)
     if (!canCreate) {
       return next(
         new AppError(
@@ -265,7 +265,36 @@ export const createContent = asyncHandler(
       }
     }
 
-    // 6. CREATE WITH SANITIZED DATA
+    // 6. DETERMINE STATUS BASED ON USER ROLE
+    // Super admin → can publish immediately
+    // Admin & Content Creator → goes to review (needs super admin approval)
+    // Default → draft
+    let finalStatus = 'draft'
+
+    if (status) {
+      // User explicitly set status
+      if (status === 'published') {
+        // Only super_admin can publish directly
+        const userRoles = req.user.roles || []
+        const isSuperAdmin = userRoles.some((role: any) =>
+          (typeof role === 'string' ? role : role.name) === 'super_admin'
+        )
+
+        if (isSuperAdmin) {
+          finalStatus = 'published'
+        } else {
+          // Admin and content_creator go to review
+          finalStatus = 'in_review'
+        }
+      } else if (status === 'draft') {
+        finalStatus = 'draft'
+      } else {
+        // Invalid status for creation
+        return next(new AppError('Invalid status. Use "draft" or "published"', 400))
+      }
+    }
+
+    // 7. CREATE WITH SANITIZED DATA
     const content = await Content.create({
       authorId: userId,
       title: sanitizedTitle,
@@ -276,7 +305,7 @@ export const createContent = asyncHandler(
       tags: validatedTags,
       category,
       difficulty,
-      status: status || 'draft',
+      status: finalStatus,
     })
 
     // Populate author for socket emission
@@ -313,7 +342,7 @@ export const updateContent = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
     const userId = req.user._id
-    const canModerate = req.user.permissions.canModerateContent
+    const canModerate = canUserModerateContent(req.user)
 
     const content = await Content.findById(id)
 
@@ -413,7 +442,7 @@ export const deleteContent = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const { id } = req.params
     const userId = req.user._id
-    const canModerate = req.user.permissions.canModerateContent
+    const canModerate = canUserModerateContent(req.user)
 
     const content = await Content.findById(id)
 
@@ -550,6 +579,15 @@ export const toggleBookmark = asyncHandler(
  */
 export const moderateContent = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
+    // Check permission: Hub moderator OR admin with global moderation rights
+    const canModerate =
+      req.user.permissions?.hub?.canModerate ||
+      req.user.permissions?.admin?.canModerateAllContent
+
+    if (!canModerate) {
+      return next(new AppError('You do not have permission to moderate content', 403))
+    }
+
     const { id } = req.params
     const { status, moderationNotes, isFeatured, isPinned } = req.body
     const userId = req.user._id
@@ -569,10 +607,16 @@ export const moderateContent = asyncHandler(
 
     // Validate status if provided
     if (status !== undefined) {
-      const validStatuses = ['draft', 'published', 'archived', 'rejected']
+      const validStatuses = ['draft', 'in_review', 'published', 'archived', 'rejected']
       if (!validStatuses.includes(status)) {
         return next(new AppError('Invalid status value', 400))
       }
+
+      // When approving (in_review → published), set publishedAt
+      if (status === 'published' && content.status === 'in_review') {
+        content.publishedAt = new Date()
+      }
+
       content.status = status
       content.moderatedBy = userId as any
       content.moderatedAt = new Date()
@@ -639,12 +683,46 @@ export const getFeaturedContents = asyncHandler(
  */
 export const getAllowedContentTypes = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const { getUserAllowedContentTypes } = await import('../utils/content-permissions')
-    const allowedTypes = await getUserAllowedContentTypes(req.user)
+    const { getAllowedContentTypes: getContentTypes } = await import('../utils/content-permissions')
+    const allowedTypes = getContentTypes(req.user)
 
     res.status(200).json({
       success: true,
       data: allowedTypes,
+    })
+  }
+)
+
+/**
+ * @desc    Upload document (PDF, DOC, DOCX) for content
+ * @route   POST /api/hub/upload/document
+ * @access  Private (requires hub.canCreate permission)
+ */
+export const uploadDocumentFile = asyncHandler(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    // Check permission: User must have hub.canCreate permission
+    if (!req.user.permissions?.hub?.canCreate) {
+      return next(new AppError('You do not have permission to upload documents', 403))
+    }
+
+    // Check if file was uploaded
+    if (!req.file) {
+      return next(new AppError('No file uploaded', 400))
+    }
+
+    // Return file URL
+    const fileUrl = `/uploads/documents/${req.file.filename}`
+
+    res.status(200).json({
+      success: true,
+      message: 'Document uploaded successfully',
+      data: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        url: fileUrl,
+      },
     })
   }
 )

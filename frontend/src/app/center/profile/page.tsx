@@ -1,24 +1,39 @@
 'use client'
 
 import { useAuth } from '@/hooks/use-auth'
-import { useUserStats, useUserActivity } from '@/hooks/use-user'
+import {
+  useUserStats,
+  useUserActivity,
+  useMyZoneFeed,
+  useMyFeed,
+  useCommentedFeed,
+  useLikedFeed,
+  ProfileFeedContent,
+} from '@/hooks/use-user'
 import { useMyBadges, useMyPinnedBadges, usePinBadge, useUnpinBadge } from '@/hooks/use-badges'
-import { Skeleton, ProfileSkeleton, CardSkeleton } from '@/components/ui/skeleton'
+import { Skeleton, ProfileSkeleton, CardSkeleton, TwitterFeedSkeleton } from '@/components/ui/skeleton'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { BadgeDisplay, PinnedBadges, BadgeGrid } from '@/components/badges/badge-display'
 import { getBadgeShape } from '@/components/badges/badge-shapes'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useQueryClient } from '@tanstack/react-query'
+import { getSocket } from '@/lib/socket'
+import { TwitterStyleContent } from '@/components/hub/twitter-style-content'
+import { TwitterReplyInput } from '@/components/hub/twitter-reply-input'
+import { useToggleLike, useToggleBookmark, useCreateComment } from '@/hooks/use-hub'
+import Link from 'next/link'
 
 export default function ProfilePage() {
   const router = useRouter()
   const { user, isLoading: authLoading, isAuthenticated, refreshUser } = useAuth()
   const { data: stats, isLoading: statsLoading } = useUserStats()
-  const [activityPage, setActivityPage] = useState(1)
-  const { data: activity, isLoading: activityLoading } = useUserActivity(activityPage, 10)
+  const queryClient = useQueryClient()
+  const observerTarget = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
 
   // Badge hooks
   const { data: badges } = useMyBadges()
@@ -38,6 +53,28 @@ export default function ProfilePage() {
 
   // Social links state
   const [unlinkingPlatform, setUnlinkingPlatform] = useState<string | null>(null)
+
+  // Feed system state
+  type FeedTab = 'my-zone' | 'my-feed' | 'commented' | 'liked'
+  const [activeTab, setActiveTab] = useState<FeedTab>('my-feed')
+  const [selectedContent, setSelectedContent] = useState<ProfileFeedContent | null>(null)
+  const [commentText, setCommentText] = useState('')
+
+  // Feed data hooks
+  const myZoneFeed = useMyZoneFeed(user?._id, activeTab === 'my-zone')
+  const myFeed = useMyFeed(user?._id, activeTab === 'my-feed')
+  const commentedFeed = useCommentedFeed(user?._id, activeTab === 'commented')
+  const likedFeed = useLikedFeed(user?._id, activeTab === 'liked')
+
+  // Engagement mutations
+  const { mutate: toggleLike } = useToggleLike()
+  const { mutate: toggleBookmark } = useToggleBookmark()
+  const { mutate: createComment, isPending: isSubmittingComment } = useCreateComment()
+
+  // Client-side mount detection
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -168,6 +205,156 @@ export default function ProfilePage() {
       }
     }
   }
+
+  // Feed handlers
+  const handleCommentClick = (content: ProfileFeedContent) => {
+    setSelectedContent(content)
+    setCommentText('')
+  }
+
+  const handleSubmitComment = () => {
+    if (!commentText.trim() || !selectedContent) return
+
+    createComment(
+      {
+        contentType: 'hub_content',
+        contentId: selectedContent._id,
+        content: commentText.trim(),
+      },
+      {
+        onSuccess: () => {
+          setCommentText('')
+          setSelectedContent(null)
+          // WebSocket will handle comment count update
+        },
+      }
+    )
+  }
+
+  // Get active feed data
+  const getActiveFeed = () => {
+    switch (activeTab) {
+      case 'my-zone':
+        return myZoneFeed
+      case 'my-feed':
+        return myFeed
+      case 'commented':
+        return commentedFeed
+      case 'liked':
+        return likedFeed
+    }
+  }
+
+  const activeFeed = getActiveFeed()
+  const allContents =
+    activeTab === 'commented'
+      ? [] // Commented feed has different structure
+      : activeFeed.data?.pages.flatMap((page) => page.data) || []
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!activeFeed.hasNextPage || activeFeed.isFetchingNextPage) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          activeFeed.fetchNextPage()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    const target = observerTarget.current
+    if (target) {
+      observer.observe(target)
+    }
+
+    return () => {
+      if (target) {
+        observer.unobserve(target)
+      }
+    }
+  }, [activeFeed.hasNextPage, activeFeed.isFetchingNextPage, activeFeed.fetchNextPage])
+
+  // WebSocket listeners for real-time updates
+  useEffect(() => {
+    if (!user?._id) return
+
+    const socket = getSocket()
+
+    // Like update
+    const handleLikeUpdate = (data: { contentId: string; likesCount: number }) => {
+      // Update all feed queries
+      const feedTypes = ['my-zone', 'my-feed', 'liked']
+      feedTypes.forEach((feedType) => {
+        queryClient.setQueryData(['user', 'feed', feedType, user._id], (old: any) => {
+          if (!old) return old
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((content: ProfileFeedContent) =>
+                content._id === data.contentId ? { ...content, likesCount: data.likesCount } : content
+              ),
+            })),
+          }
+        })
+      })
+    }
+
+    // Bookmark update
+    const handleBookmarkUpdate = (data: { contentId: string; bookmarksCount: number }) => {
+      const feedTypes = ['my-zone', 'my-feed', 'liked']
+      feedTypes.forEach((feedType) => {
+        queryClient.setQueryData(['user', 'feed', feedType, user._id], (old: any) => {
+          if (!old) return old
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((content: ProfileFeedContent) =>
+                content._id === data.contentId ? { ...content, bookmarksCount: data.bookmarksCount } : content
+              ),
+            })),
+          }
+        })
+      })
+    }
+
+    // Comment created
+    const handleCommentCreated = (data: { contentId: string }) => {
+      const feedTypes = ['my-zone', 'my-feed', 'commented', 'liked']
+      feedTypes.forEach((feedType) => {
+        queryClient.setQueryData(['user', 'feed', feedType, user._id], (old: any) => {
+          if (!old) return old
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((content: any) =>
+                content._id === data.contentId || content.content?._id === data.contentId
+                  ? {
+                      ...content,
+                      commentsCount: ((content.commentsCount || content.content?.commentsCount) || 0) + 1,
+                    }
+                  : content
+              ),
+            })),
+          }
+        })
+      })
+    }
+
+    socket.on('hub:likeUpdate', handleLikeUpdate)
+    socket.on('hub:bookmarkUpdate', handleBookmarkUpdate)
+    socket.on('hub:commentCreated', handleCommentCreated)
+
+    return () => {
+      socket.off('hub:likeUpdate', handleLikeUpdate)
+      socket.off('hub:bookmarkUpdate', handleBookmarkUpdate)
+      socket.off('hub:commentCreated', handleCommentCreated)
+    }
+  }, [queryClient, user?._id])
 
   if (authLoading || !user) {
     return (
@@ -903,82 +1090,296 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Profile Feed (4 Tabs) */}
           <div>
-            <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
-            <div className="bg-card rounded-lg border border-border">
-              {activityLoading ? (
-                <div className="p-6">
-                  <Skeleton className="h-12 w-full mb-2" />
-                  <Skeleton className="h-12 w-full mb-2" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : activity && activity.data.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {activity.data.map((item, index) => (
-                    <div key={index} className="p-6 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-primary">
-                              {item.module.replace('_', ' ')}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 rounded-lg text-xs ${
-                                item.status === 'approved'
-                                  ? 'bg-green-500/10 text-green-500'
-                                  : item.status === 'pending'
-                                  ? 'bg-yellow-500/10 text-yellow-500'
-                                  : item.status === 'rejected'
-                                  ? 'bg-red-500/10 text-red-500'
-                                  : 'bg-muted text-muted-foreground'
-                              }`}
-                            >
-                              {item.status}
-                            </span>
+            <h2 className="text-2xl font-bold mb-4">Content Feed</h2>
+
+            {/* Tab Navigation */}
+            <div className="flex gap-1 border-b border-border mb-6">
+              {user?.permissions?.canCreateContent && (
+                <button
+                  onClick={() => setActiveTab('my-zone')}
+                  className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                    activeTab === 'my-zone'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  My Zone
+                </button>
+              )}
+              <button
+                onClick={() => setActiveTab('my-feed')}
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                  activeTab === 'my-feed'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                My Feed
+              </button>
+              <button
+                onClick={() => setActiveTab('commented')}
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                  activeTab === 'commented'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Commented
+              </button>
+              <button
+                onClick={() => setActiveTab('liked')}
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                  activeTab === 'liked'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Liked
+              </button>
+            </div>
+
+            {/* Feed Content */}
+            {activeFeed.isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <TwitterFeedSkeleton key={i} />
+                ))}
+              </div>
+            ) : activeTab === 'commented' ? (
+              // Commented Feed - Thread View
+              commentedFeed.data?.pages[0]?.data && commentedFeed.data.pages[0].data.length > 0 ? (
+                <div className="space-y-6">
+                  {commentedFeed.data.pages.flatMap((page) => page.data).map((threadData) => (
+                    <div key={threadData.contentId} className="bg-card border border-border rounded-lg p-4">
+                      {/* Thread Items */}
+                      {threadData.thread.map((item, index) => (
+                        <div key={index} className="flex gap-3 mb-2">
+                          {/* Left column - Avatar + Vertical Line */}
+                          <div className="flex flex-col items-center" style={{ width: '40px' }}>
+                            {item.data.authorId?.profileImage || item.data.userId?.profileImage ? (
+                              <Image
+                                src={item.data.authorId?.profileImage || item.data.userId?.profileImage}
+                                alt={item.data.authorId?.displayName || item.data.userId?.displayName || 'User'}
+                                width={40}
+                                height={40}
+                                className="rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-semibold text-primary">
+                                  {((item.data.authorId?.displayName || item.data.userId?.displayName) || 'U')[0].toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            {/* Vertical line (same horizontal level) */}
+                            {index < threadData.thread.length - 1 && (
+                              <div className="w-0.5 bg-border flex-1 my-2" style={{ minHeight: '20px' }}></div>
+                            )}
                           </div>
-                          <p className="text-foreground mt-1">{item.description}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {new Date(item.timestamp).toLocaleString()}
-                          </p>
+
+                          {/* Right column - Content/Comment */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm">
+                                {item.data.authorId?.displayName || item.data.userId?.displayName || 'Anonymous'}
+                              </span>
+                              {(item.data.authorId?.twitterUsername || item.data.userId?.twitterUsername) && (
+                                <span className="text-muted-foreground text-xs">
+                                  @{item.data.authorId?.twitterUsername || item.data.userId?.twitterUsername}
+                                </span>
+                              )}
+                              {item.isUserComment && (
+                                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                                  You
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Content based on type */}
+                            {item.type === 'content' ? (
+                              <Link
+                                href={`/hub/content/${item.data._id}`}
+                                className="text-sm font-medium hover:underline cursor-pointer"
+                              >
+                                {item.data.title}
+                              </Link>
+                            ) : (
+                              <p className="text-sm">{item.data.content}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   ))}
+
+                  {/* Loading indicator */}
+                  {commentedFeed.isFetchingNextPage && (
+                    <div className="py-8 text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+
+                  {/* Intersection observer target */}
+                  <div ref={observerTarget} className="h-4" />
+
+                  {/* End of feed */}
+                  {!commentedFeed.hasNextPage && (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      You've reached the end
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="p-12 text-center">
-                  <p className="text-muted-foreground">No activity yet</p>
+                <div className="bg-card rounded-lg border border-border p-12 text-center">
+                  <p className="text-muted-foreground">No commented posts yet</p>
                 </div>
-              )}
+              )
+            ) : (
+              // Standard Feeds (My Zone, My Feed, Liked)
+              allContents.length > 0 ? (
+                <div className="space-y-3">
+                  {allContents.map((content) => (
+                    <TwitterStyleContent
+                      key={content._id}
+                      content={content}
+                      onLike={() => toggleLike(content._id)}
+                      onBookmark={() => toggleBookmark(content._id)}
+                      onComment={() => handleCommentClick(content)}
+                      showFullContent={false}
+                    />
+                  ))}
 
-              {/* Pagination */}
-              {activity && activity.pages > 1 && (
-                <div className="p-4 border-t border-border flex items-center justify-between">
-                  <button
-                    onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
-                    disabled={activityPage === 1}
-                    className="px-4 py-2 rounded-md text-sm font-medium bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {activity.page} of {activity.pages}
-                  </span>
-                  <button
-                    onClick={() => setActivityPage((p) => Math.min(activity.pages, p + 1))}
-                    disabled={activityPage === activity.pages}
-                    className="px-4 py-2 rounded-md text-sm font-medium bg-background hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
+                  {/* Loading indicator */}
+                  {activeFeed.isFetchingNextPage && (
+                    <div className="py-8 text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  )}
+
+                  {/* Intersection observer target */}
+                  <div ref={observerTarget} className="h-4" />
+
+                  {/* End of feed */}
+                  {!activeFeed.hasNextPage && (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      You've reached the end
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              ) : (
+                <div className="bg-card rounded-lg border border-border p-12 text-center">
+                  <p className="text-muted-foreground">
+                    {activeTab === 'my-zone' && 'No content created yet'}
+                    {activeTab === 'my-feed' && 'No recommended content yet. Start interacting with content to get personalized recommendations.'}
+                    {activeTab === 'liked' && 'No liked posts yet'}
+                  </p>
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
       </div>
+
+      {/* Comment Modal */}
+      {selectedContent && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedContent(null)}
+        >
+          <div
+            className="bg-card rounded-xl border border-border max-w-xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => {
+              e.stopPropagation()
+              const textarea = e.currentTarget.querySelector('textarea')
+              if (textarea && !window.getSelection()?.toString()) {
+                textarea.focus()
+              }
+            }}
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-card border-b border-border px-4 py-2 flex items-center justify-end">
+              <button
+                onClick={() => setSelectedContent(null)}
+                className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content Info & Comment Input */}
+            <div className="p-4">
+              {/* Content Section */}
+              <div className="flex gap-3 mb-2">
+                {/* Left column - Avatar + Vertical Line */}
+                <div className="flex flex-col items-center" style={{ width: '40px' }}>
+                  {selectedContent.authorId?.profileImage ? (
+                    <Image
+                      src={selectedContent.authorId.profileImage}
+                      alt={selectedContent.authorId.displayName || 'User'}
+                      width={40}
+                      height={40}
+                      className="rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-semibold text-primary">
+                        {(selectedContent.authorId?.displayName || selectedContent.authorId?.twitterUsername || 'U')[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  {/* Vertical line */}
+                  <div className="w-0.5 bg-border flex-1 my-2" style={{ minHeight: '20px' }}></div>
+                </div>
+
+                {/* Right column - Content info */}
+                <div className="flex-1 min-w-0">
+                  {/* Content header */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-sm">{selectedContent.authorId?.displayName || 'Anonymous'}</span>
+                    {selectedContent.authorId?.twitterUsername && (
+                      <span className="text-muted-foreground text-xs">@{selectedContent.authorId.twitterUsername}</span>
+                    )}
+                  </div>
+
+                  {/* Content title */}
+                  <p className="text-sm font-medium mb-2">{selectedContent.title}</p>
+
+                  {/* Replying to indicator */}
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Replying to{' '}
+                    {selectedContent.authorId?._id ? (
+                      <Link
+                        href={`/center/profile/${selectedContent.authorId._id}`}
+                        className="text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        @{selectedContent.authorId?.twitterUsername || selectedContent.authorId?.displayName || 'user'}
+                      </Link>
+                    ) : (
+                      <span className="text-primary">@{selectedContent.authorId?.twitterUsername || selectedContent.authorId?.displayName || 'user'}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Comment Input Section */}
+              <TwitterReplyInput
+                value={commentText}
+                onChange={setCommentText}
+                onSubmit={handleSubmitComment}
+                isSubmitting={isSubmittingComment}
+                placeholder="Post your comment..."
+                currentUser={user}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </AuthenticatedLayout>
   )
 }

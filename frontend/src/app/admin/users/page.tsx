@@ -2,34 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useAuth, User } from '@/hooks/use-auth'
 import { useAllUsers, useUpdateUserRole, useUpdateUserPermissions, useUpdateUser } from '@/hooks/use-admin'
 import { AdminLayout } from '@/components/admin/admin-layout'
 import toast from 'react-hot-toast'
 import { userHasAnyRole } from '@/lib/utils'
 
-interface User {
-  _id: string
-  displayName?: string
-  twitterUsername?: string
-  walletAddress?: string
-  roles: Array<string | { _id: string; name: string; displayName: string }>
-  permissions: {
-    canAccessJHub: boolean
-    canAccessJStudio: boolean
-    canAccessJAcademy: boolean
-    canAccessJInfo: boolean
-    canAccessJAlpha: boolean
-    canCreateContent: boolean
-    canModerateContent: boolean
-    canManageUsers: boolean
-    canManageRoles: boolean
-    canManageSiteSettings: boolean
-    customPermissions: string[]
-  }
+// Extend User type with admin-specific fields
+interface AdminUser extends User {
   status: string
-  jRankPoints: number
-  contributionScore: number
   joinedAt: string
   lastLogin?: string
 }
@@ -423,45 +404,375 @@ function RoleModal({ user, onClose, onSave }: { user: User; onClose: () => void;
 
 function PermissionModal({ user, onClose, onSave }: { user: User; onClose: () => void; onSave: (userId: string, permissions: any) => void }) {
   const [permissions, setPermissions] = useState(user.permissions)
+  const [availableTypes, setAvailableTypes] = useState<Record<string, string[]>>({})
+  const [loading, setLoading] = useState(true)
 
-  const togglePermission = (key: string) => {
-    setPermissions({ ...permissions, [key]: !permissions[key] })
+  // Fetch all dynamic types on mount
+  useEffect(() => {
+    const fetchTypes = async () => {
+      try {
+        const [hubTypes, studioTypes, academyCategories, alphaCategories, infoPlatforms, infoEngagementTypes] = await Promise.all([
+          fetch('/api/configs/hub-content-types').then(r => r.json()).catch(() => ({ data: [] })),
+          fetch('/api/configs/studio-request-types').then(r => r.json()).catch(() => ({ data: [] })),
+          fetch('/api/configs/academy-categories').then(r => r.json()).catch(() => ({ data: [] })),
+          fetch('/api/configs/alpha-categories').then(r => r.json()).catch(() => ({ data: [] })),
+          fetch('/api/configs/info-platforms').then(r => r.json()).catch(() => ({ data: [] })),
+          fetch('/api/configs/info-engagement-types').then(r => r.json()).catch(() => ({ data: [] })),
+        ])
+
+        setAvailableTypes({
+          hubContentTypes: hubTypes.data?.map((t: any) => t.name) || [],
+          studioRequestTypes: studioTypes.data?.map((t: any) => t.name) || [],
+          academyCategories: academyCategories.data?.map((t: any) => t.name) || [],
+          alphaCategories: alphaCategories.data?.map((t: any) => t.name) || [],
+          infoPlatforms: infoPlatforms.data?.map((t: any) => t.name) || [],
+          infoEngagementTypes: infoEngagementTypes.data?.map((t: any) => t.name) || [],
+        })
+      } catch (error) {
+        console.error('Error fetching dynamic types:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTypes()
+  }, [])
+
+  const togglePermission = (module: string, key: string) => {
+    setPermissions({
+      ...permissions,
+      [module]: {
+        ...(permissions[module as keyof typeof permissions] as any),
+        [key]: !(permissions[module as keyof typeof permissions] as any)?.[key]
+      }
+    })
   }
 
-  const PERMISSION_LABELS: Record<string, string> = {
-    canAccessJHub: 'Access J Hub',
-    canAccessJStudio: 'Access J Studio',
-    canAccessJAcademy: 'Access J Academy',
-    canAccessJInfo: 'Access J Info',
-    canAccessJAlpha: 'Access J Alpha',
-    canCreateContent: 'Create Content',
-    canModerateContent: 'Moderate Content',
-    canManageUsers: 'Manage Users',
-    canManageRoles: 'Manage Roles',
-    canManageSiteSettings: 'Manage Site Settings',
+  const toggleArrayPermission = (module: string, key: string, value: string) => {
+    const currentArray = (permissions[module as keyof typeof permissions] as any)?.[key] || []
+    const newArray = currentArray.includes(value)
+      ? currentArray.filter((v: string) => v !== value)
+      : [...currentArray, value]
+
+    setPermissions({
+      ...permissions,
+      [module]: {
+        ...(permissions[module as keyof typeof permissions] as any),
+        [key]: newArray
+      }
+    })
   }
+
+  const selectAllTypes = (module: string, key: string, allTypes: string[]) => {
+    setPermissions({
+      ...permissions,
+      [module]: {
+        ...(permissions[module as keyof typeof permissions] as any),
+        [key]: [...allTypes]
+      }
+    })
+  }
+
+  const unselectAllTypes = (module: string, key: string) => {
+    setPermissions({
+      ...permissions,
+      [module]: {
+        ...(permissions[module as keyof typeof permissions] as any),
+        [key]: []
+      }
+    })
+  }
+
+  const selectAllModulePermissions = (module: string, permissionKeys: string[]) => {
+    const newModulePerms: any = { ...(permissions[module as keyof typeof permissions] as any) }
+    permissionKeys.forEach(key => {
+      newModulePerms[key] = true
+    })
+    setPermissions({
+      ...permissions,
+      [module]: newModulePerms
+    })
+  }
+
+  const unselectAllModulePermissions = (module: string, permissionKeys: string[]) => {
+    const newModulePerms: any = { ...(permissions[module as keyof typeof permissions] as any) }
+    permissionKeys.forEach(key => {
+      newModulePerms[key] = false
+    })
+    setPermissions({
+      ...permissions,
+      [module]: newModulePerms
+    })
+  }
+
+  // Modern nested permission structure grouped by module
+  const PERMISSION_CATEGORIES = [
+    {
+      module: 'hub',
+      name: 'J Hub',
+      color: 'bg-blue-500',
+      permissions: [
+        { key: 'canAccess', label: 'Access J Hub' },
+        { key: 'canCreate', label: 'Create Content' },
+        { key: 'canModerate', label: 'Moderate Content' },
+      ],
+      nestedTypes: {
+        key: 'allowedContentTypes',
+        label: 'Allowed Content Types',
+        availableKey: 'hubContentTypes',
+        emptyMeaning: 'Empty = Can create ALL content types'
+      }
+    },
+    {
+      module: 'studio',
+      name: 'J Studio',
+      color: 'bg-purple-500',
+      permissions: [
+        { key: 'canAccess', label: 'Access J Studio' },
+        { key: 'canCreateRequest', label: 'Create Requests' },
+        { key: 'canClaimRequest', label: 'Claim Requests' },
+        { key: 'canModerate', label: 'Moderate Requests' },
+      ],
+      nestedTypes: {
+        key: 'allowedRequestTypes',
+        label: 'Allowed Request Types',
+        availableKey: 'studioRequestTypes',
+        emptyMeaning: 'Empty = Can claim ALL request types'
+      }
+    },
+    {
+      module: 'academy',
+      name: 'J Academy',
+      color: 'bg-green-500',
+      permissions: [
+        { key: 'canAccess', label: 'Access J Academy' },
+        { key: 'canEnroll', label: 'Enroll in Courses' },
+        { key: 'canTeach', label: 'Teach Courses' },
+        { key: 'canCreateCourseRequest', label: 'Create Course Requests' },
+        { key: 'canModerate', label: 'Moderate Courses' },
+      ],
+      nestedTypes: {
+        key: 'allowedCourseCategories',
+        label: 'Allowed Course Categories',
+        availableKey: 'academyCategories',
+        emptyMeaning: 'Empty = Can teach ALL categories'
+      }
+    },
+    {
+      module: 'info',
+      name: 'J Info',
+      color: 'bg-cyan-500',
+      permissions: [
+        { key: 'canAccess', label: 'Access J Info' },
+        { key: 'canSubmitEngagement', label: 'Submit Engagements' },
+        { key: 'canModerate', label: 'Moderate Engagements' },
+      ],
+      nestedTypes: [
+        {
+          key: 'allowedPlatforms',
+          label: 'Allowed Platforms',
+          availableKey: 'infoPlatforms',
+          emptyMeaning: 'Empty = All platforms allowed'
+        },
+        {
+          key: 'allowedEngagementTypes',
+          label: 'Allowed Engagement Types',
+          availableKey: 'infoEngagementTypes',
+          emptyMeaning: 'Empty = All types allowed'
+        }
+      ]
+    },
+    {
+      module: 'alpha',
+      name: 'J Alpha',
+      color: 'bg-orange-500',
+      permissions: [
+        { key: 'canAccess', label: 'Access J Alpha' },
+        { key: 'canSubmitAlpha', label: 'Submit Alpha Posts' },
+        { key: 'canModerate', label: 'Moderate Alpha Posts' },
+      ],
+      nestedTypes: {
+        key: 'allowedAlphaCategories',
+        label: 'Allowed Alpha Categories',
+        availableKey: 'alphaCategories',
+        emptyMeaning: 'Empty = Can submit ALL alpha categories'
+      }
+    },
+    {
+      module: 'admin',
+      name: 'Admin',
+      color: 'bg-red-500',
+      permissions: [
+        { key: 'canManageUsers', label: 'Manage Users (Super Admin ONLY)' },
+        { key: 'canManageRoles', label: 'Manage Roles' },
+        { key: 'canManageSiteSettings', label: 'Manage Site Settings' },
+        { key: 'canModerateAllContent', label: 'Moderate All Content (Cross-module)' },
+      ]
+    },
+  ]
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg border border-border p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4">Manage Permissions</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          User: {user.displayName || user.twitterUsername || 'Anonymous'}
-        </p>
-
-        <div className="space-y-2 mb-6">
-          {Object.keys(PERMISSION_LABELS).map(key => (
-            <label key={key} className="flex items-center gap-3 p-3 rounded-md hover:bg-muted cursor-pointer">
-              <input
-                type="checkbox"
-                checked={permissions[key as keyof typeof permissions] || false}
-                onChange={() => togglePermission(key)}
-                className="w-4 h-4 rounded border-border"
-              />
-              <span className="text-sm font-medium">{PERMISSION_LABELS[key]}</span>
-            </label>
-          ))}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-card rounded-lg border border-border p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Header with X button */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold mb-1">Manage Permissions</h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              User: {user.displayName || user.twitterUsername || 'Anonymous'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Note: Changing permissions here will override role-based permissions for this user
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
+
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading dynamic types...</div>
+        ) : (
+          <div className="space-y-4 mb-6">
+            {PERMISSION_CATEGORIES.map(category => (
+              <div key={category.module} className="border border-border rounded-lg p-4">
+                {/* Module Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full ${category.color}`}></div>
+                    <h3 className="font-semibold text-sm">{category.name}</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => selectAllModulePermissions(category.module, category.permissions.map(p => p.key))}
+                      className="text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={() => unselectAllModulePermissions(category.module, category.permissions.map(p => p.key))}
+                      className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
+                    >
+                      Unselect All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Boolean Permissions */}
+                <div className="space-y-2 mb-4">
+                  {category.permissions.map(perm => (
+                    <label key={perm.key} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(permissions[category.module as keyof typeof permissions] as any)?.[perm.key] || false}
+                        onChange={() => togglePermission(category.module, perm.key)}
+                        className="w-4 h-4 rounded border-border"
+                      />
+                      <span className="text-sm">{perm.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Nested Array Permissions */}
+                {(category as any).nestedTypes && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    {Array.isArray((category as any).nestedTypes) ? (
+                      (category as any).nestedTypes.map((nested: any) => (
+                        <div key={nested.key} className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <h4 className="text-xs font-medium text-muted-foreground">{nested.label}</h4>
+                              <p className="text-xs text-muted-foreground/60">{nested.emptyMeaning}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => selectAllTypes(category.module, nested.key, availableTypes[nested.availableKey] || [])}
+                                className="text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary"
+                              >
+                                All
+                              </button>
+                              <button
+                                onClick={() => unselectAllTypes(category.module, nested.key)}
+                                className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
+                              >
+                                None
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {(availableTypes[nested.availableKey] || []).map((type: string) => {
+                              const selected = ((permissions[category.module as keyof typeof permissions] as any)?.[nested.key] || []).includes(type)
+                              return (
+                                <button
+                                  key={type}
+                                  onClick={() => toggleArrayPermission(category.module, nested.key, type)}
+                                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                                    selected
+                                      ? 'bg-primary text-primary-foreground border-primary'
+                                      : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                                  }`}
+                                >
+                                  {type}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="text-xs font-medium text-muted-foreground">{(category as any).nestedTypes.label}</h4>
+                            <p className="text-xs text-muted-foreground/60">{(category as any).nestedTypes.emptyMeaning}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => selectAllTypes(category.module, (category as any).nestedTypes.key, availableTypes[(category as any).nestedTypes.availableKey] || [])}
+                              className="text-xs px-2 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary"
+                            >
+                              All
+                            </button>
+                            <button
+                              onClick={() => unselectAllTypes(category.module, (category as any).nestedTypes.key)}
+                              className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
+                            >
+                              None
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {(availableTypes[(category as any).nestedTypes.availableKey] || []).map((type: string) => {
+                            const selected = ((permissions[category.module as keyof typeof permissions] as any)?.[( category as any).nestedTypes.key] || []).includes(type)
+                            return (
+                              <button
+                                key={type}
+                                onClick={() => toggleArrayPermission(category.module, (category as any).nestedTypes.key, type)}
+                                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                                  selected
+                                    ? 'bg-primary text-primary-foreground border-primary'
+                                    : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
+                                }`}
+                              >
+                                {type}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button

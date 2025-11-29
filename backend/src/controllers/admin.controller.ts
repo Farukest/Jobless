@@ -171,32 +171,69 @@ const getPermissionsForRoleIds = async (roleIds: mongoose.Types.ObjectId[]) => {
   // Fetch all roles from database
   const roles = await Role.find({ _id: { $in: roleIds }, status: 'active' })
 
-  // Base permissions that all users have
+  // Base permissions structure (nested by module)
   const mergedPermissions: any = {
-    canAccessJHub: false,
-    canAccessJStudio: false,
-    canAccessJAcademy: false,
-    canAccessJInfo: false,
-    canAccessJAlpha: false,
-    canCreateContent: false,
-    canModerateContent: false,
-    canManageUsers: false,
-    canManageRoles: false,
-    canManageSiteSettings: false,
-    canEnrollCourses: false,
-    canTeachCourses: false,
-    canCreateRequests: false,
-    canSubmitProposals: false,
-    canSubmitProjects: false,
-    customPermissions: []
+    hub: {
+      canAccess: false,
+      canCreate: false,
+      canModerate: false,
+      allowedContentTypes: []
+    },
+    studio: {
+      canAccess: false,
+      canCreateRequest: false,
+      canClaimRequest: false,
+      allowedRequestTypes: []
+    },
+    academy: {
+      canAccess: false,
+      canEnroll: false,
+      canTeach: false,
+      canCreateCourseRequest: false,
+      allowedCourseCategories: []
+    },
+    info: {
+      canAccess: false,
+      canSubmitEngagement: false,
+      allowedPlatforms: [],
+      allowedEngagementTypes: []
+    },
+    alpha: {
+      canAccess: false,
+      canSubmitAlpha: false,
+      canModerate: false,
+      allowedAlphaCategories: []
+    },
+    admin: {
+      canManageUsers: false,
+      canManageRoles: false,
+      canManageSiteSettings: false,
+      canModerateAllContent: false
+    }
   }
 
-  // Merge permissions from all roles (OR logic: if any role has permission, user gets it)
+  // Merge permissions from all roles (OR logic for booleans, union for arrays)
   roles.forEach((role) => {
     const rolePerms = role.permissions as any
-    Object.keys(rolePerms).forEach((key) => {
-      if (rolePerms[key]) {
-        mergedPermissions[key] = true
+
+    // Merge each module's permissions
+    Object.keys(mergedPermissions).forEach((module) => {
+      if (rolePerms[module]) {
+        Object.keys(mergedPermissions[module]).forEach((key) => {
+          const roleValue = rolePerms[module][key]
+
+          if (typeof roleValue === 'boolean') {
+            // Boolean: OR logic (if any role has true, user gets true)
+            if (roleValue) {
+              mergedPermissions[module][key] = true
+            }
+          } else if (Array.isArray(roleValue)) {
+            // Array: Union (combine all unique values)
+            mergedPermissions[module][key] = [
+              ...new Set([...mergedPermissions[module][key], ...roleValue])
+            ]
+          }
+        })
       }
     })
   })

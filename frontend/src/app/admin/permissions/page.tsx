@@ -42,75 +42,158 @@ export default function AdminPermissionsPage() {
     return null
   }
 
+  // Modern nested permission structure
   const permissions = [
     {
       category: 'J Hub Permissions',
       color: 'bg-blue-500',
       items: [
-        { key: 'canAccessJHub', name: 'Access J Hub', description: 'View and interact with J Hub content' },
-        { key: 'canCreateContent', name: 'Create Content', description: 'Create videos, threads, and podcasts' },
-        { key: 'canModerateContent', name: 'Moderate Content', description: 'Delete, archive, or feature content' },
+        { key: 'hub.canAccess', name: 'Access J Hub', description: 'View and interact with J Hub content' },
+        { key: 'hub.canCreate', name: 'Create Content', description: 'Create videos, threads, podcasts, guides, tutorials' },
+        { key: 'hub.canModerate', name: 'Moderate Content', description: 'Delete, archive, or feature content' },
       ],
     },
     {
       category: 'J Studio Permissions',
       color: 'bg-purple-500',
       items: [
-        { key: 'canAccessJStudio', name: 'Access J Studio', description: 'View production requests and proposals' },
-        { key: 'canCreateRequests', name: 'Create Requests', description: 'Post new production requests' },
-        { key: 'canSubmitProposals', name: 'Submit Proposals', description: 'Respond to production requests' },
+        { key: 'studio.canAccess', name: 'Access J Studio', description: 'View production requests and proposals' },
+        { key: 'studio.canCreateRequest', name: 'Create Requests', description: 'Post new production requests' },
+        { key: 'studio.canClaimRequest', name: 'Claim Requests', description: 'Respond to and claim production requests' },
       ],
     },
     {
       category: 'J Academy Permissions',
       color: 'bg-yellow-500',
       items: [
-        { key: 'canAccessJAcademy', name: 'Access J Academy', description: 'View available courses' },
-        { key: 'canEnrollCourses', name: 'Enroll in Courses', description: 'Join and complete courses' },
-        { key: 'canTeachCourses', name: 'Teach Courses', description: 'Create and manage courses' },
+        { key: 'academy.canAccess', name: 'Access J Academy', description: 'View available courses' },
+        { key: 'academy.canEnroll', name: 'Enroll in Courses', description: 'Join and complete courses' },
+        { key: 'academy.canTeach', name: 'Teach Courses', description: 'Create and manage courses' },
+        { key: 'academy.canCreateCourseRequest', name: 'Create Course Requests', description: 'Request new courses to be created' },
       ],
     },
     {
       category: 'J Alpha Permissions',
       color: 'bg-green-500',
       items: [
-        { key: 'canAccessJAlpha', name: 'Access J Alpha', description: 'View early project discoveries' },
-        { key: 'canSubmitProjects', name: 'Submit Projects', description: 'Scout and share new projects' },
+        { key: 'alpha.canAccess', name: 'Access J Alpha', description: 'View early project discoveries' },
+        { key: 'alpha.canSubmitAlpha', name: 'Submit Alpha Posts', description: 'Scout and share new projects' },
+        { key: 'alpha.canModerate', name: 'Moderate Alpha', description: 'Review and moderate alpha posts' },
       ],
     },
     {
       category: 'J Info Permissions',
       color: 'bg-indigo-500',
       items: [
-        { key: 'canAccessJInfo', name: 'Access J Info', description: 'Request social engagement support' },
+        { key: 'info.canAccess', name: 'Access J Info', description: 'Request social engagement support' },
+        { key: 'info.canSubmitEngagement', name: 'Submit Engagements', description: 'Submit social media engagement posts' },
       ],
     },
     {
-      category: 'Platform Permissions',
-      color: 'bg-orange-500',
+      category: 'Admin Permissions',
+      color: 'bg-red-500',
       items: [
-        { key: 'canManageUsers', name: 'Manage Users', description: 'Edit user roles and permissions' },
-        { key: 'canViewAnalytics', name: 'View Analytics', description: 'Access platform analytics dashboard' },
-        { key: 'canConfigureSettings', name: 'Configure Settings', description: 'Modify site-wide settings' },
-        { key: 'canAccessLogs', name: 'Access Logs', description: 'View admin activity logs' },
+        { key: 'admin.canManageUsers', name: 'Manage Users', description: 'Edit user roles and permissions' },
+        { key: 'admin.canManageRoles', name: 'Manage Roles', description: 'Create and edit roles' },
+        { key: 'admin.canManageSiteSettings', name: 'Configure Settings', description: 'Modify site-wide settings' },
+        { key: 'admin.canModerateAllContent', name: 'Moderate All Content', description: 'Moderate content across all modules' },
       ],
     },
   ]
 
-  const defaultPermissionsByRole = {
-    member: ['canAccessJHub', 'canAccessJStudio', 'canAccessJAcademy', 'canAccessJAlpha', 'canAccessJInfo'],
-    content_creator: ['canAccessJHub', 'canCreateContent', 'canAccessJStudio', 'canAccessJAcademy', 'canAccessJAlpha', 'canAccessJInfo'],
-    requester: ['canAccessJHub', 'canAccessJStudio', 'canCreateRequests', 'canAccessJAcademy', 'canAccessJAlpha', 'canAccessJInfo'],
-    scout: ['canAccessJHub', 'canAccessJStudio', 'canAccessJAcademy', 'canAccessJAlpha', 'canSubmitProjects', 'canAccessJInfo'],
-    mentor: ['canAccessJHub', 'canAccessJStudio', 'canAccessJAcademy', 'canTeachCourses', 'canAccessJAlpha', 'canAccessJInfo'],
-    learner: ['canAccessJHub', 'canAccessJStudio', 'canAccessJAcademy', 'canEnrollCourses', 'canAccessJAlpha', 'canAccessJInfo'],
-    admin: ['canAccessJHub', 'canCreateContent', 'canModerateContent', 'canAccessJStudio', 'canCreateRequests', 'canSubmitProposals', 'canAccessJAcademy', 'canTeachCourses', 'canEnrollCourses', 'canAccessJAlpha', 'canSubmitProjects', 'canAccessJInfo', 'canManageUsers', 'canViewAnalytics', 'canConfigureSettings', 'canAccessLogs'],
+  const defaultPermissionsByRole: Record<string, string[]> = {
+    member: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'academy.canAccess',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    content_creator: [
+      'hub.canAccess',
+      'hub.canCreate',
+      'studio.canAccess',
+      'academy.canAccess',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    designer: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'studio.canClaimRequest', // Can claim design requests
+      'academy.canAccess',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    video_editor: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'studio.canClaimRequest', // Can claim video requests
+      'academy.canAccess',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    requester: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'studio.canCreateRequest',
+      'academy.canAccess',
+      'academy.canCreateCourseRequest',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    scout: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'academy.canAccess',
+      'alpha.canAccess',
+      'alpha.canSubmitAlpha',
+      'info.canAccess',
+    ],
+    mentor: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'academy.canAccess',
+      'academy.canTeach',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    learner: [
+      'hub.canAccess',
+      'studio.canAccess',
+      'academy.canAccess',
+      'academy.canEnroll',
+      'alpha.canAccess',
+      'info.canAccess',
+    ],
+    admin: [
+      'hub.canAccess',
+      'hub.canCreate',
+      'hub.canModerate',
+      'studio.canAccess',
+      'studio.canCreateRequest',
+      'studio.canClaimRequest',
+      'academy.canAccess',
+      'academy.canEnroll',
+      'academy.canTeach',
+      'academy.canCreateCourseRequest',
+      'alpha.canAccess',
+      'alpha.canSubmitAlpha',
+      'alpha.canModerate',
+      'info.canAccess',
+      'info.canSubmitEngagement',
+      'admin.canManageUsers',
+      'admin.canManageRoles',
+      'admin.canModerateAllContent',
+    ],
     super_admin: ['ALL'],
   }
 
   const roles = [
     { value: 'member', label: 'Member' },
     { value: 'content_creator', label: 'Content Creator' },
+    { value: 'designer', label: 'Designer' },
+    { value: 'video_editor', label: 'Video Editor' },
     { value: 'requester', label: 'Requester' },
     { value: 'scout', label: 'Scout' },
     { value: 'mentor', label: 'Mentor' },
@@ -120,9 +203,9 @@ export default function AdminPermissionsPage() {
   ]
 
   const hasPermission = (permissionKey: string) => {
-    const rolePermissions = defaultPermissionsByRole[selectedRole as keyof typeof defaultPermissionsByRole]
-    if (rolePermissions.includes('ALL')) return true
-    return rolePermissions.includes(permissionKey)
+    const rolePermissions = defaultPermissionsByRole[selectedRole]
+    if (rolePermissions?.includes('ALL')) return true
+    return rolePermissions?.includes(permissionKey) ?? false
   }
 
   return (
@@ -131,13 +214,13 @@ export default function AdminPermissionsPage() {
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           <div className="mb-8">
             <h1 className="text-4xl font-bold tracking-tight mb-2">Permission Management</h1>
-            <p className="text-muted-foreground">Overview of permissions for each role</p>
+            <p className="text-muted-foreground">Modern module-based permission system - Overview of permissions for each role</p>
           </div>
 
           {/* Role Selector */}
           <div className="mb-8 bg-card rounded-lg border border-border p-6">
             <label className="block text-sm font-medium mb-3">Select Role to View Permissions:</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {roles.map((role) => (
                 <div key={role.value} className="flex flex-col gap-2">
                   <button
@@ -215,8 +298,8 @@ export default function AdminPermissionsPage() {
                                     </svg>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-300">
-                                    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-700">
+                                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                   </div>
@@ -239,7 +322,7 @@ export default function AdminPermissionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-4 rounded-lg bg-muted">
                 <p className="text-3xl font-bold text-green-500">
-                  {selectedRole === 'super_admin' ? 'ALL' : defaultPermissionsByRole[selectedRole as keyof typeof defaultPermissionsByRole].length}
+                  {selectedRole === 'super_admin' ? 'ALL' : defaultPermissionsByRole[selectedRole]?.length || 0}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">Active Permissions</p>
               </div>
@@ -252,7 +335,7 @@ export default function AdminPermissionsPage() {
               <div className="text-center p-4 rounded-lg bg-muted">
                 <p className="text-3xl font-bold text-purple-500">
                   {selectedRole === 'super_admin' ? '100' : (
-                    (defaultPermissionsByRole[selectedRole as keyof typeof defaultPermissionsByRole].length /
+                    ((defaultPermissionsByRole[selectedRole]?.length || 0) /
                     permissions.reduce((acc, cat) => acc + cat.items.length, 0) * 100).toFixed(0)
                   )}%
                 </p>
@@ -270,13 +353,12 @@ export default function AdminPermissionsPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold mb-2">About Permissions</h3>
+                <h3 className="font-bold mb-2">About Modern Permission System</h3>
                 <p className="text-sm text-muted-foreground">
-                  Permissions control what actions users can perform on the platform. Each role has a default set of permissions.
-                  Individual users can have additional custom permissions applied through the User Management page.
+                  This platform uses a modern module-based permission system. Permissions are organized by module (hub, studio, academy, info, alpha, admin) for better scalability and maintainability.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  To modify a user's permissions, go to <a href="/admin/users" className="text-primary hover:underline">User Management</a> and click on the user you want to edit.
+                  Each role has a default set of permissions. Individual users can have permission overrides applied through the <a href="/admin/users" className="text-primary hover:underline">User Management</a> page.
                 </p>
               </div>
             </div>

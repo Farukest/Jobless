@@ -24,7 +24,7 @@ export interface IContent extends Document {
   bookmarksCount: number
   commentsCount: number
 
-  status: 'draft' | 'published' | 'archived' | 'rejected'
+  status: 'draft' | 'in_review' | 'published' | 'archived' | 'rejected'
   publishedAt?: Date
 
   moderatedBy?: mongoose.Types.ObjectId
@@ -114,7 +114,7 @@ const ContentSchema = new Schema<IContent>(
     },
     status: {
       type: String,
-      enum: ['draft', 'published', 'archived', 'rejected'],
+      enum: ['draft', 'in_review', 'published', 'archived', 'rejected'],
       default: 'draft',
     },
     publishedAt: Date,

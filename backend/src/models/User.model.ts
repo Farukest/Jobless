@@ -31,22 +31,75 @@ export interface IUser extends Document {
   // Roles (references to Role model)
   roles: mongoose.Types.ObjectId[]
 
-  // Content Type Overrides (optional - overrides role's allowedContentTypes)
-  contentTypeOverrides?: string[]
-
-  // Permissions
+  // Permissions (merged from roles)
   permissions: {
-    canAccessJHub: boolean
-    canAccessJStudio: boolean
-    canAccessJAcademy: boolean
-    canAccessJInfo: boolean
-    canAccessJAlpha: boolean
-    canCreateContent: boolean
-    canModerateContent: boolean
-    canManageUsers: boolean
-    canManageRoles: boolean
-    canManageSiteSettings: boolean
-    customPermissions: string[]
+    hub: {
+      canAccess: boolean
+      canCreate: boolean
+      canModerate: boolean
+      allowedContentTypes: string[]
+    }
+    studio: {
+      canAccess: boolean
+      canCreateRequest: boolean
+      canClaimRequest: boolean
+      allowedRequestTypes: string[]
+    }
+    academy: {
+      canAccess: boolean
+      canEnroll: boolean
+      canTeach: boolean
+      canCreateCourseRequest: boolean
+      allowedCourseCategories: string[]
+    }
+    info: {
+      canAccess: boolean
+      canSubmitEngagement: boolean
+      allowedPlatforms: string[]
+      allowedEngagementTypes: string[]
+    }
+    alpha: {
+      canAccess: boolean
+      canSubmitAlpha: boolean
+      canModerate: boolean
+      allowedAlphaCategories: string[]
+    }
+    admin: {
+      canManageUsers: boolean
+      canManageRoles: boolean
+      canManageSiteSettings: boolean
+      canModerateAllContent: boolean
+    }
+  }
+
+  // Permission Overrides (user-specific overrides)
+  permissionOverrides?: {
+    hub?: {
+      canCreate?: boolean
+      canModerate?: boolean
+      allowedContentTypes?: string[]
+    }
+    studio?: {
+      canCreateRequest?: boolean
+      canClaimRequest?: boolean
+      allowedRequestTypes?: string[]
+    }
+    academy?: {
+      canEnroll?: boolean
+      canTeach?: boolean
+      canCreateCourseRequest?: boolean
+      allowedCourseCategories?: string[]
+    }
+    info?: {
+      canSubmitEngagement?: boolean
+      allowedPlatforms?: string[]
+      allowedEngagementTypes?: string[]
+    }
+    alpha?: {
+      canSubmitAlpha?: boolean
+      canModerate?: boolean
+      allowedAlphaCategories?: string[]
+    }
   }
 
   // Stats
@@ -139,28 +192,78 @@ const UserSchema = new Schema<IUser>(
     // Roles
     roles: {
       type: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
-      default: [], // Will be populated via migration or on first login
+      default: [],
     },
 
-    // Content Type Overrides (optional)
-    contentTypeOverrides: {
-      type: [String],
-      default: undefined, // undefined means use role's allowedContentTypes
-    },
-
-    // Permissions
+    // Permissions (merged from roles)
     permissions: {
-      canAccessJHub: { type: Boolean, default: true },
-      canAccessJStudio: { type: Boolean, default: true },
-      canAccessJAcademy: { type: Boolean, default: true },
-      canAccessJInfo: { type: Boolean, default: true },
-      canAccessJAlpha: { type: Boolean, default: true },
-      canCreateContent: { type: Boolean, default: false },
-      canModerateContent: { type: Boolean, default: false },
-      canManageUsers: { type: Boolean, default: false },
-      canManageRoles: { type: Boolean, default: false },
-      canManageSiteSettings: { type: Boolean, default: false },
-      customPermissions: { type: [String], default: [] },
+      hub: {
+        canAccess: { type: Boolean, default: true },
+        canCreate: { type: Boolean, default: false },
+        canModerate: { type: Boolean, default: false },
+        allowedContentTypes: { type: [String], default: [] },
+      },
+      studio: {
+        canAccess: { type: Boolean, default: true },
+        canCreateRequest: { type: Boolean, default: false },
+        canClaimRequest: { type: Boolean, default: false },
+        allowedRequestTypes: { type: [String], default: [] },
+      },
+      academy: {
+        canAccess: { type: Boolean, default: true },
+        canEnroll: { type: Boolean, default: false },
+        canTeach: { type: Boolean, default: false },
+        canCreateCourseRequest: { type: Boolean, default: false },
+        allowedCourseCategories: { type: [String], default: [] },
+      },
+      info: {
+        canAccess: { type: Boolean, default: true },
+        canSubmitEngagement: { type: Boolean, default: false },
+        allowedPlatforms: { type: [String], default: [] },
+        allowedEngagementTypes: { type: [String], default: [] },
+      },
+      alpha: {
+        canAccess: { type: Boolean, default: true },
+        canSubmitAlpha: { type: Boolean, default: false },
+        canModerate: { type: Boolean, default: false },
+        allowedAlphaCategories: { type: [String], default: [] },
+      },
+      admin: {
+        canManageUsers: { type: Boolean, default: false },
+        canManageRoles: { type: Boolean, default: false },
+        canManageSiteSettings: { type: Boolean, default: false },
+        canModerateAllContent: { type: Boolean, default: false },
+      },
+    },
+
+    // Permission Overrides (user-specific)
+    permissionOverrides: {
+      hub: {
+        canCreate: { type: Boolean, required: false },
+        canModerate: { type: Boolean, required: false },
+        allowedContentTypes: { type: [String], required: false },
+      },
+      studio: {
+        canCreateRequest: { type: Boolean, required: false },
+        canClaimRequest: { type: Boolean, required: false },
+        allowedRequestTypes: { type: [String], required: false },
+      },
+      academy: {
+        canEnroll: { type: Boolean, required: false },
+        canTeach: { type: Boolean, required: false },
+        canCreateCourseRequest: { type: Boolean, required: false },
+        allowedCourseCategories: { type: [String], required: false },
+      },
+      info: {
+        canSubmitEngagement: { type: Boolean, required: false },
+        allowedPlatforms: { type: [String], required: false },
+        allowedEngagementTypes: { type: [String], required: false },
+      },
+      alpha: {
+        canSubmitAlpha: { type: Boolean, required: false },
+        canModerate: { type: Boolean, required: false },
+        allowedAlphaCategories: { type: [String], required: false },
+      },
     },
 
     // Stats

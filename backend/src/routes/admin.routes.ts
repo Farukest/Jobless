@@ -28,37 +28,36 @@ import { engagementCriteriaController } from '../controllers/engagementCriteria.
 
 const router = Router()
 
-// All admin routes require admin or super_admin role
+// All admin routes require authentication
 router.use(protect)
-router.use(authorize('admin', 'super_admin'))
 
-// User management
-router.get('/users', getAllUsers)
-router.get('/users/:id', getUserById)
-router.put('/users/:id', updateUser)
-router.delete('/users/:id', deleteUser)
+// User management (super_admin only)
+router.get('/users', authorize('super_admin'), getAllUsers)
+router.get('/users/:id', authorize('super_admin'), getUserById)
+router.put('/users/:id', authorize('super_admin'), updateUser)
+router.delete('/users/:id', authorize('super_admin'), deleteUser)
 
 // Role & permission management (super_admin only)
 router.put('/users/:id/roles', authorize('super_admin'), updateUserRoles)
 router.put('/users/:id/permissions', authorize('super_admin'), updateUserPermissions)
 
 // Site settings (super_admin only)
-router.get('/settings', getSiteSettings)
+router.get('/settings', authorize('super_admin'), getSiteSettings)
 router.put('/settings', authorize('super_admin'), updateSiteSettings)
 
-// Logs
-router.get('/logs', getAdminLogs)
+// Logs (admin & super_admin)
+router.get('/logs', authorize('admin', 'super_admin'), getAdminLogs)
 
-// Analytics
-router.get('/analytics', getAnalytics)
+// Analytics (admin & super_admin)
+router.get('/analytics', authorize('admin', 'super_admin'), getAnalytics)
 
-// Engagement Criteria Management
-router.get('/engagement-criteria', engagementCriteriaController.getAllCriteria.bind(engagementCriteriaController))
-router.get('/engagement-criteria/:id', engagementCriteriaController.getCriteriaById.bind(engagementCriteriaController))
-router.post('/engagement-criteria', engagementCriteriaController.createCriteria.bind(engagementCriteriaController))
-router.put('/engagement-criteria/:id', engagementCriteriaController.updateCriteria.bind(engagementCriteriaController))
-router.delete('/engagement-criteria/:id', engagementCriteriaController.deleteCriteria.bind(engagementCriteriaController))
-router.patch('/engagement-criteria/:id/toggle', engagementCriteriaController.toggleCriteria.bind(engagementCriteriaController))
+// Engagement Criteria Management (admin & super_admin)
+router.get('/engagement-criteria', authorize('admin', 'super_admin'), engagementCriteriaController.getAllCriteria.bind(engagementCriteriaController))
+router.get('/engagement-criteria/:id', authorize('admin', 'super_admin'), engagementCriteriaController.getCriteriaById.bind(engagementCriteriaController))
+router.post('/engagement-criteria', authorize('admin', 'super_admin'), engagementCriteriaController.createCriteria.bind(engagementCriteriaController))
+router.put('/engagement-criteria/:id', authorize('admin', 'super_admin'), engagementCriteriaController.updateCriteria.bind(engagementCriteriaController))
+router.delete('/engagement-criteria/:id', authorize('admin', 'super_admin'), engagementCriteriaController.deleteCriteria.bind(engagementCriteriaController))
+router.patch('/engagement-criteria/:id/toggle', authorize('admin', 'super_admin'), engagementCriteriaController.toggleCriteria.bind(engagementCriteriaController))
 
 // Dynamic J Hub Configuration Management (super_admin only)
 router.get('/hub/config', authorize('super_admin'), getHubConfig) // Get all configs at once

@@ -5,23 +5,50 @@ export interface IRole extends Document {
   displayName: string
   description?: string
   permissions: {
-    canAccessJHub: boolean
-    canAccessJStudio: boolean
-    canAccessJAcademy: boolean
-    canAccessJInfo: boolean
-    canAccessJAlpha: boolean
-    canCreateContent: boolean
-    canModerateContent: boolean
-    canManageUsers: boolean
-    canManageRoles: boolean
-    canManageSiteSettings: boolean
-    canEnrollCourses: boolean
-    canTeachCourses: boolean
-    canCreateRequests: boolean
-    canSubmitProposals: boolean
-    canSubmitProjects: boolean
+    // J Hub Permissions
+    hub: {
+      canAccess: boolean
+      canCreate: boolean
+      canModerate: boolean
+      allowedContentTypes: string[]
+    }
+    // J Studio Permissions
+    studio: {
+      canAccess: boolean
+      canCreateRequest: boolean
+      canClaimRequest: boolean
+      allowedRequestTypes: string[]
+    }
+    // J Academy Permissions
+    academy: {
+      canAccess: boolean
+      canEnroll: boolean
+      canTeach: boolean
+      canCreateCourseRequest: boolean
+      allowedCourseCategories: string[]
+    }
+    // J Info Permissions
+    info: {
+      canAccess: boolean
+      canSubmitEngagement: boolean
+      allowedPlatforms: string[]
+      allowedEngagementTypes: string[]
+    }
+    // J Alpha Permissions
+    alpha: {
+      canAccess: boolean
+      canSubmitAlpha: boolean
+      canModerate: boolean
+      allowedAlphaCategories: string[]
+    }
+    // Admin Permissions
+    admin: {
+      canManageUsers: boolean
+      canManageRoles: boolean
+      canManageSiteSettings: boolean
+      canModerateAllContent: boolean
+    }
   }
-  allowedContentTypes: string[] // Content types this role can create (e.g., ['Video', 'Thread', 'Guide'])
   isSystemRole: boolean
   status: 'active' | 'inactive'
   createdAt: Date
@@ -47,25 +74,43 @@ const RoleSchema = new Schema<IRole>(
       trim: true,
     },
     permissions: {
-      canAccessJHub: { type: Boolean, default: true },
-      canAccessJStudio: { type: Boolean, default: true },
-      canAccessJAcademy: { type: Boolean, default: true },
-      canAccessJInfo: { type: Boolean, default: true },
-      canAccessJAlpha: { type: Boolean, default: true },
-      canCreateContent: { type: Boolean, default: false },
-      canModerateContent: { type: Boolean, default: false },
-      canManageUsers: { type: Boolean, default: false },
-      canManageRoles: { type: Boolean, default: false },
-      canManageSiteSettings: { type: Boolean, default: false },
-      canEnrollCourses: { type: Boolean, default: false },
-      canTeachCourses: { type: Boolean, default: false },
-      canCreateRequests: { type: Boolean, default: false },
-      canSubmitProposals: { type: Boolean, default: false },
-      canSubmitProjects: { type: Boolean, default: false },
-    },
-    allowedContentTypes: {
-      type: [String],
-      default: [], // Empty means no content creation allowed
+      hub: {
+        canAccess: { type: Boolean, default: true },
+        canCreate: { type: Boolean, default: false },
+        canModerate: { type: Boolean, default: false },
+        allowedContentTypes: { type: [String], default: [] },
+      },
+      studio: {
+        canAccess: { type: Boolean, default: true },
+        canCreateRequest: { type: Boolean, default: false },
+        canClaimRequest: { type: Boolean, default: false },
+        allowedRequestTypes: { type: [String], default: [] },
+      },
+      academy: {
+        canAccess: { type: Boolean, default: true },
+        canEnroll: { type: Boolean, default: false },
+        canTeach: { type: Boolean, default: false },
+        canCreateCourseRequest: { type: Boolean, default: false },
+        allowedCourseCategories: { type: [String], default: [] },
+      },
+      info: {
+        canAccess: { type: Boolean, default: true },
+        canSubmitEngagement: { type: Boolean, default: false },
+        allowedPlatforms: { type: [String], default: [] },
+        allowedEngagementTypes: { type: [String], default: [] },
+      },
+      alpha: {
+        canAccess: { type: Boolean, default: true },
+        canSubmitAlpha: { type: Boolean, default: false },
+        canModerate: { type: Boolean, default: false },
+        allowedAlphaCategories: { type: [String], default: [] },
+      },
+      admin: {
+        canManageUsers: { type: Boolean, default: false },
+        canManageRoles: { type: Boolean, default: false },
+        canManageSiteSettings: { type: Boolean, default: false },
+        canModerateAllContent: { type: Boolean, default: false },
+      },
     },
     isSystemRole: {
       type: Boolean,

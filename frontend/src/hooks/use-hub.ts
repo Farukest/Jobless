@@ -295,59 +295,127 @@ export function useCreateComment() {
 }
 
 /**
- * Toggle comment like
+ * Toggle comment like with optimistic update
  */
 export function useToggleCommentLike() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (commentId: string) => {
+    mutationFn: async ({ commentId, userId }: { commentId: string; userId: string }) => {
       const { data } = await api.post(`/comments/${commentId}/like`)
-      return data
+      return { ...data, commentId, userId }
     },
-    onSuccess: (data, commentId) => {
-      // WebSocket will handle real-time updates for other clients
-      // But we need optimistic update for current client
+    onMutate: async ({ commentId, userId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['comments'] })
+      await queryClient.cancelQueries({ queryKey: ['replies'] })
 
-      // Update comment in comments list
+      // Helper function to toggle like in comment
+      const toggleLike = (comment: any) => {
+        if (comment._id !== commentId) return comment
+        
+        const likedBy = comment.likedBy || []
+        const isCurrentlyLiked = likedBy.includes(userId)
+        
+        return {
+          ...comment,
+          likes: isCurrentlyLiked ? Math.max(0, comment.likes - 1) : comment.likes + 1,
+          likedBy: isCurrentlyLiked 
+            ? likedBy.filter((id: string) => id !== userId)
+            : [...likedBy, userId]
+        }
+      }
+
+      // Optimistically update comments list
       queryClient.setQueriesData({ queryKey: ['comments'] }, (old: any) => {
         if (!old?.data) return old
         return {
           ...old,
-          data: old.data.map((comment: any) =>
-            comment._id === commentId
-              ? { ...comment, likes: data.data.likes, likedBy: comment.likedBy || [] }
-              : comment
-          )
+          data: old.data.map(toggleLike)
         }
       })
 
-      // Update comment in replies list
+      // Optimistically update replies list
       queryClient.setQueriesData({ queryKey: ['replies'] }, (old: any) => {
         if (!old?.data) return old
         return {
           ...old,
-          data: old.data.map((reply: any) =>
-            reply._id === commentId
-              ? { ...reply, likes: data.data.likes, likedBy: reply.likedBy || [] }
-              : reply
-          )
+          data: old.data.map(toggleLike)
         }
       })
 
-      // Update single comment if it's cached
+      // Optimistically update single comment
       queryClient.setQueryData(['comment', commentId], (old: any) => {
         if (!old?.data) return old
         return {
           ...old,
-          data: {
-            ...old.data,
-            likes: data.data.likes,
-            likedBy: old.data.likedBy || []
-          }
+          data: toggleLike(old.data)
         }
       })
     },
+    onError: (err, variables, context) => {
+      // Rollback by invalidating queries to refetch
+      queryClient.invalidateQueries({ queryKey: ['comments'] })
+      queryClient.invalidateQueries({ queryKey: ['replies'] })
+    },
+  })
+}
+
+/**
+ * Helper to update comment like from WebSocket
+ */
+export function updateCommentLikeFromSocket(
+  queryClient: any,
+  data: { commentId: string; likes: number; isLiked: boolean; userId: string }
+) {
+  const { commentId, likes, isLiked, userId } = data
+
+  // Helper function to update like
+  const updateLike = (comment: any) => {
+    if (comment._id !== commentId) return comment
+    
+    const likedBy = comment.likedBy || []
+    const userAlreadyLiked = likedBy.includes(userId)
+    
+    let newLikedBy = likedBy
+    if (isLiked && !userAlreadyLiked) {
+      newLikedBy = [...likedBy, userId]
+    } else if (!isLiked && userAlreadyLiked) {
+      newLikedBy = likedBy.filter((id: string) => id !== userId)
+    }
+    
+    return {
+      ...comment,
+      likes,
+      likedBy: newLikedBy
+    }
+  }
+
+  // Update comments list
+  queryClient.setQueriesData({ queryKey: ['comments'] }, (old: any) => {
+    if (!old?.data) return old
+    return {
+      ...old,
+      data: old.data.map(updateLike)
+    }
+  })
+
+  // Update replies list
+  queryClient.setQueriesData({ queryKey: ['replies'] }, (old: any) => {
+    if (!old?.data) return old
+    return {
+      ...old,
+      data: old.data.map(updateLike)
+    }
+  })
+
+  // Update single comment
+  queryClient.setQueryData(['comment', commentId], (old: any) => {
+    if (!old?.data) return old
+    return {
+      ...old,
+      data: updateLike(old.data)
+    }
   })
 }
 

@@ -53,6 +53,15 @@ export const verifyEngagement = asyncHandler(async (req: AuthRequest, res: Respo
   const { id } = req.params
   const { status, pointsEarned } = req.body
 
+  // Check permission: Info moderator OR admin with global moderation rights
+  const canModerate =
+    req.user.permissions?.info?.canModerate ||
+    req.user.permissions?.admin?.canModerateAllContent
+
+  if (!canModerate) {
+    throw new AppError('You do not have permission to verify engagements', 403)
+  }
+
   const engagement = await UserEngagement.findByIdAndUpdate(
     id,
     { status, pointsEarned, verifiedAt: new Date() },

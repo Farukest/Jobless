@@ -12,6 +12,10 @@ import {
   searchUsers,
   getUserBadges,
   getUserBadgeStats,
+  getMyZoneFeed,
+  getMyFeed,
+  getCommentedFeed,
+  getLikedFeed,
 } from '../controllers/user.controller'
 
 const router = Router()
@@ -36,5 +40,11 @@ router.delete('/wallet/:walletAddress', protect, removeWhitelistWallet)
 // Badge routes
 router.get('/:userId/badges', protect, getUserBadges)
 router.get('/:userId/badges/stats', protect, getUserBadgeStats)
+
+// Profile feed routes
+router.get('/:userId/feed/my-zone', protect, getMyZoneFeed)
+router.get('/:userId/feed/my-feed', protect, getMyFeed)
+router.get('/:userId/feed/commented', protect, getCommentedFeed)
+router.get('/:userId/feed/liked', protect, getLikedFeed)
 
 export default router

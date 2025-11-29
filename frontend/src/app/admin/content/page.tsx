@@ -16,7 +16,7 @@ interface Content {
   contentType: 'video' | 'thread' | 'podcast' | 'guide' | 'tutorial'
   category: string
   difficulty?: 'beginner' | 'intermediate' | 'advanced'
-  status: 'draft' | 'published' | 'archived' | 'rejected'
+  status: 'draft' | 'in_review' | 'published' | 'archived' | 'rejected'
   authorId: {
     _id: string
     name?: string
@@ -539,7 +539,9 @@ export default function AdminContentPage() {
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
+                <option value="in_review">In Review</option>
                 <option value="published">Published</option>
+                <option value="rejected">Rejected</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
@@ -876,9 +878,11 @@ export default function AdminContentPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`text-xs px-2 py-1 rounded-lg ${
+                          className={`text-xs px-2 py-1 rounded-lg capitalize ${
                             content.status === 'published'
                               ? 'bg-green-500/10 text-green-500'
+                              : content.status === 'in_review'
+                              ? 'bg-blue-500/10 text-blue-500'
                               : content.status === 'draft'
                               ? 'bg-yellow-500/10 text-yellow-500'
                               : content.status === 'rejected'
@@ -886,7 +890,7 @@ export default function AdminContentPage() {
                               : 'bg-gray-500/10 text-gray-500'
                           }`}
                         >
-                          {content.status}
+                          {content.status === 'in_review' ? 'In Review' : content.status}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -920,8 +924,8 @@ export default function AdminContentPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          {/* Approve - show for draft/rejected */}
-                          {(content.status === 'draft' || content.status === 'rejected') && (
+                          {/* Approve - show for draft/in_review/rejected */}
+                          {(content.status === 'draft' || content.status === 'in_review' || content.status === 'rejected') && (
                             <button
                               onClick={() => handleModerate(content._id, 'approve')}
                               className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
@@ -940,8 +944,8 @@ export default function AdminContentPage() {
                             </button>
                           )}
 
-                          {/* Reject - show for draft/published */}
-                          {(content.status === 'draft' || content.status === 'published') && (
+                          {/* Reject - show for draft/in_review/published */}
+                          {(content.status === 'draft' || content.status === 'in_review' || content.status === 'published') && (
                             <button
                               onClick={() => handleModerate(content._id, 'reject')}
                               className="px-3 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"

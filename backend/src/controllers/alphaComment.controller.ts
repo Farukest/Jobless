@@ -58,7 +58,9 @@ export const deleteComment = asyncHandler(async (req: AuthRequest, res: Response
     throw new AppError('Comment not found', 404)
   }
 
-  if (comment.userId.toString() !== userId.toString() && !req.user.permissions.canModerateContent) {
+  // Check if user is comment author or has moderation rights
+  const isModerator = req.user.permissions.alpha?.canModerate || req.user.permissions.admin?.canModerateAllContent
+  if (comment.userId.toString() !== userId.toString() && !isModerator) {
     throw new AppError('Not authorized', 403)
   }
 

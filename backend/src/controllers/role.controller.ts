@@ -95,7 +95,7 @@ export const createRole = asyncHandler(async (req: AuthRequest, res: Response) =
 // Update role
 export const updateRole = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params
-  const { displayName, description, permissions, status, allowedContentTypes } = req.body
+  const { displayName, description, permissions, status } = req.body
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError('Invalid role ID', 400)
@@ -112,7 +112,6 @@ export const updateRole = asyncHandler(async (req: AuthRequest, res: Response) =
   if (description !== undefined) role.description = description
   if (permissions) role.permissions = { ...role.permissions, ...permissions }
   if (status) role.status = status
-  if (allowedContentTypes !== undefined) role.allowedContentTypes = allowedContentTypes
 
   await role.save()
 

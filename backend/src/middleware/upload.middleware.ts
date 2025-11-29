@@ -91,3 +91,65 @@ export const setUploadType = (type: string) => {
     next()
   }
 }
+
+// ============================================
+// DOCUMENT UPLOAD - ONLY PDF, DOC, DOCX
+// ============================================
+
+// Document-only file filter
+const documentOnlyFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ]
+
+  const allowedExtensions = ['.pdf', '.doc', '.docx']
+  const ext = path.extname(file.originalname).toLowerCase()
+
+  // Check MIME type AND extension for security
+  if (allowedMimes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
+    cb(null, true)
+  } else {
+    cb(new AppError('Only PDF, DOC, and DOCX files are allowed', 400))
+  }
+}
+
+// Document storage - separate folder
+const documentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dest = path.join(uploadDir, 'documents')
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true })
+    }
+    cb(null, dest)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
+    const ext = path.extname(file.originalname)
+    const nameWithoutExt = path.basename(file.originalname, ext)
+    const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '-')
+    cb(null, `${sanitizedName}-${uniqueSuffix}${ext}`)
+  },
+})
+
+// Multer instance for DOCUMENTS ONLY
+export const uploadDocument = multer({
+  storage: documentStorage,
+  fileFilter: documentOnlyFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max for documents
+  },
+})
+
+// Helper to delete uploaded file
+export const deleteUploadedFile = (filePath: string): void => {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+      console.log('Deleted file:', filePath)
+    }
+  } catch (error) {
+    console.error('Error deleting file:', error)
+  }
+}

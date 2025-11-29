@@ -10,7 +10,7 @@ import { getSocket } from '@/lib/socket'
 import { TwitterStyleContent } from '@/components/hub/twitter-style-content'
 import { Skeleton, TwitterFeedSkeleton } from '@/components/ui/skeleton'
 import { TwitterReplyInput } from '@/components/hub/twitter-reply-input'
-import { TwitterPostComposer } from '@/components/hub/twitter-post-composer'
+import { EditorPostComposer } from '@/components/hub/editor-post-composer'
 import { useToggleLike, useToggleBookmark, useCreateComment } from '@/hooks/use-hub'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -290,7 +290,7 @@ export default function HubFeedPage() {
     <>
       <div className="container mx-auto max-w-2xl px-4">
         {/* Post Composer */}
-        <TwitterPostComposer onPostCreated={handlePostCreated} />
+        <EditorPostComposer onPostCreated={handlePostCreated} />
 
         {/* New Posts Banner */}
         {newPostsCount > 0 && (
@@ -418,13 +418,17 @@ export default function HubFeedPage() {
                     {/* Replying to indicator */}
                     <div className="text-xs text-muted-foreground mb-2">
                       Replying to{' '}
-                      <Link
-                        href={`/center/profile/${selectedContent.authorId._id}`}
-                        className="text-primary hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        @{selectedContent.authorId?.twitterUsername || selectedContent.authorId?.displayName || 'user'}
-                      </Link>
+                      {selectedContent.authorId?._id ? (
+                        <Link
+                          href={`/center/profile/${selectedContent.authorId._id}`}
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          @{selectedContent.authorId?.twitterUsername || selectedContent.authorId?.displayName || 'user'}
+                        </Link>
+                      ) : (
+                        <span className="text-primary">@{selectedContent.authorId?.twitterUsername || selectedContent.authorId?.displayName || 'user'}</span>
+                      )}
                     </div>
                   </div>
                 </div>

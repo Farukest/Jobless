@@ -15,17 +15,43 @@ export interface User {
   bio?: string
   roles: string[]
   permissions: {
-    canAccessJHub: boolean
-    canAccessJStudio: boolean
-    canAccessJAcademy: boolean
-    canAccessJInfo: boolean
-    canAccessJAlpha: boolean
-    canCreateContent: boolean
-    canModerateContent: boolean
-    canManageUsers: boolean
-    canManageRoles: boolean
-    canManageSiteSettings: boolean
-    customPermissions: string[]
+    hub: {
+      canAccess: boolean
+      canCreate: boolean
+      canModerate: boolean
+      allowedContentTypes: string[]
+    }
+    studio: {
+      canAccess: boolean
+      canCreateRequest: boolean
+      canClaimRequest: boolean
+      allowedRequestTypes: string[]
+    }
+    academy: {
+      canAccess: boolean
+      canEnroll: boolean
+      canTeach: boolean
+      canCreateCourseRequest: boolean
+      allowedCourseCategories: string[]
+    }
+    info: {
+      canAccess: boolean
+      canSubmitEngagement: boolean
+      allowedPlatforms: string[]
+      allowedEngagementTypes: string[]
+    }
+    alpha: {
+      canAccess: boolean
+      canSubmitAlpha: boolean
+      canModerate: boolean
+      allowedAlphaCategories: string[]
+    }
+    admin: {
+      canManageUsers: boolean
+      canManageRoles: boolean
+      canManageSiteSettings: boolean
+      canModerateAllContent: boolean
+    }
   }
   theme: 'light' | 'dark'
   jRankPoints?: number
@@ -71,6 +97,45 @@ export function useAuth() {
     await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] })
   }
 
+  /**
+   * Check if user has a specific permission
+   * Supports both modern nested format (e.g., 'hub.canCreate') and backward compatibility
+   */
+  const hasPermission = (permission: string): boolean => {
+    if (!user?.permissions) return false
+
+    // Modern nested format: 'module.permission' (e.g., 'hub.canCreate')
+    if (permission.includes('.')) {
+      const [module, key] = permission.split('.')
+      const modulePerms = user.permissions[module as keyof typeof user.permissions] as any
+      return modulePerms?.[key] ?? false
+    }
+
+    // Backward compatibility: map old flat keys to new nested structure
+    const legacyMapping: Record<string, string> = {
+      canAccessJHub: 'hub.canAccess',
+      canAccessJStudio: 'studio.canAccess',
+      canAccessJAcademy: 'academy.canAccess',
+      canAccessJInfo: 'info.canAccess',
+      canAccessJAlpha: 'alpha.canAccess',
+      canCreateContent: 'hub.canCreate',
+      canModerateContent: 'hub.canModerate',
+      canManageUsers: 'admin.canManageUsers',
+      canManageRoles: 'admin.canManageRoles',
+      canManageSiteSettings: 'admin.canManageSiteSettings',
+      canEnrollCourses: 'academy.canEnroll',
+      canTeachCourses: 'academy.canTeach',
+      canSubmitProposals: 'alpha.canSubmitAlpha',
+    }
+
+    const modernKey = legacyMapping[permission]
+    if (modernKey) {
+      return hasPermission(modernKey)
+    }
+
+    return false
+  }
+
   return {
     user,
     isLoading,
@@ -79,6 +144,6 @@ export function useAuth() {
     logout: logoutMutation.mutate,
     refreshUser,
     hasRole: (role: string) => user?.roles?.some((r: any) => r.name === role || r === role) ?? false,
-    hasPermission: (permission: keyof User['permissions']) => user?.permissions?.[permission] ?? false,
+    hasPermission,
   }
 }

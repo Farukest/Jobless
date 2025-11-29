@@ -339,7 +339,7 @@ export default function CommentDetailPage() {
           <CommentItem
             comment={comment}
             onLike={handleCommentLike}
-            isLiked={user && comment.likedBy?.includes(user._id)}
+            isLiked={!!(user && comment.likedBy?.includes(user._id))}
           />
 
           {/* Reply Input */}
@@ -403,7 +403,6 @@ export default function CommentDetailPage() {
               </div>
             )}
           </div>
-        </div>
 
         {/* Reply Modal */}
         {replyModalComment && (

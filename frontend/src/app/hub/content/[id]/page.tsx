@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
-import { useContent, useToggleLike, useToggleBookmark, useComments, useCreateComment, useToggleCommentLike } from '@/hooks/use-hub'
+import { useContent, useToggleLike, useToggleBookmark, useComments, useCreateComment, useToggleCommentLike, updateCommentLikeFromSocket } from '@/hooks/use-hub'
 import { Skeleton } from '@/components/ui/skeleton'
 import Image from 'next/image'
 import { TwitterStyleContent } from '@/components/hub/twitter-style-content'
@@ -101,20 +101,10 @@ export default function ContentDetailPage() {
       })
     }
 
-    // Listen for comment like updates
+    // Listen for comment like updates - use helper function for all comments and replies
     const handleCommentLikeUpdate = (data: any) => {
       console.log('[Socket] Comment like update received:', data)
-      queryClient.setQueryData(['comments', 'hub_content', id], (old: any) => {
-        if (!old) return old
-        return {
-          ...old,
-          data: old.data.map((comment: any) =>
-            comment._id === data.commentId
-              ? { ...comment, likes: data.likes, likedBy: data.isLiked ? [...(comment.likedBy || []), data.userId] : (comment.likedBy || []).filter((uid: string) => uid !== data.userId) }
-              : comment
-          )
-        }
-      })
+      updateCommentLikeFromSocket(queryClient, data)
     }
 
     // Listen for new replies (to update comment reply count)
@@ -269,7 +259,8 @@ export default function ContentDetailPage() {
   }
 
   const handleCommentLike = (commentId: string) => {
-    toggleCommentLike(commentId)
+    if (!user?._id) return
+    toggleCommentLike({ commentId, userId: user._id })
   }
 
   const handleReplyClick = (comment: any) => {
@@ -460,7 +451,26 @@ export default function ContentDetailPage() {
               </div>
             ) : commentsData?.data && commentsData.data.length > 0 ? (
               <div>
-                {commentsData.data.map((comment: any, index: number) => {
+                {/* Sort comments: my comments first (newest to oldest), then others (oldest to newest) */}
+                {(() => {
+                  const myUserId = user?._id
+                  
+                  // Helper to check if comment belongs to current user
+                  const isMyComment = (c: any) => {
+                    const commentUserId = c.userId?._id || c.userId
+                    return commentUserId === myUserId
+                  }
+                  
+                  const myComments = commentsData.data
+                    .filter(isMyComment)
+                    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  
+                  const otherComments = commentsData.data
+                    .filter((c: any) => !isMyComment(c))
+                    .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                  
+                  return [...myComments, ...otherComments]
+                })().map((comment: any, index: number) => {
                   const isLiked = user && comment.likedBy?.includes(user._id)
                   const isLastComment = index === commentsData.data.length - 1
                   return (
@@ -468,7 +478,7 @@ export default function ContentDetailPage() {
                       key={comment._id}
                       comment={comment}
                       onLike={handleCommentLike}
-                      commentDetailUrl={`/hub/content/${id}/comment/${comment._id}`}
+                      contentId={id}
                       onReplyClick={handleReplyClick}
                       isLiked={isLiked}
                       contentAuthorId={content.authorId?._id}

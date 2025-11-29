@@ -97,8 +97,18 @@ export const checkPermission = (permission: string) => {
       throw new AppError('Not authorized', 401)
     }
 
-    const hasPermission = req.user.permissions[permission] === true ||
-                         req.user.permissions.customPermissions?.includes(permission)
+    // Support nested permission checks with dot notation (e.g., 'hub.canCreate')
+    let hasPermission = false
+
+    if (permission.includes('.')) {
+      // Nested permission check (e.g., 'hub.canCreate')
+      const [module, key] = permission.split('.')
+      hasPermission = req.user.permissions?.[module]?.[key] === true
+    } else {
+      // Legacy flat permission check (for backward compatibility)
+      hasPermission = req.user.permissions[permission] === true ||
+                     req.user.permissions.customPermissions?.includes(permission)
+    }
 
     if (!hasPermission) {
       throw new AppError('You do not have permission to perform this action', 403)

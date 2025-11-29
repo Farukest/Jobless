@@ -93,26 +93,17 @@ export const connectWallet = asyncHandler(
       throw new AppError('Member role not found. Please run role seeding script.', 500)
     }
 
-    // Create new user with wallet
+    // Get member role permissions using modern nested structure
+    const memberPermissions = memberRole.permissions
+
+    // Create new user with wallet and modern nested permissions
     const user = await User.create({
       walletAddress: walletAddress.toLowerCase(),
       walletConnectedAt: new Date(),
       isWalletVerified: true,
       status: 'active',
-      roles: [memberRole._id], // Use ObjectId instead of string
-      permissions: {
-        canAccessJHub: true,
-        canAccessJStudio: true,
-        canAccessJAcademy: true,
-        canAccessJInfo: true,
-        canAccessJAlpha: true,
-        canCreateContent: false,
-        canModerateContent: false,
-        canManageUsers: false,
-        canManageRoles: false,
-        canManageSiteSettings: false,
-        customPermissions: [],
-      },
+      roles: [memberRole._id],
+      permissions: memberPermissions, // Use role's modern nested permissions
     })
 
     const accessToken = generateAccessToken((user._id as any).toString())

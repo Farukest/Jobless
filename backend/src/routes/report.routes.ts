@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { protect, authorize, checkPermission } from '../middleware/auth.middleware'
+import { protect } from '../middleware/auth.middleware'
 import {
   createReport,
   getAllReports,
@@ -18,10 +18,10 @@ router.use(protect)
 router.post('/', createReport)
 router.get('/my-reports', getMyReports)
 
-// Moderator/Admin routes
-router.get('/', checkPermission('canModerateContent'), getAllReports)
-router.get('/:id', checkPermission('canModerateContent'), getReport)
-router.put('/:id/review', checkPermission('canModerateContent'), reviewReport)
-router.delete('/:id', authorize('admin', 'super_admin'), deleteReport)
+// Moderator/Admin routes (permission check in controller)
+router.get('/', getAllReports)
+router.get('/:id', getReport)
+router.put('/:id/review', reviewReport)
+router.delete('/:id', deleteReport)
 
 export default router
