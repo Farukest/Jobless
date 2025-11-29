@@ -411,37 +411,38 @@ export function CommentItem({
 
     const visible: any[] = []
     const hidden: any[] = []
-    let firstNonMineReplyShown = false
+    let firstReplyShown = false
 
     sortedReplies.forEach((reply) => {
       const replyUserId = reply.userId._id || reply.userId
 
-      // Rule: All MY replies are always visible
+      // Rule: All MY replies are always visible (and count as first reply)
       if (isMe(replyUserId)) {
         visible.push(reply)
+        firstReplyShown = true
         return
       }
 
       // For TOP-LEVEL comments only:
-      if (isTopLevelComment && !firstNonMineReplyShown) {
+      if (isTopLevelComment && !firstReplyShown) {
         // Rule A: Parent by post author → first reply always shown
         if (isParentCommentByPostAuthor) {
           visible.push(reply)
-          firstNonMineReplyShown = true
+          firstReplyShown = true
           return
         }
         // Rule B: Parent by someone else → first reply shown only if from post author
         if (isPostAuthor(replyUserId)) {
           visible.push(reply)
-          firstNonMineReplyShown = true
+          firstReplyShown = true
           return
         }
       }
 
       // Rule: First reply to MY comment (any level)
-      if (isParentCommentMine && !firstNonMineReplyShown) {
+      if (isParentCommentMine && !firstReplyShown) {
         visible.push(reply)
-        firstNonMineReplyShown = true
+        firstReplyShown = true
         return
       }
 
@@ -501,63 +502,16 @@ export function CommentItem({
               </div>
             ) : (
               <>
+                {/* First: Render all visible direct replies (without nested yet) */}
                 {allVisibleReplies.map((reply: any, index: number) => {
                   const replyIsLiked = user && reply.likedBy?.includes(user._id)
-                  const isLastInList = index === allVisibleReplies.length - 1 && showMoreCount === 0
+                  const isLastVisible = index === allVisibleReplies.length - 1
+                  const hasMoreToShow = showMoreCount > 0 // Hidden replies exist (collapsed or expanded)
                   const hasNestedReplies = willHaveNestedReplies(reply, myUserId)
-                  const shouldShowLine = !isLastInList || hasNestedReplies
+                  // Show line if: not last, OR has more replies (hidden or shown), OR has nested replies
+                  const shouldShowLine = !isLastVisible || hasMoreToShow || hasNestedReplies
                   const replyUserId = reply.userId._id || reply.userId
                   
-                  return (
-                    <div key={reply._id}>
-                      <CommentContent
-                        comment={reply}
-                        onLike={onLike}
-                        isLiked={replyIsLiked}
-                        contentAuthorId={contentAuthorId}
-                        contentId={contentId}
-                        onReplyClick={onReplyClick}
-                        showVerticalLine={shouldShowLine}
-                        isLastInThread={isLastInList && !hasNestedReplies}
-                        canDelete={canDeleteComment(replyUserId)}
-                        onDelete={() => handleDeleteComment(reply._id)}
-                      />
-                      
-                      {/* Nested replies */}
-                      <NestedReplies
-                        comment={reply}
-                        onLike={onLike}
-                        contentAuthorId={contentAuthorId}
-                        contentId={contentId}
-                        onReplyClick={onReplyClick}
-                        myUserId={myUserId}
-                        user={user}
-                        myRepliesMap={myRepliesMap}
-                        onMyReplyClearedForId={onMyReplyClearedForId}
-                        isLastInParentList={isLastInList}
-                        canDeleteComment={canDeleteComment}
-                        onDeleteComment={handleDeleteComment}
-                      />
-                    </div>
-                  )
-                })}
-
-                {/* Show more button */}
-                {showMoreCount > 0 && !hiddenRepliesExpanded && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setHiddenRepliesExpanded(true) }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="ml-[52px] py-2 text-sm text-primary hover:underline"
-                  >
-                    Show {showMoreCount} more {showMoreCount === 1 ? 'reply' : 'replies'}
-                  </button>
-                )}
-
-                {/* Hidden replies when expanded */}
-                {hiddenRepliesExpanded && hiddenReplies.map((reply: any, index: number) => {
-                  const replyIsLiked = user && reply.likedBy?.includes(user._id)
-                  const isLast = index === hiddenReplies.length - 1
-                  const replyUserId = reply.userId._id || reply.userId
                   return (
                     <CommentContent
                       key={reply._id}
@@ -567,10 +521,83 @@ export function CommentItem({
                       contentAuthorId={contentAuthorId}
                       contentId={contentId}
                       onReplyClick={onReplyClick}
-                      showVerticalLine={!isLast}
-                      isLastInThread={isLast}
+                      showVerticalLine={shouldShowLine}
+                      isLastInThread={!shouldShowLine}
                       canDelete={canDeleteComment(replyUserId)}
                       onDelete={() => handleDeleteComment(reply._id)}
+                    />
+                  )
+                })}
+
+                {/* Second: Show more button for hidden direct replies */}
+                {showMoreCount > 0 && !hiddenRepliesExpanded && (
+                  <div className="flex gap-3">
+                    {/* Vertical line column - connects to nested replies below */}
+                    <div className="flex flex-col items-center" style={{ width: '40px' }}>
+                      <div className="flex flex-col items-center justify-center gap-1 py-2">
+                        <div className="w-0.5 h-1.5 bg-border rounded-full" />
+                        <div className="w-0.5 h-1.5 bg-border rounded-full" />
+                        <div className="w-0.5 h-1.5 bg-border rounded-full" />
+                      </div>
+                      {/* Continue line if there are nested replies */}
+                      {allVisibleReplies.some((r: any) => willHaveNestedReplies(r, myUserId)) && (
+                        <div className="w-0.5 bg-border flex-1" />
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setHiddenRepliesExpanded(true) }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="py-2 text-sm text-primary hover:underline"
+                    >
+                      Show {showMoreCount} more {showMoreCount === 1 ? 'reply' : 'replies'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Third: Hidden replies when expanded */}
+                {hiddenRepliesExpanded && hiddenReplies.map((reply: any, index: number) => {
+                  const replyIsLiked = user && reply.likedBy?.includes(user._id)
+                  const isLast = index === hiddenReplies.length - 1
+                  const replyUserId = reply.userId._id || reply.userId
+                  // Check if any visible reply has nested replies
+                  const anyVisibleHasNested = allVisibleReplies.some((r: any) => willHaveNestedReplies(r, myUserId))
+                  return (
+                    <CommentContent
+                      key={reply._id}
+                      comment={reply}
+                      onLike={onLike}
+                      isLiked={replyIsLiked}
+                      contentAuthorId={contentAuthorId}
+                      contentId={contentId}
+                      onReplyClick={onReplyClick}
+                      showVerticalLine={!isLast || anyVisibleHasNested}
+                      isLastInThread={isLast && !anyVisibleHasNested}
+                      canDelete={canDeleteComment(replyUserId)}
+                      onDelete={() => handleDeleteComment(reply._id)}
+                    />
+                  )
+                })}
+
+                {/* Fourth: Nested replies for visible replies (after all direct replies) */}
+                {allVisibleReplies.map((reply: any, index: number) => {
+                  const isLastInList = index === allVisibleReplies.length - 1 && 
+                    (hiddenRepliesExpanded ? hiddenReplies.length === 0 : showMoreCount === 0)
+                  
+                  return (
+                    <NestedReplies
+                      key={`nested-${reply._id}`}
+                      comment={reply}
+                      onLike={onLike}
+                      contentAuthorId={contentAuthorId}
+                      contentId={contentId}
+                      onReplyClick={onReplyClick}
+                      myUserId={myUserId}
+                      user={user}
+                      myRepliesMap={myRepliesMap}
+                      onMyReplyClearedForId={onMyReplyClearedForId}
+                      isLastInParentList={isLastInList}
+                      canDeleteComment={canDeleteComment}
+                      onDeleteComment={handleDeleteComment}
                     />
                   )
                 })}
@@ -665,19 +692,20 @@ function NestedReplies({
 
     const visible: any[] = []
     const hidden: any[] = []
-    let firstNonMineReplyShown = false
+    let firstReplyShown = false
 
     sortedReplies.forEach((reply) => {
       const replyUserId = reply.userId._id || reply.userId
 
       if (isMe(replyUserId)) {
         visible.push(reply)
+        firstReplyShown = true
         return
       }
 
-      if (!firstNonMineReplyShown) {
+      if (!firstReplyShown) {
         visible.push(reply)
-        firstNonMineReplyShown = true
+        firstReplyShown = true
         return
       }
 
@@ -756,12 +784,20 @@ function NestedReplies({
           })}
 
           {showMoreCount > 0 && !hiddenRepliesExpanded && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setHiddenRepliesExpanded(true) }}
-              className="ml-[52px] py-2 text-sm text-primary hover:underline"
-            >
-              Show {showMoreCount} more {showMoreCount === 1 ? 'reply' : 'replies'}
-            </button>
+            <div className="flex gap-3">
+              {/* Dotted vertical line column */}
+              <div className="flex flex-col items-center justify-center gap-1" style={{ width: '40px' }}>
+                <div className="w-0.5 h-1.5 bg-border rounded-full" />
+                <div className="w-0.5 h-1.5 bg-border rounded-full" />
+                <div className="w-0.5 h-1.5 bg-border rounded-full" />
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); setHiddenRepliesExpanded(true) }}
+                className="py-2 text-sm text-primary hover:underline"
+              >
+                Show {showMoreCount} more {showMoreCount === 1 ? 'reply' : 'replies'}
+              </button>
+            </div>
           )}
 
           {hiddenRepliesExpanded && hiddenReplies.map((reply: any, index: number) => {
