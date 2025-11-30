@@ -27,7 +27,7 @@ interface CommentItemProps {
 
 // Types for flat list rendering
 type FlatItem = 
-  | { type: 'comment'; comment: any; isLiked: boolean; canDelete: boolean }
+  | { type: 'comment'; comment: any; isLiked: boolean; canDelete: boolean; hasReplies: boolean; parentId: string }
   | { type: 'show-more'; count: number; onClick: () => void; parentId: string }
 
 // Dropdown Menu Component
@@ -315,19 +315,110 @@ function ShowMoreRow({ count, onClick, hasNextItem }: { count: number; onClick: 
   )
 }
 
-// Hook to fetch and process replies for a comment
-function useProcessedReplies(
-  commentId: string,
-  shouldFetch: boolean,
+/**
+ * VISIBILITY RULES - Clean filter-based approach
+ * 
+ * Rules (in priority order):
+ * 1. MY replies → ALWAYS visible (doesn't consume "first slot")
+ * 2. First slot for others (only applies when parent is mine OR top-level):
+ *    - If parent is MY comment → first reply from anyone
+ *    - If top-level & parent is by post author → first reply from anyone
+ *    - If top-level & parent is by someone else → first reply only if from post author
+ * 3. Hidden (show more): remaining replies when parent is mine or top-level with visible replies
+ * 4. Non-top-level & parent is NOT mine → ONLY my replies visible, nothing else
+ */
+function processRepliesVisibility(
+  replies: any[],
   myUserId: string | undefined,
   contentAuthorId: string | undefined,
-  isTopLevel: boolean,
-  parentCommentUserId: string
-) {
+  parentCommentUserId: string,
+  isTopLevel: boolean
+): { visible: any[]; hidden: any[] } {
+  if (replies.length === 0) return { visible: [], hidden: [] }
+
+  // Helper functions
+  const getUserId = (r: any) => r.userId._id || r.userId
+  const isMe = (userId: string) => myUserId && userId === myUserId
+  const isPostAuthor = (userId: string) => userId === contentAuthorId
+  const isParentByPostAuthor = isPostAuthor(parentCommentUserId)
+  const isParentMine = isMe(parentCommentUserId)
+
+  // Sort by date
+  const sorted = [...replies].sort((a, b) =>
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+
+  // CASE: Non-top-level AND parent is NOT mine → only show MY replies, nothing else
+  if (!isTopLevel && !isParentMine) {
+    const myReplies = sorted.filter(r => isMe(getUserId(r)))
+    console.log('[VISIBILITY] Non-top-level, not my parent. myUserId:', myUserId, 'parentUserId:', parentCommentUserId, 'myReplies:', myReplies.length)
+    return { visible: myReplies, hidden: [] }
+  }
+
+  // CASE: Top-level OR parent is mine → apply full visibility rules
+  
+  // Step 1: Find "first slot" reply from ALL replies (chronologically first)
+  let firstSlotReply: any = null
+
+  if (sorted.length > 0) {
+    if (isParentMine) {
+      // My comment → first reply from anyone
+      firstSlotReply = sorted[0]
+    } else if (isTopLevel) {
+      if (isParentByPostAuthor) {
+        // Top-level, parent by post author → first reply from anyone
+        firstSlotReply = sorted[0]
+      } else {
+        // Top-level, parent by someone else → first reply only if from post author
+        firstSlotReply = sorted.find(r => isPostAuthor(getUserId(r))) || null
+      }
+    }
+  }
+
+  // Step 2: Build visible and hidden lists
+  const visible: any[] = []
+  const hidden: any[] = []
+
+  sorted.forEach(reply => {
+    const userId = getUserId(reply)
+    
+    if (reply === firstSlotReply) {
+      // First slot reply → visible (even if mine)
+      visible.push(reply)
+    } else if (isMe(userId)) {
+      // My other replies → also visible
+      visible.push(reply)
+    } else {
+      // Everything else → hidden (for "Show more")
+      hidden.push(reply)
+    }
+  })
+
+  return { visible, hidden }
+}
+
+// Helper to update repliesCount of a comment in all replies caches
+function updateCommentRepliesCount(queryClient: any, targetCommentId: string, delta: number) {
+  // Search through all replies caches to find and update the target comment
+  queryClient.setQueriesData({ queryKey: ['replies'] }, (old: any) => {
+    if (!old?.data) return old
+    let changed = false
+    const updated = old.data.map((comment: any) => {
+      if (comment._id === targetCommentId) {
+        changed = true
+        return { ...comment, repliesCount: Math.max(0, (comment.repliesCount || 0) + delta) }
+      }
+      return comment
+    })
+    return changed ? { ...old, data: updated } : old
+  })
+}
+
+// Hook to fetch replies with WebSocket
+function useRepliesWithSocket(commentId: string, shouldFetch: boolean) {
   const queryClient = useQueryClient()
   const { data: repliesData, isLoading } = useReplies(shouldFetch ? commentId : '')
 
-  // WebSocket
   useEffect(() => {
     if (!commentId) return
     const socket = getSocket()
@@ -341,15 +432,21 @@ function useProcessedReplies(
           if (exists) return old
           return { ...old, count: (old.count || 0) + 1, data: [...(old.data || []), reply] }
         })
+        // Also update the parent comment's repliesCount in all caches
+        updateCommentRepliesCount(queryClient, commentId, 1)
       }
     }
 
-    const handleCommentDeleted = (data: { commentId: string }) => {
+    const handleCommentDeleted = (data: { commentId: string, parentCommentId?: string }) => {
       queryClient.setQueryData(['replies', commentId], (old: any) => {
         if (!old?.data) return old
         const filtered = old.data.filter((r: any) => r._id !== data.commentId)
         return { ...old, count: filtered.length, data: filtered }
       })
+      // Also update the parent comment's repliesCount if this was a direct child
+      if (data.parentCommentId === commentId) {
+        updateCommentRepliesCount(queryClient, commentId, -1)
+      }
     }
 
     socket.on('newReply', handleNewReply)
@@ -361,64 +458,182 @@ function useProcessedReplies(
     }
   }, [commentId, queryClient])
 
-  const processed = useMemo(() => {
-    const replies = repliesData?.data || []
-    if (replies.length === 0) return { visible: [], hidden: [] }
+  return { replies: repliesData?.data || [], isLoading }
+}
 
-    const isPostAuthor = (userId: string) => userId === contentAuthorId
-    const isMe = (userId: string) => userId === myUserId
-    const isParentByPostAuthor = isPostAuthor(parentCommentUserId)
-    const isParentMine = myUserId && parentCommentUserId === myUserId
+/**
+ * ReplyWithNested - Renders a reply and fetches its nested replies
+ * This component handles its own nested reply fetching and rendering
+ */
+function ReplyWithNested({
+  reply,
+  onLike,
+  isLiked,
+  contentAuthorId,
+  contentId,
+  onReplyClick,
+  showTopLine,
+  hasNextSibling,
+  myUserId,
+  user,
+  canDeleteComment,
+  onDeleteComment,
+  expandedShowMore,
+  setExpandedShowMore,
+  myRepliesMap
+}: {
+  reply: any
+  onLike?: (commentId: string) => void
+  isLiked: boolean
+  contentAuthorId?: string
+  contentId?: string
+  onReplyClick?: (comment: any) => void
+  showTopLine: boolean
+  hasNextSibling: boolean
+  myUserId?: string
+  user?: any
+  canDeleteComment: (userId: string) => boolean
+  onDeleteComment: (commentId: string) => void
+  expandedShowMore: Set<string>
+  setExpandedShowMore: React.Dispatch<React.SetStateAction<Set<string>>>
+  myRepliesMap?: Record<string, any>
+}) {
+  const replyUserId = reply.userId._id || reply.userId
+  const hasReplies = reply.repliesCount > 0
 
-    const sorted = [...replies].sort((a, b) =>
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    )
+  // Fetch nested replies
+  const { replies: nestedRawReplies, isLoading: nestedLoading } = useRepliesWithSocket(
+    hasReplies ? reply._id : '',
+    hasReplies
+  )
 
-    const visible: any[] = []
-    const hidden: any[] = []
-    let firstShown = false
+  // Process nested visibility
+  const { visible: nestedVisible, hidden: nestedHidden } = useMemo(() => {
+    console.log('[ReplyWithNested] Processing nested for:', reply.content, 'replyUserId:', replyUserId, 'isTopLevel: false')
+    const result = processRepliesVisibility(nestedRawReplies, myUserId, contentAuthorId, replyUserId, false)
+    console.log('[ReplyWithNested] Result:', 'visible:', result.visible.length, 'hidden:', result.hidden.length)
+    return result
+  }, [nestedRawReplies, myUserId, contentAuthorId, replyUserId])
 
-    sorted.forEach((reply) => {
-      const replyUserId = reply.userId._id || reply.userId
+  // Add optimistic nested reply
+  const myNestedReply = myRepliesMap?.[reply._id]
+  const allNestedVisible = useMemo(() => {
+    if (myNestedReply && !nestedVisible.some((r: any) => r._id === myNestedReply._id)) {
+      return [...nestedVisible, myNestedReply]
+    }
+    return nestedVisible
+  }, [nestedVisible, myNestedReply])
 
-      // My replies always visible
-      if (isMe(replyUserId)) {
-        visible.push(reply)
-        firstShown = true
-        return
-      }
-
-      // Top-level logic
-      if (isTopLevel && !firstShown) {
-        if (isParentByPostAuthor) {
-          visible.push(reply)
-          firstShown = true
-          return
-        }
-        if (isPostAuthor(replyUserId)) {
-          visible.push(reply)
-          firstShown = true
-          return
-        }
-      }
-
-      // My comment's first reply
-      if (isParentMine && !firstShown) {
-        visible.push(reply)
-        firstShown = true
-        return
-      }
-
-      // Hide others if conditions met
-      if (isParentMine || (isTopLevel && (isParentByPostAuthor || visible.length > 0))) {
-        hidden.push(reply)
-      }
+  // Build nested items
+  const nestedItems: FlatItem[] = useMemo(() => {
+    const items: FlatItem[] = []
+    
+    allNestedVisible.forEach((nested) => {
+      items.push({
+        type: 'comment',
+        comment: nested,
+        isLiked: user && nested.likedBy?.includes(user._id),
+        canDelete: canDeleteComment(nested.userId._id || nested.userId),
+        hasReplies: nested.repliesCount > 0,
+        parentId: reply._id
+      })
     })
 
-    return { visible, hidden }
-  }, [repliesData?.data, contentAuthorId, myUserId, isTopLevel, parentCommentUserId])
+    if (nestedHidden.length > 0) {
+      if (!expandedShowMore.has(reply._id)) {
+        items.push({
+          type: 'show-more',
+          count: nestedHidden.length,
+          onClick: () => setExpandedShowMore(prev => new Set(prev).add(reply._id)),
+          parentId: reply._id
+        })
+      } else {
+        nestedHidden.forEach((nested) => {
+          items.push({
+            type: 'comment',
+            comment: nested,
+            isLiked: user && nested.likedBy?.includes(user._id),
+            canDelete: canDeleteComment(nested.userId._id || nested.userId),
+            hasReplies: nested.repliesCount > 0,
+            parentId: reply._id
+          })
+        })
+      }
+    }
 
-  return { ...processed, isLoading, rawData: repliesData?.data }
+    return items
+  }, [allNestedVisible, nestedHidden, expandedShowMore, user, reply._id, canDeleteComment, setExpandedShowMore])
+
+  const hasNestedItems = nestedItems.length > 0
+  // Show bottom line if there's a next sibling OR if there are nested items
+  const showBottomLine = hasNextSibling || hasNestedItems
+
+  return (
+    <>
+      <CommentRow
+        comment={reply}
+        onLike={onLike}
+        isLiked={isLiked}
+        contentAuthorId={contentAuthorId}
+        contentId={contentId}
+        onReplyClick={onReplyClick}
+        showTopLine={showTopLine}
+        showBottomLine={showBottomLine}
+        canDelete={canDeleteComment(replyUserId)}
+        onDelete={() => onDeleteComment(reply._id)}
+      />
+
+      {/* Nested replies */}
+      {hasReplies && (
+        <>
+          {nestedLoading ? (
+            <div className="py-2 flex justify-center ml-[52px]">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+            </div>
+          ) : (
+            nestedItems.map((item, index) => {
+              const hasNextNestedItem = index < nestedItems.length - 1
+              // For last nested item, also consider if parent has next sibling
+              const nestedHasNextSibling = hasNextNestedItem || hasNextSibling
+
+              if (item.type === 'comment') {
+                // Recursive: nested replies can also have their own replies
+                return (
+                  <ReplyWithNested
+                    key={item.comment._id}
+                    reply={item.comment}
+                    onLike={onLike}
+                    isLiked={item.isLiked}
+                    contentAuthorId={contentAuthorId}
+                    contentId={contentId}
+                    onReplyClick={onReplyClick}
+                    showTopLine={true}
+                    hasNextSibling={nestedHasNextSibling}
+                    myUserId={myUserId}
+                    user={user}
+                    canDeleteComment={canDeleteComment}
+                    onDeleteComment={onDeleteComment}
+                    expandedShowMore={expandedShowMore}
+                    setExpandedShowMore={setExpandedShowMore}
+                    myRepliesMap={myRepliesMap}
+                  />
+                )
+              } else {
+                return (
+                  <ShowMoreRow
+                    key={`show-more-${item.parentId}`}
+                    count={item.count}
+                    onClick={item.onClick}
+                    hasNextItem={nestedHasNextSibling}
+                  />
+                )
+              }
+            })
+          )}
+        </>
+      )}
+    </>
+  )
 }
 
 export function CommentItem({
@@ -442,6 +657,7 @@ export function CommentItem({
   const myUserId = user?._id
   const hasReplies = comment.repliesCount > 0
   const commentUserId = comment.userId._id || comment.userId
+  const isTopLevel = !comment.parentCommentId
 
   const canDeleteComment = (userId: string) => {
     if (!user) return false
@@ -466,14 +682,18 @@ export function CommentItem({
   }, [hasReplies, isReply])
 
   // Fetch direct replies
-  const { visible: visibleReplies, hidden: hiddenReplies, isLoading } = useProcessedReplies(
+  const { replies: rawReplies, isLoading } = useRepliesWithSocket(
     showReplies ? comment._id : '',
-    showReplies,
-    myUserId,
-    contentAuthorId,
-    !comment.parentCommentId,
-    commentUserId
+    showReplies
   )
+
+  // Process visibility
+  const { visible: visibleReplies, hidden: hiddenReplies } = useMemo(() => {
+    console.log('[CommentItem] Processing for:', comment.content, 'isTopLevel:', isTopLevel, 'commentUserId:', commentUserId)
+    const result = processRepliesVisibility(rawReplies, myUserId, contentAuthorId, commentUserId, isTopLevel)
+    console.log('[CommentItem] Result: visible:', result.visible.map((r:any) => r.content), 'hidden:', result.hidden.map((r:any) => r.content))
+    return result
+  }, [rawReplies, myUserId, contentAuthorId, commentUserId, isTopLevel, comment.content])
 
   // Add optimistic reply
   const allVisibleReplies = useMemo(() => {
@@ -483,56 +703,52 @@ export function CommentItem({
     return visibleReplies
   }, [visibleReplies, myReply])
 
-  // Build flat list of all items to render
-  const flatItems = useMemo(() => {
+  // Build flat items for direct replies only (nested handled by ReplyWithNested)
+  const directItems: FlatItem[] = useMemo(() => {
     const items: FlatItem[] = []
-    
-    const addRepliesRecursively = (
-      replies: any[],
-      hiddenList: any[],
-      parentId: string,
-      depth: number
-    ) => {
-      replies.forEach((reply) => {
-        items.push({
-          type: 'comment',
-          comment: reply,
-          isLiked: user && reply.likedBy?.includes(user._id),
-          canDelete: canDeleteComment(reply.userId._id || reply.userId)
-        })
-      })
 
-      // Add show more for hidden replies at this level
-      if (hiddenList.length > 0 && !expandedShowMore.has(parentId)) {
+    allVisibleReplies.forEach((reply) => {
+      items.push({
+        type: 'comment',
+        comment: reply,
+        isLiked: user && reply.likedBy?.includes(user._id),
+        canDelete: canDeleteComment(reply.userId._id || reply.userId),
+        hasReplies: reply.repliesCount > 0,
+        parentId: comment._id
+      })
+    })
+
+    if (hiddenReplies.length > 0) {
+      if (!expandedShowMore.has(comment._id)) {
         items.push({
           type: 'show-more',
-          count: hiddenList.length,
-          onClick: () => setExpandedShowMore(prev => new Set(prev).add(parentId)),
-          parentId
+          count: hiddenReplies.length,
+          onClick: () => setExpandedShowMore(prev => new Set(prev).add(comment._id)),
+          parentId: comment._id
         })
-      } else if (expandedShowMore.has(parentId)) {
-        hiddenList.forEach((reply) => {
+      } else {
+        hiddenReplies.forEach((reply) => {
           items.push({
             type: 'comment',
             comment: reply,
             isLiked: user && reply.likedBy?.includes(user._id),
-            canDelete: canDeleteComment(reply.userId._id || reply.userId)
+            canDelete: canDeleteComment(reply.userId._id || reply.userId),
+            hasReplies: reply.repliesCount > 0,
+            parentId: comment._id
           })
         })
       }
     }
 
-    addRepliesRecursively(allVisibleReplies, hiddenReplies, comment._id, 0)
-
     return items
   }, [allVisibleReplies, hiddenReplies, expandedShowMore, user, comment._id])
 
-  const hasAnyReplies = flatItems.length > 0
+  const hasAnyItems = directItems.length > 0
 
   return (
     <div className={`${!isReply ? 'border-b border-border' : ''}`}>
       <div className="p-4">
-        {/* Parent comment - show bottom line if there are any items after it */}
+        {/* Parent comment */}
         <CommentRow
           comment={comment}
           onLike={onLike}
@@ -541,7 +757,7 @@ export function CommentItem({
           contentId={contentId}
           onReplyClick={onReplyClick}
           showTopLine={false}
-          showBottomLine={hasAnyReplies}
+          showBottomLine={hasAnyItems}
           canDelete={canDeleteComment(commentUserId)}
           onDelete={() => handleDeleteComment(comment._id)}
         />
@@ -555,23 +771,28 @@ export function CommentItem({
               </div>
             ) : (
               <>
-                {flatItems.map((item, index) => {
-                  const hasNextItem = index < flatItems.length - 1
+                {directItems.map((item, index) => {
+                  const hasNextItem = index < directItems.length - 1
                   
                   if (item.type === 'comment') {
                     return (
-                      <CommentRow
+                      <ReplyWithNested
                         key={item.comment._id}
-                        comment={item.comment}
+                        reply={item.comment}
                         onLike={onLike}
                         isLiked={item.isLiked}
                         contentAuthorId={contentAuthorId}
                         contentId={contentId}
                         onReplyClick={onReplyClick}
                         showTopLine={true}
-                        showBottomLine={hasNextItem}
-                        canDelete={item.canDelete}
-                        onDelete={() => handleDeleteComment(item.comment._id)}
+                        hasNextSibling={hasNextItem}
+                        myUserId={myUserId}
+                        user={user}
+                        canDeleteComment={canDeleteComment}
+                        onDeleteComment={handleDeleteComment}
+                        expandedShowMore={expandedShowMore}
+                        setExpandedShowMore={setExpandedShowMore}
+                        myRepliesMap={myRepliesMap}
                       />
                     )
                   } else {
