@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -431,8 +431,10 @@ function useRepliesWithSocket(commentId: string, shouldFetch: boolean) {
   const queryClient = useQueryClient()
   const { data: repliesData, isLoading } = useReplies(shouldFetch ? commentId : '')
 
+  // Always subscribe to WebSocket for this comment, even if not fetching yet
   useEffect(() => {
     if (!commentId) return
+    console.log('[useRepliesWithSocket] Subscribing to:', commentId)
     const socket = getSocket()
     socket.emit('join:comment', commentId)
 
@@ -513,9 +515,9 @@ function ReplyWithNested({
   const replyUserId = reply.userId._id || reply.userId
   const hasReplies = reply.repliesCount > 0
 
-  // Fetch nested replies
+  // Fetch nested replies - always pass reply._id for WebSocket subscription
   const { replies: nestedRawReplies, isLoading: nestedLoading } = useRepliesWithSocket(
-    hasReplies ? reply._id : '',
+    reply._id,
     hasReplies
   )
 
@@ -678,24 +680,35 @@ export function CommentItem({
            user.permissions?.admin?.canModerateAllContent
   }
 
-  const handleDeleteComment = async (commentId: string) => {
+  const handleDeleteComment = useCallback(async (commentId: string) => {
     if (!confirm('Are you sure you want to delete this comment?')) return
     try {
       await deleteComment.mutateAsync(commentId)
+      // Clear from myReplies state if this was user's own optimistic reply
+      if (myReply?._id === commentId && onMyReplyCleared) {
+        onMyReplyCleared()
+      }
+      if (onMyReplyClearedForId && myRepliesMap) {
+        Object.entries(myRepliesMap).forEach(([parentId, reply]: [string, any]) => {
+          if (reply?._id === commentId) {
+            onMyReplyClearedForId(parentId)
+          }
+        })
+      }
       toast.success('Comment deleted')
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to delete comment')
     }
-  }
+  }, [deleteComment, myReply, onMyReplyCleared, myRepliesMap, onMyReplyClearedForId])
 
   // Auto-expand replies
   useEffect(() => {
     if (hasReplies && !isReply) setShowReplies(true)
   }, [hasReplies, isReply])
 
-  // Fetch direct replies
+  // Fetch direct replies - always pass comment._id for WebSocket subscription
   const { replies: rawReplies, isLoading } = useRepliesWithSocket(
-    showReplies ? comment._id : '',
+    comment._id,
     showReplies
   )
 
