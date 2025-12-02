@@ -348,11 +348,23 @@ function processRepliesVisibility(
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   )
 
-  // CASE: Non-top-level AND parent is NOT mine → only show MY replies, nothing else
+  // CASE: Non-top-level AND parent is NOT mine → only show MY replies + post author's first reply
   if (!isTopLevel && !isParentMine) {
     const myReplies = sorted.filter(r => isMe(getUserId(r)))
-    console.log('[VISIBILITY] Non-top-level, not my parent. myUserId:', myUserId, 'parentUserId:', parentCommentUserId, 'myReplies:', myReplies.length)
-    return { visible: myReplies, hidden: [] }
+    // Also show post author's first reply
+    const postAuthorFirstReply = sorted.find(r => isPostAuthor(getUserId(r)))
+    
+    const visible: any[] = []
+    sorted.forEach(reply => {
+      if (reply === postAuthorFirstReply) {
+        visible.push(reply)
+      } else if (isMe(getUserId(reply))) {
+        visible.push(reply)
+      }
+    })
+    
+    console.log('[VISIBILITY] Non-top-level, not my parent. myUserId:', myUserId, 'parentUserId:', parentCommentUserId, 'visible:', visible.length)
+    return { visible, hidden: [] }
   }
 
   // CASE: Top-level OR parent is mine → apply full visibility rules
